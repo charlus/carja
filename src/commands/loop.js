@@ -42,7 +42,7 @@ import { recordUsage, usageSummary, cacheShare } from "../loop/usage.js";
 import { newRulings, rulingInboxLines, rulingsPrBody, rulingsForChecker, RULINGS_REL } from "../loop/rulings.js";
 import { renderShipAssignment, shipBeatSection, sectionOf, checkShipEvidence, PR_BODY_REL } from "../loop/ship.js";
 import { harvestSlices, specEvidence as checkSpecEvidence, PROJECTS_REL } from "../loop/slices.js";
-import { pruneMergedLoopWorktrees, LOOP_PREFIX, WORK_PREFIX, remoteLoopBranches, mergedBranches, skipClaimed, defaultBranchRef, markWorktreeHeld, removeHeldWorktrees } from "../loop/reconcile.js";
+import { pruneMergedLoopWorktrees, LOOP_PREFIX, WORK_PREFIX, remoteLoopBranches, mergedBranches, skipClaimed, defaultBranchRef, markWorktreeHeld, removeHeldWorktrees, catchUpCheckout } from "../loop/reconcile.js";
 import { forgeMergedHead } from "../live-state.js";
 import { readReady } from "../loop/ready-queue.js";
 import { gitCommonDir as gitDirOf } from "./loop-take.js";
@@ -707,6 +707,15 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   const runDir = scope && runsDir ? join(runsDir, runKey(scope)) : null;
   const dryRun = args.includes("--dry-run");
   const fromConductor = args.includes("--from-conductor") || Boolean(scope);
+  // The owner merged the last MR on the forge: the backlog, the slices, the
+  // Blueprint and a new project are on the default branch, not in this folder.
+  // Fast-forward it before anything is read, so the same command takes the next item.
+  if (fromConductor && !dryRun && !stack && commonDirRes.ok) {
+    await runCli("git", ["fetch", "-q", "origin"], root);
+    const up = await catchUpCheckout({ git: makeGit(root) });
+    if (up.status === "updated") stdout.write(`[CONDUCTOR LOOP] updated to ${up.ref} (${up.count} new commit${up.count === 1 ? "" : "s"})\n`);
+    if (up.status === "failed") stderr.write(`[CONDUCTOR LOOP] ⚠️  could not update ${root} to ${up.ref}: ${up.reason}. The loop reads the backlog as it is on disk.\n`);
+  }
   if (scope) {
     const base = join(root, PROJECTS_REL);
     const names = [];
@@ -866,8 +875,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     // branch is on the remote is in progress or in review elsewhere; nothing is
     // committed to the owner's checkout to mark it.
     if (harvestedQueue.length && !stack) {
-      const rootGit = makeGit(root);
-      if (!dryRun) await runCli("git", ["fetch", "-q", "origin"], root);
+      const rootGit = makeGit(root); // fetched before the harvest
       // Step 7: an item is taken when its branch is on either remote.
       const codeDirAbs = loopConfig.codeDir ? join(root, loopConfig.codeDir) : null;
       if (codeDirAbs && !dryRun) await runCli("git", ["fetch", "-q", "origin"], codeDirAbs);

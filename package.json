@@ -1,6 +1,6 @@
 {
   "name": "conductor-framework",
-  "version": "6.52.0",
+  "version": "6.53.0",
   "description": "The Conductor — an AI Software Engineering framework for the full development lifecycle. Workflows, skills, and personas for AI-assisted product engineering.",
   "type": "module",
   "bin": {
