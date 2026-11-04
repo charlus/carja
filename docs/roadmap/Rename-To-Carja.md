@@ -1,6 +1,6 @@
 # Rename Conductor to Carja
 
-> **Status:** parked, 2026-10-16. Plan approved by the owner (D2 and D4 answered), no code written. Pick up with PR 1. Name chosen by the owner: `carja`, the Jacquard loom in verlan.
+> **Status:** in progress. Plan approved by the owner 2026-10-16 (D2 and D4 answered), resumed 2026-11-04 with the name `carja` confirmed. PR 1 (dual-name readers) in 6.54.0, `src/names.js`, proven by `test/names-dual.test.js`. Next: PR 2. Name chosen by the owner: `carja`, the Jacquard loom in verlan.
 > **Release:** 7.0.0, one major. `Compatibility: upgrade plus a step` (the step: update scripts and your own instruction files that call `conductor`).
 
 ## Why
@@ -24,7 +24,7 @@ Discussed with the owner on 2026-10-16. Recorded so the choice is not reopened w
 
 ## Scope: every surface that carries the name
 
-Measured on `master` at `2c2a4e4`: 2,904 occurrences in 242 files, 57 paths.
+Measured on `master` at `2c2a4e4`: 2,904 occurrences in 242 files, 57 paths. On 2026-11-04 at `168c813`: 4,719 in 343 files.
 
 | Surface | Today | After | Compatibility in 7.x |
 |---|---|---|---|
@@ -68,7 +68,12 @@ The step is idempotent: run twice, the second run does nothing.
 
 ## Delivery
 
-1. **PR 1: dual-name readers.** Every reader accepts both names (folder, config, stamp, markers, env vars). No visible change. Behaviour tests per surface.
+1. **PR 1: dual-name readers (6.54.0).** No visible change. `src/names.js` holds both names, the new one first, and `CURRENT` (still `conductor`) for writers. Built:
+   - The config file, the version stamp and every marker (framework block, project card, managed block, Claude Code shims) are read under both names, everywhere.
+   - `CARJA_*` variables are copied to their `CONDUCTOR_*` name at CLI start (`mirrorEnv`), so every reader and child process sees them. An explicit `CONDUCTOR_*` value wins.
+   - The state folder falls back only in the commands an agent or the owner runs on an install not yet upgraded: `status` (with `--live`), `inbox`, `view`, `review-log`, `agents-md`.
+   - Not dual, by decision (2026-11-04). The loop, `loop doctor` and the hooks: they are replaced together with the folder by `upgrade`, so they never meet the other name. Measured on `master` at `168c813`: 133 literal `conductor/` paths in `src/`, most in the loop. In PR 2 the loop refuses a 6.x layout with "run `carja upgrade` first". `design migrate` is a pre-6.8 migration and stays as it is.
+   - Found for PR 2. The pre-commit hook loads the COMMITTED `lib.sh`, so the upgrade commit itself runs under the 6.x hooks: every waiver the CLI sets for that commit must be set under both names. `pre-commit` and `pre-push` read `CONDUCTOR_HOOKS` before they load `lib.sh`, so the hook rename edits the pinned `pre-commit` and its fingerprint.
 2. **PR 2: the rename and the migration.** Binary, package, templates, prose, writers, the upgrade step, `CHANGELOG.md` 7.0.0, README, `CLAUDE.md`, `how-it-works.md`, roadmap status blocks. `check-conductor.sh` becomes `check-carja.sh`. The README title changes to Carja and gets a short "Why Carja" section of three or four lines: *carja* is *jacquard* in verlan; the Jacquard loom was the first machine that ran a program unattended, as Carja runs coding agents unattended inside rules enforced by code; the project was called Conductor until 6.x and was renamed because of Google's Conductor, which uses the same `conductor/` folder. The credit to Test in Prod's Conductor stays.
 3. **Owner: rename the repo** (D4), then verify `npx -y github:charlus/conductor-framework status` still resolves through the redirect.
 4. **Local installs**, one MR each, as for 6.12.0: eurassistant, evalapp-v2, website. autopportunity only when asked. euranova-os untouched.

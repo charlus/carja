@@ -7,6 +7,7 @@ import { describeModels, costBasis } from "../loop/profiles.js";
 import { usageSummary } from "../loop/usage.js";
 import { exists } from "./loop.js";
 import { STATE_REL } from "../loop/state-sync.js";
+import { configPath as configPathOf } from "../names.js";
 
 const WHAT = {
   quality: "Opus for every role: the best measured quality, the highest cost per beat.",
@@ -14,7 +15,7 @@ const WHAT = {
 };
 
 export async function loopProfileCommand(root, name, { stdout, stderr }) {
-  const cfgPath = join(root, "conductor.config.json");
+  const cfgPath = configPathOf(root);
   const raw = (await exists(cfgPath)) ? JSON.parse(await readFile(cfgPath, "utf8")) : {};
   if (name) {
     if (!PROFILES[name]) {

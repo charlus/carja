@@ -24,6 +24,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { suggestVerifyCommand } from "./detect.js";
+import { configPath as configPathOf } from "./names.js";
 
 export const CONFIG_FILE = "conductor.config.json";
 
@@ -86,13 +87,13 @@ async function readIfPresent(path) {
 export async function readGateState(targetDir, repo = null) {
   if (!repo) {
     return gateStateFrom(
-      await readIfPresent(join(targetDir, CONFIG_FILE)),
+      await readIfPresent(configPathOf(targetDir)),
       await readIfPresent(join(targetDir, "package.json")),
     );
   }
   let verify;
   try {
-    verify = JSON.parse((await readIfPresent(join(targetDir, CONFIG_FILE))) ?? "{}")?.repos?.[repo]?.verify;
+    verify = JSON.parse((await readIfPresent(configPathOf(targetDir))) ?? "{}")?.repos?.[repo]?.verify;
   } catch {
     verify = undefined;
   }
@@ -109,7 +110,7 @@ export async function readGateState(targetDir, repo = null) {
  * @returns {Promise<{created: boolean, path: string}>}
  */
 export async function writeVerify(targetDir, command, repo = null) {
-  const cfgPath = join(targetDir, CONFIG_FILE);
+  const cfgPath = configPathOf(targetDir);
   const raw = await readIfPresent(cfgPath);
   let cfg = {};
   try {

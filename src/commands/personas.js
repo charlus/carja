@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { resolveRules, matchPersonas, extractReviewLens } from "../personas.js";
 import { ignoredNestedRepos } from "../nested-repos.js";
+import { configPath as configPathOf } from "../names.js";
 
 function parseArgs(args) {
   const opts = { json: false, base: null, paths: [] };
@@ -62,7 +63,7 @@ async function readJson(path) {
 export async function personasCommand(args, { cwd, stdout, stderr }) {
   const opts = parseArgs(args);
   const root = resolve(cwd);
-  const config = await readJson(join(root, "conductor.config.json"));
+  const config = await readJson(configPathOf(root));
 
   // In the outer layout each nested code repository has its own DESIGN.md:
   // one install can hold two products with two designs.

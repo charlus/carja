@@ -35,7 +35,7 @@ function listFiles(dirPath, prefix) {
         } else if (entry.isFile()) {
             if (entry.name === '.checksums.json') continue;
             if (entry.name === '.selections.json') continue;
-            if (entry.name === '.conductor-version.json') continue;
+            if (entry.name === '.conductor-version.json' || entry.name === '.carja-version.json') continue;
             results.push(rel);
         }
     }

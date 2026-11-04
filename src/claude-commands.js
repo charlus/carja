@@ -16,6 +16,8 @@ import { join } from "node:path";
 
 // Marker identifying a shim we own, so cleanup never touches the user's own commands.
 const MARKER = "<!-- conductor:generated-command -->";
+// Readers accept both prefixes (rename to Carja, PR 1); writers emit MARKER.
+const isOurs = (text) => /<!-- (?:carja|conductor):generated-command -->/.test(text);
 
 async function exists(path) {
   try {
@@ -154,7 +156,7 @@ export async function generateClaudeCommands(targetDir, opts = {}) {
     const name = file.slice(0, -3);
     if (liveNames.has(name)) continue;
     const contents = await readFile(join(commandsDir, file), "utf8");
-    if (contents.includes(MARKER)) {
+    if (isOurs(contents)) {
       await rm(join(commandsDir, file));
       removed += 1;
     }
@@ -219,7 +221,7 @@ export async function generateClaudeSkills(targetDir, opts = {}) {
     liveNames.add(name);
 
     const shimPath = join(claudeSkillsDir, name, "SKILL.md");
-    if ((await exists(shimPath)) && !(await readFile(shimPath, "utf8")).includes(MARKER)) {
+    if ((await exists(shimPath)) && !isOurs(await readFile(shimPath, "utf8"))) {
       skipped.push(name);
       continue;
     }
@@ -236,7 +238,7 @@ export async function generateClaudeSkills(targetDir, opts = {}) {
       if (liveNames.has(name)) continue;
       const shimPath = join(claudeSkillsDir, name, "SKILL.md");
       if (!(await exists(shimPath))) continue;
-      if ((await readFile(shimPath, "utf8")).includes(MARKER)) {
+      if (isOurs(await readFile(shimPath, "utf8"))) {
         await rm(join(claudeSkillsDir, name), { recursive: true });
         removedNames.push(name);
         removed += 1;

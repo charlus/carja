@@ -54,6 +54,7 @@ import { verifyWithEvidence } from "../loop/verify-evidence.js";
 import { blankedNames, beatEnv, withBeatEnv } from "../loop/beat-env.js";
 import { mrTitles, readOnlyEnv } from "../loop/team-facing.js";
 import { STACK_FILE, REPORT_REL, forgeBranchMr, closeMr, reconcileStack, stackTop, stackNote, renderStackReport, summaryFromBody, ownerActionsFromBody } from "../loop/stack.js";
+import { configPath as configPathOf } from "../names.js";
 
 const STATE_REL = "conductor/1-workbench/loop-state.json";
 const LOCK_REL = "conductor/1-workbench/loop.lock";
@@ -295,7 +296,7 @@ export async function hasNpmTestScript(root) {
 }
 
 export async function configVerify(root, codeDir = null) {
-  const cfgPath = join(root, "conductor.config.json");
+  const cfgPath = configPathOf(root);
   if (!(await exists(cfgPath))) return "";
   try {
     const cfg = await readJson(cfgPath);
@@ -310,7 +311,7 @@ export async function configVerify(root, codeDir = null) {
 
 /** The raw conductor.config.json from the ROOT checkout ({} if absent). Throws on bad JSON. */
 async function readRootConfig(root) {
-  const cfgPath = join(root, "conductor.config.json");
+  const cfgPath = configPathOf(root);
   if (!(await exists(cfgPath))) return {};
   return readJson(cfgPath);
 }

@@ -10,6 +10,7 @@ import { access, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promise
 import { constants as fsConstants } from "node:fs";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
+import { configPath as configPathOf } from "./names.js";
 
 const exec = promisify(execFile);
 
@@ -43,7 +44,7 @@ export async function checkGlabAuth(hostname = DEFAULT_HOSTNAME) {
  * @returns {{ project: string, hostname: string }}
  */
 export async function resolveRegistry(projectDir) {
-  const configPath = join(projectDir, "conductor.config.json");
+  const configPath = configPathOf(projectDir);
   let raw;
   try {
     raw = await readFile(configPath, "utf-8");

@@ -2,7 +2,10 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 
-export const STAMP_FILE = ".conductor-version.json";
+import { CURRENT, STAMP_FILES } from "./names.js";
+
+/** The stamp file writers use. Readers accept every name in STAMP_FILES. */
+export const STAMP_FILE = `.${CURRENT}-version.json`;
 
 /** The framework version shipped by this package (single source of truth). */
 export function packageVersion() {
@@ -12,8 +15,9 @@ export function packageVersion() {
 
 /** Read the version stamp written into an installed `.agents/`, or null. */
 export function readVersionStamp(agentsDir) {
-  const p = join(agentsDir, STAMP_FILE);
-  if (!existsSync(p)) return null;
+  const name = STAMP_FILES.find((f) => existsSync(join(agentsDir, f)));
+  if (!name) return null;
+  const p = join(agentsDir, name);
   try {
     return JSON.parse(readFileSync(p, "utf8"));
   } catch {
@@ -49,7 +53,8 @@ export function detectShape(targetDir) {
   // V4-era: singular .agent/, dotted .conductor/, or root Title/kebab numbered folders
   // living outside a conductor/ wrapper.
   if (has(".agent") || has(".conductor")) return "v4";
-  if ((has("0-Compass") || has("0-compass")) && !has("conductor")) return "v4";
-  if (has(".agents") && has("conductor")) return "v5";
+  const state = has("carja") || has("conductor");
+  if ((has("0-Compass") || has("0-compass")) && !state) return "v4";
+  if (has(".agents") && state) return "v5";
   return "unknown";
 }

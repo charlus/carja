@@ -32,6 +32,7 @@ import {
   documentTitle,
   plainText,
 } from "./view/markdown.js";
+import { stateDirName, statePath, configPath } from "./names.js";
 
 export const CONDUCTOR_DIR = "conductor";
 export const VIEWS_REL = "conductor/.views";
@@ -62,7 +63,7 @@ const DAY_MS = 86400000;
 /** Which lifecycle folder a `conductor/…` path belongs to, or null. */
 export function sectionForPath(relPath) {
   const parts = String(relPath ?? "").split("/");
-  const key = parts[0] === CONDUCTOR_DIR ? parts[1] : parts[0];
+  const key = parts[0] === "carja" || parts[0] === CONDUCTOR_DIR ? parts[1] : parts[0];
   return SECTION_KEYS.has(key) ? key : null;
 }
 
@@ -364,8 +365,8 @@ export function buildState({
         ? { ...gateWiring, waivers: summariseWaivers(shipLogMd, { now }) }
         : null,
     },
-    inbox: { relPath: INBOX_REL, items: inboxItems },
-    backlog: { relPath: BACKLOG_REL, ...backlog },
+    inbox: { relPath: root ? statePath(root, INBOX_REL) : INBOX_REL, items: inboxItems },
+    backlog: { relPath: root ? statePath(root, BACKLOG_REL) : BACKLOG_REL, ...backlog },
     queue,
     sections,
     stale,
@@ -621,7 +622,7 @@ async function readOwnGateWiring(root) {
 
 /** Every markdown file under `conductor/`, excluding the derived views. */
 async function walkDocs(root) {
-  const base = join(root, CONDUCTOR_DIR);
+  const base = join(root, stateDirName(root));
   const out = [];
 
   const walk = async (dir) => {
@@ -659,11 +660,11 @@ async function walkDocs(root) {
  */
 export async function collectState(root, { now = Date.now(), staleDays = 30 } = {}) {
   const [inboxMd, backlogMd, loopRaw, shipLogMd, configRaw, pkgRaw] = await Promise.all([
-    readIfPresent(join(root, INBOX_REL)),
-    readIfPresent(join(root, BACKLOG_REL)),
-    readIfPresent(join(root, LOOP_STATE_REL)),
-    readIfPresent(join(root, SHIP_LOG_REL)),
-    readIfPresent(join(root, CONFIG_REL)),
+    readIfPresent(join(root, statePath(root, INBOX_REL))),
+    readIfPresent(join(root, statePath(root, BACKLOG_REL))),
+    readIfPresent(join(root, statePath(root, LOOP_STATE_REL))),
+    readIfPresent(join(root, statePath(root, SHIP_LOG_REL))),
+    readIfPresent(configPath(root)),
     readIfPresent(join(root, "package.json")),
   ]);
 
@@ -717,13 +718,14 @@ export async function collectState(root, { now = Date.now(), staleDays = 30 } = 
  * which is worse than a clear refusal.
  */
 export async function captureInbox(root, text) {
-  const path = join(root, INBOX_REL);
+  const relPath = statePath(root, INBOX_REL);
+  const path = join(root, relPath);
   const existing = await readIfPresent(path);
 
   if (existing === null) {
     let hasInstall = false;
     try {
-      hasInstall = (await stat(join(root, CONDUCTOR_DIR))).isDirectory();
+      hasInstall = (await stat(join(root, stateDirName(root)))).isDirectory();
     } catch {
       hasInstall = false;
     }
@@ -740,5 +742,5 @@ export async function captureInbox(root, text) {
   const next = appendInboxLine(base, text);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, next, "utf8");
-  return { path, relPath: INBOX_REL, created: existing === null };
+  return { path, relPath, created: existing === null };
 }

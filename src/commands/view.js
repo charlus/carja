@@ -22,6 +22,7 @@ import {
   VIEWS_REL,
 } from "../conductor-state.js";
 import { renderPage, VIEW_FILENAME } from "../view/render.js";
+import { statePath } from "../names.js";
 
 function parseArgs(args) {
   const opts = { open: false, out: null, staleDays: 30, dir: null };
@@ -47,10 +48,11 @@ async function ignoreViews(root, stdout) {
   } catch {
     current = "";
   }
-  const next = ensureGitignoreEntry(current, `${VIEWS_REL}/`);
+  const views = statePath(root, VIEWS_REL);
+  const next = ensureGitignoreEntry(current, `${views}/`);
   if (next === current) return false;
   await writeFile(path, next, "utf8");
-  stdout?.write(`  ✅ Added ${VIEWS_REL}/ to .gitignore — the views are derived, never committed\n`);
+  stdout?.write(`  ✅ Added ${views}/ to .gitignore — the views are derived, never committed\n`);
   return true;
 }
 
@@ -123,7 +125,7 @@ export async function viewCommand(args, context) {
     return 1;
   }
 
-  const outPath = opts.out ? resolve(opts.out) : join(root, VIEWS_REL, VIEW_FILENAME);
+  const outPath = opts.out ? resolve(opts.out) : join(root, statePath(root, VIEWS_REL), VIEW_FILENAME);
   const html = renderPage(state);
 
   await mkdir(join(outPath, ".."), { recursive: true });
