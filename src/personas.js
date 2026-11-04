@@ -6,7 +6,7 @@
 // triggers the Security Auditor and `tokenizer.ts` does not. A wrong match
 // costs one persona file read, a missed one ships unreviewed auth code, so
 // the defaults lean wide. A project narrows or extends them under `personas`
-// in conductor.config.json.
+// in carja.config.json.
 
 export const DEFAULT_RULES = {
   // A dependency manifest is where coupling and lock-in enter a codebase.

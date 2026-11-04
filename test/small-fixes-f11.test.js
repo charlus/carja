@@ -1,7 +1,7 @@
 // test/small-fixes-f11.test.js
 //
 // F11 — small defects seen in real usage (2026-10).
-//   - Ship archived only from conductor/1-workbench/. Carve puts slices under
+//   - Ship archived only from carja/1-workbench/. Carve puts slices under
 //     2-backlog/project-backlog/<P>/implementations/, so 18 shipped slices in
 //     autopportunity were never archived until the owner asked.
 //   - how-it-works sent "I know exactly what to build" to Quick-Path OR Spec-It,

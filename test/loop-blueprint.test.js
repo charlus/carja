@@ -15,7 +15,7 @@ import { runSwarm, normalizeTask } from "../src/loop/swarm.js";
 import { parseLoopConfig } from "../src/loop/config.js";
 import { shipBeatSection } from "../src/loop/ship.js";
 
-const tpl = (rel) => readFileSync(new URL(`../templates/conductor/5-templates/${rel}`, import.meta.url), "utf8");
+const tpl = (rel) => readFileSync(new URL(`../templates/carja/5-templates/${rel}`, import.meta.url), "utf8");
 const TEMPLATES = {
   "genesis/problem-solar-system.md": tpl("genesis-workflow/problem-solar-system-template.md"),
   "genesis/world-transformation.md": tpl("genesis-workflow/world-transformation-template.md"),
@@ -59,7 +59,7 @@ test("harvestBlueprints: an opted-in project after Discovery and before Carve; t
   });
   assert.deepEqual(items.map((t) => t.id), ["blueprint:notes"]);
   assert.equal(items[0].type, "blueprint");
-  assert.equal(items[0].source.path, "conductor/2-backlog/project-backlog/notes");
+  assert.equal(items[0].source.path, "carja/2-backlog/project-backlog/notes");
   assert.deepEqual(items[0].stages_done, ["grand-prd"], "a PRD on the default branch is the owner's: no PRD stage");
 });
 

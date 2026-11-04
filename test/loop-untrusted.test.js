@@ -2,7 +2,7 @@
 //
 // E4 — untrusted trigger input must never gain authority.
 //
-// A `conductor loop` run can be seeded from a GitHub issue body, a PR comment,
+// A `carja loop` run can be seeded from a GitHub issue body, a PR comment,
 // or a Slack message. Anyone who can file an issue can put text in front of an
 // unattended agent that holds credentials. This is not hypothetical: the
 // Feb-2026 Cline incident turned one malicious issue TITLE into an npm
@@ -11,7 +11,7 @@
 // coding agent. In every case untrusted content was processed in the same
 // context as trusted instructions.
 //
-// Conductor's answer has three parts, each asserted here:
+// Carja's answer has three parts, each asserted here:
 //   1. ENVELOPE  — trigger content is always wrapped and labelled as data,
 //                  never merged into the instruction stream.
 //   2. TRUST     — privilege comes from the operator, never from the event. An
@@ -314,7 +314,7 @@ describe("E4.7 — the trigger doc carries the envelope", () => {
     const { provenance } = applyTrigger(normalizeState({ autonomy_level: "L3" }), {
       goal: "fix login",
       source: "operator",
-      context: "see the spec in conductor/",
+      context: "see the spec in carja/",
     });
     const doc = renderTriggerDoc(provenance);
     assert.ok(!doc.includes(ENVELOPE_BEGIN), "operator context should not be enveloped");

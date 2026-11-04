@@ -3,8 +3,8 @@
 // Interactive work is branch-safe (owner, 2026-10-22): "the owner's folder (and
 // its nested code repository) always stays on the default branch". Interactive
 // Spec-It, Build and Ship work in one hidden worktree per item, made by
-// `conductor work <item>`; merged ones go on `git pull` and at a loop run, the
-// way the loop's own do; `conductor status` says when a folder is off its
+// `carja work <item>`; merged ones go on `git pull` and at a loop run, the
+// way the loop's own do; `carja status` says when a folder is off its
 // default branch. Real git in temp repositories: this is git behaviour.
 
 import { test } from "node:test";
@@ -28,7 +28,7 @@ const run = async (args, cwd) => {
   return { code, out: io.stdout.text, err: io.stderr.text };
 };
 
-/** A repository with an origin, `conductor/` and `.agents/`; returns {base, repo, bare}. */
+/** A repository with an origin, `carja/` and `.agents/`; returns {base, repo, bare}. */
 function repoWithOrigin(base, name, files = {}) {
   const bare = join(base, `${name}.git`);
   const repo = join(base, name);
@@ -49,7 +49,7 @@ function repoWithOrigin(base, name, files = {}) {
 
 function singleLayout() {
   const base = mkdtempSync(join(tmpdir(), "work-"));
-  const { repo } = repoWithOrigin(base, "proj", { "conductor/1-workbench/inbox.md": "# Inbox\n", ".agents/AGENTS.md": "x\n", "src/a.js": "export const a = 1;\n" });
+  const { repo } = repoWithOrigin(base, "proj", { "carja/1-workbench/inbox.md": "# Inbox\n", ".agents/AGENTS.md": "x\n", "src/a.js": "export const a = 1;\n" });
   return { base, root: repo };
 }
 
@@ -58,10 +58,10 @@ function outerLayout({ setup } = {}) {
   const base = mkdtempSync(join(tmpdir(), "work-outer-"));
   const config = { verify: "none", loop: { code_dir: "repo", ...(setup ? { setup } : {}) } };
   const { repo: root } = repoWithOrigin(base, "outer", {
-    "conductor/1-workbench/inbox.md": "# Inbox\n",
+    "carja/1-workbench/inbox.md": "# Inbox\n",
     ".agents/AGENTS.md": "x\n",
     ".gitignore": "repo/\n",
-    "conductor.config.json": `${JSON.stringify(config)}\n`,
+    "carja.config.json": `${JSON.stringify(config)}\n`,
   });
   const { bare: codeBare } = repoWithOrigin(base, "code-src", { "src/a.js": "export const a = 1;\n" });
   execFileSync("git", ["clone", "-q", codeBare, join(root, "repo")], { stdio: "pipe" });
@@ -71,7 +71,7 @@ function outerLayout({ setup } = {}) {
   return { base, root, code: join(root, "repo") };
 }
 
-test("conductor work <item> makes the item's branch in a hidden worktree from the default branch, and never moves the owner's folder", async () => {
+test("carja work <item> makes the item's branch in a hidden worktree from the default branch, and never moves the owner's folder", async () => {
   const { base, root } = singleLayout();
   try {
     // The owner sits on a feature branch with a local commit: it must not become the base.
@@ -115,7 +115,7 @@ test("in the outer layout, the code repository gets a worktree on the same branc
   }
 });
 
-test("conductor work inside an item's worktree, or a loop beat's, makes nothing and names where it is", async () => {
+test("carja work inside an item's worktree, or a loop beat's, makes nothing and names where it is", async () => {
   const { base, root } = singleLayout();
   try {
     const loopWt = join(root, ".agents/.worktrees/loop-x");
@@ -191,7 +191,7 @@ test("the post-merge hook removes a merged interactive worktree when the owner p
   }
 });
 
-test("conductor work clean removes merged item worktrees, the code one first", async () => {
+test("carja work clean removes merged item worktrees, the code one first", async () => {
   const { base, root, code } = outerLayout();
   try {
     await run(["work", "done", root], root);
@@ -212,7 +212,7 @@ test("conductor work clean removes merged item worktrees, the code one first", a
   }
 });
 
-test("conductor status warns when the owner's folder or its code repository is off the default branch", async () => {
+test("carja status warns when the owner's folder or its code repository is off the default branch", async () => {
   const { base, root, code } = outerLayout();
   try {
     const clean = await run(["status", root, "--no-color"], root);

@@ -1,67 +1,67 @@
 #!/usr/bin/env bash
-# Conductor enforcement hooks — shared helpers (ADR-0001 D1).
+# Carja enforcement hooks — shared helpers (ADR-0001 D1).
 # Sourced by pre-commit / pre-push. Pure POSIX-ish bash; needs git + node (>=20).
 
 # Repo root (empty if not in a git work tree).
-conductor_repo_root() {
+carja_repo_root() {
   git rev-parse --show-toplevel 2>/dev/null || true
 }
 
 # True (0) for test files. Covers *.test.*, *.spec.*, test_*.*, and tests/ dirs.
-conductor_is_test_file() {
+carja_is_test_file() {
   printf '%s\n' "$1" | grep -Eiq '(\.|_)(test|spec)\.|(^|/)(tests?|__tests__|specs?)/|(^|/)test_[^/]*$'
 }
 
 # True (0) for implementation source files (and NOT test files). Nothing under
-# conductor/ is: it holds project state, and a one-off script archived there is
+# carja/ is: it holds project state, and a one-off script archived there is
 # a record, not product code.
-conductor_is_impl_file() {
-  conductor_is_test_file "$1" && return 1
-  case "$1" in conductor/*) return 1 ;; esac
+carja_is_impl_file() {
+  carja_is_test_file "$1" && return 1
+  case "$1" in carja/*) return 1 ;; esac
   printf '%s\n' "$1" | grep -Eiq '\.(js|jsx|ts|tsx|mjs|cjs|py|go|rs|java|rb|php|c|h|cc|cpp|hpp|cs|swift|kt|kts|scala|ex|exs|dart|m|mm|vue|svelte)$'
 }
 
 # True (0) for eval files (Eval-Driven Law). Mirrors the test-file convention:
 # a *.eval.* / *.evals.* infix, or an evals/ (eval/) directory.
-conductor_is_eval_file() {
+carja_is_eval_file() {
   printf '%s\n' "$1" | grep -Eiq '(\.|_)(eval|evals)\.|(^|/)evals?/'
 }
 
 # True (0) if the file's CONTENT calls an LLM provider — the non-deterministic
 # surface that needs an eval, not just a test. Content-based (LLM calls live in
 # ordinary app files), skipping test/eval files themselves. Full provider list,
-# accepting occasional false positives (mitigated by the CONDUCTOR_NO_EVAL
+# accepting occasional false positives (mitigated by the CARJA_NO_EVAL
 # waiver) — a missed eval surface is the costlier error.
-conductor_is_llm_feature_file() {
+carja_is_llm_feature_file() {
   local f="$1"
   [ -f "$f" ] || return 1
-  conductor_is_eval_file "$f" && return 1
+  carja_is_eval_file "$f" && return 1
   # Only real SOURCE files can be an LLM feature. This excludes shell scripts,
   # docs, and config that merely *mention* a provider name — including the
   # framework's own hooks/skills — and is more correct (an eval covers code that
-  # CALLS a provider). conductor_is_impl_file already excludes test files.
-  conductor_is_impl_file "$f" || return 1
+  # CALLS a provider). carja_is_impl_file already excludes test files.
+  carja_is_impl_file "$f" || return 1
   grep -Eiq '(openai|@anthropic-ai|anthropic|langchain|langgraph|llama[-_]?index|google\.generativeai|@google/(genai|generative-ai)|generativeai|vertexai|bedrock-runtime|mistralai|cohere|ollama|huggingface|replicate|litellm)' "$f"
 }
 
 # True (0) if the path is a brief document — the artifact that records the
 # shared understanding reached at convergence, and the first place work starts.
 # Quick-Path and Spec-It both converge on `feature-spec.md`.
-conductor_is_brief_doc() {
+carja_is_brief_doc() {
   printf '%s\n' "$1" | grep -Eiq '(^|/)feature-spec\.md$'
 }
 
 # True (0) if a brief document CONTAINS the brief-check section. Presence, not
 # quality — the same call as the Eval-Driven Law's presence gate. A generic hook
 # cannot judge whether a challenge is a good one; the Checker does that.
-conductor_has_brief_check() {
+carja_has_brief_check() {
   local f="$1"
   [ -f "$f" ] || return 1
   grep -Eiq '^#{1,6}[[:space:]]*Brief check' "$f"
 }
 
 # True (0) if the path is the project's ship-log.
-conductor_is_ship_log() {
+carja_is_ship_log() {
   printf '%s\n' "$1" | grep -Eiq '(^|/)ship-log\.md$'
 }
 
@@ -70,12 +70,12 @@ conductor_is_ship_log() {
 # one live log had 07-15 written after 07-16. Presence, not quality — a hook
 # cannot judge whether an Impact line is any good.
 # A log with no dated entry at all passes: there is nothing to report yet.
-conductor_newest_entry_has_for_you() {
+carja_newest_entry_has_for_you() {
   local f="$1"
   [ -f "$f" ] || return 0
   # A staged change that only appends "Hook waiver" lines is the hooks' own
-  # bookkeeping, not a ship report: conductor upgrade writes one on every run.
-  conductor_staged_only_waiver_lines "$f" && return 0
+  # bookkeeping, not a ship report: carja upgrade writes one on every run.
+  carja_staged_only_waiver_lines "$f" && return 0
   local newest
   newest="$(grep -Eo '^## [0-9]{4}-[0-9]{2}-[0-9]{2}' "$f" | sort | tail -1)"
   [ -z "$newest" ] && return 0
@@ -88,27 +88,27 @@ conductor_newest_entry_has_for_you() {
 }
 
 # Echo `"repos": { "<dir>": { "<key>": … } }` from the project's
-# conductor.config.json, for the nested code repository <dir>. Empty when unset.
-conductor_repo_setting() {
+# carja.config.json, for the nested code repository <dir>. Empty when unset.
+carja_repo_setting() {
   local project="$1" repo="$2" key="$3"
-  [ -f "$project/conductor.config.json" ] || return 0
+  [ -f "$project/carja.config.json" ] || return 0
   node -e 'try{const c=require(process.argv[1]);const v=((c.repos||{})[process.argv[2]]||{})[process.argv[3]];if(v!=null)process.stdout.write(String(v))}catch(e){}' \
-    "$project/conductor.config.json" "$repo" "$key" 2>/dev/null || true
+    "$project/carja.config.json" "$repo" "$key" 2>/dev/null || true
 }
 
 # Echo the project's verification command.
-# Priority: conductor.config.json "verify" → package.json "test" script → empty.
+# Priority: carja.config.json "verify" → package.json "test" script → empty.
 # In the outer layout ($1 = the code repository's work tree, $2 = the project
 # root, $3 = the nested repository's directory name in the project):
 # "repos" → "<dir>" → "verify" first, then the code repository's package.json.
 # The project's own top-level "verify" is the outer repository's and is not used.
-conductor_verify_cmd() {
+carja_verify_cmd() {
   local root="$1" project="${2:-$1}"
   local cmd=""
   if [ "$project" != "$root" ]; then
-    cmd="$(conductor_repo_setting "$project" "${3:-${root##*/}}" verify)"
-  elif [ -f "$root/conductor.config.json" ]; then
-    cmd="$(node -e "try{process.stdout.write((require('$root/conductor.config.json').verify||'').toString())}catch(e){}" 2>/dev/null || true)"
+    cmd="$(carja_repo_setting "$project" "${3:-${root##*/}}" verify)"
+  elif [ -f "$root/carja.config.json" ]; then
+    cmd="$(node -e "try{process.stdout.write((require('$root/carja.config.json').verify||'').toString())}catch(e){}" 2>/dev/null || true)"
   fi
   if [ -z "$cmd" ] && [ -f "$root/package.json" ]; then
     if node -e "process.exit(require('$root/package.json').scripts&&require('$root/package.json').scripts.test?0:1)" 2>/dev/null; then
@@ -119,15 +119,15 @@ conductor_verify_cmd() {
 }
 
 # Echo the project's EVAL command (Eval-Driven Law run-gate).
-# Priority: conductor.config.json "eval" → package.json "eval" script → empty.
+# Priority: carja.config.json "eval" → package.json "eval" script → empty.
 # In the outer layout: "repos" → "<dir>" → "eval", as for the verify command.
-conductor_eval_cmd() {
+carja_eval_cmd() {
   local root="$1" project="${2:-$1}"
   local cmd=""
   if [ "$project" != "$root" ]; then
-    cmd="$(conductor_repo_setting "$project" "${3:-${root##*/}}" eval)"
-  elif [ -f "$root/conductor.config.json" ]; then
-    cmd="$(node -e "try{process.stdout.write((require('$root/conductor.config.json').eval||'').toString())}catch(e){}" 2>/dev/null || true)"
+    cmd="$(carja_repo_setting "$project" "${3:-${root##*/}}" eval)"
+  elif [ -f "$root/carja.config.json" ]; then
+    cmd="$(node -e "try{process.stdout.write((require('$root/carja.config.json').eval||'').toString())}catch(e){}" 2>/dev/null || true)"
   fi
   if [ -z "$cmd" ] && [ -f "$root/package.json" ]; then
     if node -e "process.exit(require('$root/package.json').scripts&&require('$root/package.json').scripts.eval?0:1)" 2>/dev/null; then
@@ -137,8 +137,8 @@ conductor_eval_cmd() {
   printf '%s' "$cmd"
 }
 
-# True (0) if the repo tracks any eval file (same convention as conductor_is_eval_file).
-conductor_has_eval_files() {
+# True (0) if the repo tracks any eval file (same convention as carja_is_eval_file).
+carja_has_eval_files() {
   local root="$1"
   git -C "$root" ls-files 2>/dev/null | grep -Eiq '(\.|_)(eval|evals)\.|(^|/)evals?/'
 }
@@ -157,19 +157,19 @@ conductor_has_eval_files() {
 # These three helpers are that boundary, and they are deliberately syntactic —
 # a hook cannot judge whether removing a test was right, only that it happened.
 
-# Test-disabling markers, across the languages conductor_is_test_file covers.
+# Test-disabling markers, across the languages carja_is_test_file covers.
 # Only ever matched against ADDED lines inside files that are already tests.
-CONDUCTOR_SKIP_MARKER_RE='\.(skip|only|todo|failing)\(|\bx(it|test|describe)\(|@pytest\.mark\.skip|@unittest\.skip|\bpytest\.skip\(|#\[ignore\]|\bt\.Skip(Now)?\(|@Ignore\b|@Disabled\b'
+CARJA_SKIP_MARKER_RE='\.(skip|only|todo|failing)\(|\bx(it|test|describe)\(|@pytest\.mark\.skip|@unittest\.skip|\bpytest\.skip\(|#\[ignore\]|\bt\.Skip(Now)?\(|@Ignore\b|@Disabled\b'
 
 # What counts as an assertion — the thing a test actually proves.
-CONDUCTOR_ASSERT_RE='expect\(|\bassert|\.should\b|\bEXPECT_|\bASSERT_|XCTAssert|\bt\.(is|deepEqual|truthy|throws)\(|\.to\.(be|equal|deep)'
+CARJA_ASSERT_RE='expect\(|\bassert|\.should\b|\bEXPECT_|\bASSERT_|XCTAssert|\bt\.(is|deepEqual|truthy|throws)\(|\.to\.(be|equal|deep)'
 
-# True (0) for a test file that is CODE. conductor_is_test_file counts any path
+# True (0) for a test file that is CODE. carja_is_test_file counts any path
 # under test/, which is right for the TDD gate (a fixture change is a test
 # change) and wrong for deletions: removing test/fixtures/data.json or
 # test/README.md is not removing a test.
-conductor_is_test_code_file() {
-  conductor_is_test_file "$1" || return 1
+carja_is_test_code_file() {
+  carja_is_test_file "$1" || return 1
   printf '%s\n' "$1" | grep -Eiq '\.(js|jsx|ts|tsx|mjs|cjs|py|go|rs|java|rb|php|c|h|cc|cpp|hpp|cs|swift|kt|kts|scala|ex|exs|dart|m|mm|vue|svelte)$'
 }
 
@@ -179,14 +179,14 @@ conductor_is_test_code_file() {
 # the test simply stops running — and the delta review found it walked straight
 # past a deletion-only check. Rename detection is forced on with -M, so an
 # ordinary rename between test paths is not read as removing a test.
-conductor_deleted_test_files() {
+carja_deleted_test_files() {
   local root="$1" st a b
   git -C "$root" diff --cached --name-status -M --diff-filter=DR 2>/dev/null |
     while IFS=$'\t' read -r st a b; do
       [ -z "${a:-}" ] && continue
       case "$st" in
-        D*) conductor_is_test_code_file "$a" && printf '%s\n' "$a" ;;
-        R*) conductor_is_test_code_file "$a" && ! conductor_is_test_code_file "$b" &&
+        D*) carja_is_test_code_file "$a" && printf '%s\n' "$a" ;;
+        R*) carja_is_test_code_file "$a" && ! carja_is_test_code_file "$b" &&
               printf '%s (renamed to %s, which is not a test)\n' "$a" "$b" ;;
       esac
     done
@@ -201,21 +201,21 @@ conductor_deleted_test_files() {
 #     with diff.renames=false a pure rename read as new .skip( lines.
 # Passing both paths with an explicit -M pairs them, whatever the config, and
 # leaves only the lines that really changed.
-conductor_staged_test_paths() {
+carja_staged_test_paths() {
   local root="$1" st a b
   git -C "$root" diff --cached --name-status -M --diff-filter=ACMR 2>/dev/null |
     while IFS=$'\t' read -r st a b; do
       [ -z "${a:-}" ] && continue
       case "$st" in
-        R*) conductor_is_test_file "$b" && printf '%s\n%s\n' "$a" "$b" ;;
-        *)  conductor_is_test_file "$a" && printf '%s\n' "$a" ;;
+        R*) carja_is_test_file "$b" && printf '%s\n%s\n' "$a" "$b" ;;
+        *)  carja_is_test_file "$a" && printf '%s\n' "$a" ;;
       esac
     done
 }
 
 # Echo "file: marker" for each staged test file that ADDS a disabling marker.
-# Arguments are the paths from conductor_staged_test_paths.
-conductor_added_skip_markers() {
+# Arguments are the paths from carja_staged_test_paths.
+carja_added_skip_markers() {
   local root="$1" f line hit seen=""
   shift
   [ "$#" -eq 0 ] && return 0
@@ -227,7 +227,7 @@ conductor_added_skip_markers() {
          /^\+/{print f "\t" substr($0,2)}' |
     while IFS=$'\t' read -r f line; do
       case " $seen " in *" $f "*) continue ;; esac
-      hit="$(printf '%s\n' "$line" | grep -Eo "$CONDUCTOR_SKIP_MARKER_RE" | head -1)"
+      hit="$(printf '%s\n' "$line" | grep -Eo "$CARJA_SKIP_MARKER_RE" | head -1)"
       if [ -n "$hit" ]; then
         printf '%s: %s\n' "$f" "$hit"
         seen="$seen $f"
@@ -239,13 +239,13 @@ conductor_added_skip_markers() {
 # Negative means this commit removed more proof than it added. Summed across
 # files on purpose: moving assertions between test files nets to zero. One
 # rename-paired diff, so a renamed file contributes only its real line changes.
-conductor_assertion_delta() {
+carja_assertion_delta() {
   local root="$1" d a r
   shift
   if [ "$#" -eq 0 ]; then printf '0'; return 0; fi
   d="$(git -C "$root" diff --cached -M -U0 -- "$@" 2>/dev/null)"
-  a="$(printf '%s\n' "$d" | grep -E '^\+' | grep -Ev '^\+\+\+' | grep -Ec "$CONDUCTOR_ASSERT_RE")"
-  r="$(printf '%s\n' "$d" | grep -E '^-' | grep -Ev '^---' | grep -Ec "$CONDUCTOR_ASSERT_RE")"
+  a="$(printf '%s\n' "$d" | grep -E '^\+' | grep -Ev '^\+\+\+' | grep -Ec "$CARJA_ASSERT_RE")"
+  r="$(printf '%s\n' "$d" | grep -E '^-' | grep -Ev '^---' | grep -Ec "$CARJA_ASSERT_RE")"
   printf '%s' "$((a - r))"
 }
 
@@ -261,17 +261,17 @@ conductor_assertion_delta() {
 #
 # Scoped to the ENFORCEMENT surface only. Workflows, skills and project
 # knowledge stay freely editable; freezing those would make the gate a tax.
-conductor_is_protected_path() {
+carja_is_protected_path() {
   printf '%s\n' "$1" |
     grep -Eq '^\.agents/(hooks|rules|sandbox)/|^\.agents/skills/independent-review/'
 }
 
 # True (0) once the enforcement surface is COMMITTED. Until then the commit in
-# hand is the install itself (`conductor init` stages .agents/ wholesale), and
+# hand is the install itself (`carja init` stages .agents/ wholesale), and
 # blocking it would mean a fresh project cannot make its first commit. You
 # cannot weaken a gate that does not exist yet; from the next commit on, every
 # touch of these paths — add, modify, delete — is a change to the rules.
-conductor_enforcement_installed() {
+carja_enforcement_installed() {
   git -C "$1" cat-file -e HEAD:.agents/hooks/pre-commit 2>/dev/null
 }
 
@@ -280,7 +280,7 @@ conductor_enforcement_installed() {
 # just as surely as rewriting it, and only a full name-status scan sees that.
 # True (0) during a merge when the staged version of $2 (or its absence) is
 # exactly MERGE_HEAD's.
-conductor_same_as_merge_head() {
+carja_same_as_merge_head() {
   local root="$1" path="$2" staged theirs
   git -C "$root" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 || return 1
   staged="$(git -C "$root" rev-parse -q --verify ":$path" 2>/dev/null || echo absent)"
@@ -288,9 +288,9 @@ conductor_same_as_merge_head() {
   [ "$staged" = "$theirs" ]
 }
 
-conductor_protected_changes() {
+carja_protected_changes() {
   local root="$1" line status path
-  conductor_enforcement_installed "$root" || return 0
+  carja_enforcement_installed "$root" || return 0
   git -C "$root" diff --cached --name-status --find-renames 2>/dev/null |
     while IFS=$'\t' read -r status path dest; do
       [ -z "${path:-}" ] && continue
@@ -298,17 +298,17 @@ conductor_protected_changes() {
       # is a change to the enforcement surface.
       for candidate in "$path" "${dest:-}"; do
         [ -z "$candidate" ] && continue
-        conductor_is_protected_path "$candidate" || continue
+        carja_is_protected_path "$candidate" || continue
         # During a merge, a protected file staged exactly as the merged branch
         # committed it was judged on that branch: this change did not write it.
-        conductor_same_as_merge_head "$root" "$candidate" && continue
+        carja_same_as_merge_head "$root" "$candidate" && continue
         printf '%s (%s)\n' "$candidate" "$(printf '%s' "$status" | cut -c1)"
       done
     done
 }
 
 # True (0) if the staged diff of file $1 (absolute) only ADDS waiver lines.
-conductor_staged_only_waiver_lines() {
+carja_staged_only_waiver_lines() {
   local f="$1" dir root rel diff
   dir="$(dirname "$f")"
   root="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || return 1
@@ -316,7 +316,7 @@ conductor_staged_only_waiver_lines() {
   diff="$(git -C "$root" diff --cached -U0 -- "$rel" 2>/dev/null | grep -E '^[+-]' | grep -Ev '^(\+\+\+|---) ')"
   [ -n "$diff" ] || return 1
   # Bookkeeping lines only: the hooks' own waiver lines, and the audit lines
-  # `conductor loop` appends (`- [<ISO time>] [loop] …`). Anything else is gated.
+  # `carja loop` appends (`- [<ISO time>] [loop] …`). Anything else is gated.
   printf '%s\n' "$diff" | grep -Ev '^\+- \[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}\] Hook waiver \(' \
     | grep -Evq '^\+- \[[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z\] \[loop\] ' && return 1
   return 0
@@ -326,8 +326,8 @@ conductor_staged_only_waiver_lines() {
 # is recorded in the commit it belongs to (or, for a push waiver, the next one)
 # instead of leaving the tree dirty and needing a chore commit. A hand-written
 # ship-log edit is never staged: then nothing is.
-conductor_stage_waiver_lines() {
-  local root="$1" rel="conductor/0-compass/ship-log.md" diff
+carja_stage_waiver_lines() {
+  local root="$1" rel="carja/0-compass/ship-log.md" diff
   [ -f "$root/$rel" ] || return 0
   diff="$(git -C "$root" diff -U0 -- "$rel" 2>/dev/null | grep -E '^[+-]' | grep -Ev '^(\+\+\+|---) ')"
   [ -n "$diff" ] || return 0
@@ -336,9 +336,9 @@ conductor_stage_waiver_lines() {
 }
 
 # Append a waiver line to the ship-log so bypasses are auditable, never silent.
-conductor_log_waiver() {
+carja_log_waiver() {
   local root="$1" kind="$2" reason="$3"
-  local log="$root/conductor/0-compass/ship-log.md"
+  local log="$root/carja/0-compass/ship-log.md"
   [ -f "$log" ] || return 0
   printf -- '- [%s] Hook waiver (%s): %s\n' "$(date '+%Y-%m-%d %H:%M')" "$kind" "$reason" >> "$log"
 }
@@ -352,18 +352,28 @@ conductor_log_waiver() {
 # therefore name any command. The gate is that a declared command never runs
 # until the operator has recorded it once:
 #
-#   conductor trust-verify        (run from inside the repo)
+#   carja trust-verify        (run from inside the repo)
 #
-# Store: ${CONDUCTOR_HOME:-$HOME/.conductor}/verify-trust, one
+# Store: $(carja_home)/verify-trust, one
 # "realpath<TAB>sha256" line per repo, mode 0600, rewritten atomically. Editing
 # the declared command changes its hash and invalidates trust until re-run.
 # pre-push is deliberately NOT gated: the operator typed `git push`.
 
-conductor_trust_store() {
-  printf '%s' "${CONDUCTOR_HOME:-$HOME/.conductor}/verify-trust"
+# The machine folder: $CARJA_HOME, else ~/.carja, else an existing ~/.conductor
+# (a machine set up under 6.x keeps its consents). Mirrors src/names.js machineHome.
+carja_home() {
+  if [ -n "${CARJA_HOME:-}" ]; then printf '%s' "$CARJA_HOME"
+  elif [ -n "${CONDUCTOR_HOME:-}" ]; then printf '%s' "$CONDUCTOR_HOME"
+  elif [ ! -d "$HOME/.carja" ] && [ -d "$HOME/.conductor" ]; then printf '%s' "$HOME/.conductor"
+  else printf '%s' "$HOME/.carja"
+  fi
 }
 
-conductor_sha256() {
+carja_trust_store() {
+  printf '%s' "$(carja_home)/verify-trust"
+}
+
+carja_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
     printf '%s' "$1" | sha256sum | cut -d' ' -f1
   elif command -v shasum >/dev/null 2>&1; then
@@ -374,16 +384,16 @@ conductor_sha256() {
 }
 
 # Symlink-stable key for a repo root.
-conductor_trust_key() {
+carja_trust_key() {
   (cd "$1" 2>/dev/null && pwd -P) || printf '%s' "$1"
 }
 
 # True (0) when $2 is the trusted verify command for repo root $1.
-conductor_verify_trusted() {
+carja_verify_trusted() {
   local key hash store p h
-  key="$(conductor_trust_key "$1")"
-  hash="$(conductor_sha256 "$2")"
-  store="$(conductor_trust_store)"
+  key="$(carja_trust_key "$1")"
+  hash="$(carja_sha256 "$2")"
+  store="$(carja_trust_store)"
   [ -f "$store" ] || return 1
   while IFS="$(printf '\t')" read -r p h; do
     [ "$p" = "$key" ] && [ "$h" = "$hash" ] && return 0
@@ -393,11 +403,11 @@ conductor_verify_trusted() {
 
 # Record repo root $1 -> sha256($2), replacing any prior entry for that root.
 # Also appends a grant record so a trust decision is never invisible.
-conductor_trust_verify_record() {
+carja_trust_verify_record() {
   local key hash store tmp p h log
-  key="$(conductor_trust_key "$1")"
-  hash="$(conductor_sha256 "$2")"
-  store="$(conductor_trust_store)"
+  key="$(carja_trust_key "$1")"
+  hash="$(carja_sha256 "$2")"
+  store="$(carja_trust_store)"
   mkdir -p "$(dirname "$store")"
   tmp="$store.tmp.$$"
   : > "$tmp"

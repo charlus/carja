@@ -45,13 +45,13 @@ async function commitAll(msg) {
   await git(["add", "-A"]);
   await execFileAsync("git", ["commit", "-qm", msg], {
     cwd: repo,
-    env: { ...process.env, CONDUCTOR_HOOKS: "off" },
+    env: { ...process.env, CARJA_HOOKS: "off" },
   });
 }
 
 before(async () => {
-  repo = await mkdtemp(join(tmpdir(), "conductor-ev-repo-"));
-  home = await mkdtemp(join(tmpdir(), "conductor-ev-home-"));
+  repo = await mkdtemp(join(tmpdir(), "carja-ev-repo-"));
+  home = await mkdtemp(join(tmpdir(), "carja-ev-home-"));
   await git(["init", "-q", "."]);
   await git(["config", "user.email", "t@t.t"]);
   await git(["config", "user.name", "T"]);
@@ -111,13 +111,13 @@ describe("E2.1 — the working-tree fingerprint", () => {
     const before_ = await workingTreeFingerprint(repo);
     await execFileAsync("git", ["commit", "-q", "--amend", "-m", "reworded"], {
       cwd: repo,
-      env: { ...process.env, CONDUCTOR_HOOKS: "off" },
+      env: { ...process.env, CARJA_HOOKS: "off" },
     });
     assert.equal(await workingTreeFingerprint(repo), before_, "rewording a commit moved the fingerprint");
   });
 
   test("returns null outside a git repo instead of throwing", async () => {
-    const notRepo = await mkdtemp(join(tmpdir(), "conductor-ev-plain-"));
+    const notRepo = await mkdtemp(join(tmpdir(), "carja-ev-plain-"));
     try {
       assert.equal(await workingTreeFingerprint(notRepo), null);
     } finally {
@@ -175,7 +175,7 @@ describe("E2.2 — `evidence run` is a transparent wrapper", () => {
   });
 
   test("works outside a git repo (no fingerprint, still runs the command)", async () => {
-    const plain = await mkdtemp(join(tmpdir(), "conductor-ev-plain2-"));
+    const plain = await mkdtemp(join(tmpdir(), "carja-ev-plain2-"));
     try {
       const r = await recordRun({ label: "x", command: "exit 3", cwd: plain, home });
       assert.equal(r.exitCode, 3);
@@ -319,7 +319,7 @@ describe("E2.3 — `evidence check` grades freshness", () => {
   });
 
   test("check is read-only and never throws, even on a corrupt ledger", async () => {
-    const badHome = await mkdtemp(join(tmpdir(), "conductor-ev-bad-"));
+    const badHome = await mkdtemp(join(tmpdir(), "carja-ev-bad-"));
     try {
       const p = await resolveLedgerPath({ cwd: repo, home: badHome });
       await mkdir(join(p, ".."), { recursive: true });
@@ -359,7 +359,7 @@ describe("E2.5 — a run that changes the working tree is not evidence", () => {
   };
 
   before(async () => {
-    r2 = await mkdtemp(join(tmpdir(), "conductor-ev-stable-"));
+    r2 = await mkdtemp(join(tmpdir(), "carja-ev-stable-"));
     await execFileAsync("git", ["init", "-q", "."], { cwd: r2 });
     await execFileAsync("git", ["config", "user.email", "t@t.t"], { cwd: r2 });
     await execFileAsync("git", ["config", "user.name", "T"], { cwd: r2 });
@@ -369,7 +369,7 @@ describe("E2.5 — a run that changes the working tree is not evidence", () => {
     await execFileAsync("git", ["add", "-A"], { cwd: r2 });
     await execFileAsync("git", ["commit", "-qm", "init"], {
       cwd: r2,
-      env: { ...process.env, CONDUCTOR_HOOKS: "off" },
+      env: { ...process.env, CARJA_HOOKS: "off" },
     });
   });
   after(async () => rm(r2, { recursive: true, force: true }));

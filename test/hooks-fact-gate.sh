@@ -20,8 +20,8 @@ pass=0; fail=0
 ok() { echo "  [PASS] $1"; pass=$((pass+1)); }
 no() { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
-export CONDUCTOR_HOME="$(mktemp -d)"
-cleanup() { rm -rf "$CONDUCTOR_HOME"; }
+export CARJA_HOME="$(mktemp -d)"
+cleanup() { rm -rf "$CARJA_HOME"; }
 trap cleanup EXIT
 
 # Fresh session id per scenario, so scenarios cannot leak state into each other.
@@ -167,9 +167,9 @@ fi
 
 # ---- S9c: the Bash denial never offers Edit-shaped facts ------------------
 S="$(new_session)"
-export CONDUCTOR_FACT_GATE_FULL_DENIALS=0
+export CARJA_FACT_GATE_FULL_DENIALS=0
 OUT="$(call_out "$S" Bash "$(bash_cmd 'git reset --hard HEAD~1')")"
-unset CONDUCTOR_FACT_GATE_FULL_DENIALS
+unset CARJA_FACT_GATE_FULL_DENIALS
 if printf '%s' "$OUT" | grep -qi "importer\|failing test"; then
   no "S9c: the condensed Bash denial asks for importers / a failing test"
 else
@@ -204,12 +204,12 @@ echo "Fact gate — the envelope:"
 # Textually identical denials push a model into a repetition loop. After the
 # budget, the denial must still deny but must not repeat itself verbatim.
 S="$(new_session)"
-export CONDUCTOR_FACT_GATE_FULL_DENIALS=2
+export CARJA_FACT_GATE_FULL_DENIALS=2
 A="$(call_out "$S" Edit "$(edit /r/1.js)")"
 B="$(call_out "$S" Edit "$(edit /r/2.js)")"
 C="$(call_out "$S" Edit "$(edit /r/3.js)")"
 D="$(call_out "$S" Edit "$(edit /r/4.js)")"
-unset CONDUCTOR_FACT_GATE_FULL_DENIALS
+unset CARJA_FACT_GATE_FULL_DENIALS
 if [ "${#C}" -lt "${#A}" ] && [ "$C" != "$D" ]; then
   ok "S10: past the budget, denials shorten AND stay distinct"
 else
@@ -218,9 +218,9 @@ fi
 
 # ---- S11: still DENIES after dampening ------------------------------------
 S="$(new_session)"
-export CONDUCTOR_FACT_GATE_FULL_DENIALS=0
+export CARJA_FACT_GATE_FULL_DENIALS=0
 C="$(call "$S" Edit "$(edit /r/x.js)")"
-unset CONDUCTOR_FACT_GATE_FULL_DENIALS
+unset CARJA_FACT_GATE_FULL_DENIALS
 if [ "$C" = "2" ]; then
   ok "S11: dampening shortens the message, it never stops the gate"
 else
@@ -250,7 +250,7 @@ done
 # ---- S14: an unwritable state dir fails OPEN ------------------------------
 # A gate that cannot remember what it cleared would deny the same edit forever.
 S="$(new_session)"
-C="$(CONDUCTOR_HOME=/dev/null/nope call "$S" Edit "$(edit /r/z.js)")"
+C="$(CARJA_HOME=/dev/null/nope call "$S" Edit "$(edit /r/z.js)")"
 if [ "$C" = "0" ]; then
   ok "S14: an unusable state dir fails open, never denies forever"
 else
@@ -263,7 +263,7 @@ fi
 # bounded by its own clock, not by the harness's.
 S="$(new_session)"
 START=$(date +%s)
-C="$(CONDUCTOR_HOME=/proc/nonexistent/nope CONDUCTOR_HOOK_TIMEOUT=2 call "$S" Edit "$(edit /r/h.js)")"
+C="$(CARJA_HOME=/proc/nonexistent/nope CARJA_HOOK_TIMEOUT=2 call "$S" Edit "$(edit /r/h.js)")"
 ELAPSED=$(( $(date +%s) - START ))
 if [ "$C" = "0" ] && [ "$ELAPSED" -lt 8 ]; then
   ok "S14b: a hanging hook is bounded (${ELAPSED}s) and fails open"
@@ -281,7 +281,7 @@ ln -s "$(command -v perl)" "$FAKE/perl"
 S="$(new_session)"
 START=$(date +%s)
 C="$(printf '{"session_id":"%s","tool_name":"Edit","tool_input":%s}' "$S" "$(edit /r/m.js)" \
-  | PATH="$FAKE" CONDUCTOR_HOOK_TIMEOUT=2 /bin/bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
+  | PATH="$FAKE" CARJA_HOOK_TIMEOUT=2 /bin/bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
 ELAPSED=$(( $(date +%s) - START ))
 rm -rf "$FAKE"
 if [ "$C" = "0" ] && [ "$ELAPSED" -lt 8 ]; then
@@ -299,37 +299,37 @@ ln -s "$(command -v perl)" "$FAKE/perl"
 for t in 0.5 0 garbage; do
   S="$(new_session)"; START=$(date +%s)
   C="$(printf '{"session_id":"%s","tool_name":"Edit","tool_input":%s}' "$S" "$(edit /r/t.js)" \
-    | PATH="$FAKE" CONDUCTOR_HOOK_TIMEOUT="$t" /bin/bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
+    | PATH="$FAKE" CARJA_HOOK_TIMEOUT="$t" /bin/bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
   ELAPSED=$(( $(date +%s) - START ))
-  if [ "$C" = "0" ] && [ "$ELAPSED" -lt 9 ]; then ok "S14d: CONDUCTOR_HOOK_TIMEOUT=$t is still bounded (${ELAPSED}s)"; else no "S14d: CONDUCTOR_HOOK_TIMEOUT=$t unbounded (exit $C after ${ELAPSED}s)"; fi
+  if [ "$C" = "0" ] && [ "$ELAPSED" -lt 9 ]; then ok "S14d: CARJA_HOOK_TIMEOUT=$t is still bounded (${ELAPSED}s)"; else no "S14d: CARJA_HOOK_TIMEOUT=$t unbounded (exit $C after ${ELAPSED}s)"; fi
 done
 rm -rf "$FAKE"
 
 # ---- S15: the master switch ------------------------------------------------
 S="$(new_session)"
 C="$(printf '{"session_id":"%s","tool_name":"Edit","tool_input":%s}' "$S" "$(edit /r/q.js)" \
-  | CONDUCTOR_HOOKS=off bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
+  | CARJA_HOOKS=off bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
 if [ "$C" = "0" ]; then
-  ok "S15: CONDUCTOR_HOOKS=off disables the gate"
+  ok "S15: CARJA_HOOKS=off disables the gate"
 else
-  no "S15: gate still fired with CONDUCTOR_HOOKS=off (exit $C)"
+  no "S15: gate still fired with CARJA_HOOKS=off (exit $C)"
 fi
 
 # ---- S16: its own switch, for turning off just this gate ------------------
 S="$(new_session)"
 C="$(printf '{"session_id":"%s","tool_name":"Edit","tool_input":%s}' "$S" "$(edit /r/q2.js)" \
-  | CONDUCTOR_FACT_GATE=off bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
+  | CARJA_FACT_GATE=off bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
 if [ "$C" = "0" ]; then
-  ok "S16: CONDUCTOR_FACT_GATE=off disables this gate alone"
+  ok "S16: CARJA_FACT_GATE=off disables this gate alone"
 else
-  no "S16: CONDUCTOR_FACT_GATE=off did not disable it (exit $C)"
+  no "S16: CARJA_FACT_GATE=off did not disable it (exit $C)"
 fi
 
 # ---- S17: the denial says how to turn it off ------------------------------
 # A gate with no visible exit is one a frustrated user kills globally.
 S="$(new_session)"
 OUT="$(call_out "$S" Edit "$(edit /r/esc.js)")"
-if printf '%s' "$OUT" | grep -q "CONDUCTOR_FACT_GATE"; then
+if printf '%s' "$OUT" | grep -q "CARJA_FACT_GATE"; then
   ok "S17: the denial names its own off switch"
 else
   no "S17: the denial gives the reader no way out"

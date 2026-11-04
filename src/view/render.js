@@ -6,7 +6,7 @@
 // `file://`. In that origin Chrome blocks `fetch()` and XHR, so nothing can be
 // loaded at runtime; and a per-document site would mean the human is back to
 // choosing which file to open, which is the problem this replaces. One file is
-// one bookmark: `conductor view`, then refresh.
+// one bookmark: `carja view`, then refresh.
 //
 // Consequences, all deliberate:
 //   * CSS and JS are inlined from their real sibling files (readable source,
@@ -17,7 +17,7 @@
 //     escaped so no content can close the tag and inject a script.
 //
 // The output is derived. It is written to a gitignored folder and must never be
-// committed — `conductor/` is the source of truth, this is a projection of it.
+// committed — `carja/` is the source of truth, this is a projection of it.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -56,20 +56,20 @@ function escapeAttr(text) {
 /**
  * Render the whole dashboard to a single HTML string.
  *
- * @param {ReturnType<import("../conductor-state.js").buildState>} state
+ * @param {ReturnType<import("../carja-state.js").buildState>} state
  * @returns {string}
  */
 export function renderPage(state) {
   const isEmpty =
     !state.digest.docCount && !state.digest.inboxCount && !state.digest.backlogOpen;
-  const title = `${state.projectName} · Conductor`;
+  const title = `${state.projectName} · Carja`;
 
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="conductor view">
+<meta name="generator" content="carja view">
 <meta name="robots" content="noindex">
 <title>${escapeAttr(title)}</title>
 <style>
@@ -84,7 +84,7 @@ ${CSS}
       <button class="icon-btn menu-btn" id="menu-btn" title="Sections" aria-label="Sections">&#8801;</button>
       <div class="crumb" id="crumb"></div>
       <div class="topbar-right">
-        <span class="chip" title="This page is derived from conductor/. Re-run conductor view to refresh.">derived</span>
+        <span class="chip" title="This page is derived from carja/. Re-run carja view to refresh.">derived</span>
         <button class="icon-btn" id="theme-btn" title="Theme" aria-label="Theme">&#9686;</button>
       </div>
     </header>
@@ -93,13 +93,13 @@ ${CSS}
 </div>
 <noscript>
   <div style="padding:32px;max-width:44em;margin:0 auto">
-    <h1>${escapeAttr(state.projectName)} · Conductor</h1>
+    <h1>${escapeAttr(state.projectName)} · Carja</h1>
     <p>This dashboard renders itself from an inlined data block, so it needs JavaScript.
     The source of truth is unaffected: every document is a plain markdown file under
-    <code>conductor/</code>.</p>
+    <code>carja/</code>.</p>
   </div>
 </noscript>
-<script type="application/json" id="conductor-data">${inlineJson(state)}</script>
+<script type="application/json" id="carja-data">${inlineJson(state)}</script>
 <script>
 ${APP}
 </script>

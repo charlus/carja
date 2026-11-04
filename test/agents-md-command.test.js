@@ -1,6 +1,6 @@
 // test/agents-md-command.test.js
 //
-// `conductor agents-md facts|write|check` and the `status` card line, through the
+// `carja agents-md facts|write|check` and the `status` card line, through the
 // real IO shell with real git, in both layouts: embedded (the code is in the
 // folder) and outer (the code is a gitignored nested repository).
 
@@ -29,8 +29,8 @@ async function project(fn) {
   try {
     git(dir, "init", "-q");
     await initCommand([dir, "--all", "--no-detect"], { cwd: tmpdir(), stdout: sink(), stderr: sink() });
-    await mkdir(join(dir, "conductor/3-product-areas/billing"), { recursive: true });
-    await writeFile(join(dir, "conductor/3-product-areas/billing/billing-features.md"), "# Billing\n");
+    await mkdir(join(dir, "carja/3-product-areas/billing"), { recursive: true });
+    await writeFile(join(dir, "carja/3-product-areas/billing/billing-features.md"), "# Billing\n");
     return await fn(dir);
   } finally {
     await rm(dir, { recursive: true, force: true });

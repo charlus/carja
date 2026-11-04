@@ -11,7 +11,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { buildState } from "../src/conductor-state.js";
+import { buildState } from "../src/carja-state.js";
 import { renderPage, VIEW_FILENAME } from "../src/view/render.js";
 import { renderStatus } from "../src/view/status.js";
 import { readFileSync } from "node:fs";
@@ -38,12 +38,12 @@ const state = (over = {}) =>
     loopState: { phase: "build", status: "idle", iterations: { current: 3, max_allowed: 20 }, autonomy_level: "L1" },
     docs: [
       {
-        relPath: "conductor/0-compass/north-star.md",
+        relPath: "carja/0-compass/north-star.md",
         raw: "# North Star\n\nWe help teams ship.\n\n## Metrics\n\n| Metric | Target |\n|---|---|\n| DAU | 1000 |\n",
         mtimeMs: Date.parse("2026-09-01T00:00:00Z"),
       },
       {
-        relPath: "conductor/3-product-areas/auth/spec.md",
+        relPath: "carja/3-product-areas/auth/spec.md",
         raw: "# Auth Spec\n\nSee north-star.md for context.\n",
         mtimeMs: Date.parse("2026-09-07T00:00:00Z"),
       },
@@ -93,7 +93,7 @@ describe("data is inlined safely", () => {
       state({
         docs: [
           {
-            relPath: "conductor/0-compass/north-star.md",
+            relPath: "carja/0-compass/north-star.md",
             raw: "# T\n\n```\n</script><script>alert(1)</script>\n```\n",
             mtimeMs: 0,
           },
@@ -108,7 +108,7 @@ describe("data is inlined safely", () => {
 
   test("U+2028/2029 are escaped — they are line terminators in JS", () => {
     const html = renderPage(
-      state({ docs: [{ relPath: "conductor/0-compass/a.md", raw: "# T\n\nx y\n", mtimeMs: 0 }] })
+      state({ docs: [{ relPath: "carja/0-compass/a.md", raw: "# T\n\nx y\n", mtimeMs: 0 }] })
     );
     assert.ok(!html.includes(" "), "raw U+2028 would break the parse");
   });
@@ -153,7 +153,7 @@ describe("the page carries what the human lost with the IDE", () => {
     assert.ok(html.includes("@media"), "responsive rules");
   });
 
-  test("an empty conductor/ is flagged on the page, not left to render as zeros", () => {
+  test("an empty carja/ is flagged on the page, not left to render as zeros", () => {
     const empty = renderPage(buildState({ root: "/r", projectName: "r", docs: [], now: 0 }));
     assert.ok(empty.startsWith("<!doctype html>"));
     assert.ok(empty.includes('data-empty="true"'), "the page states it is empty");
@@ -169,7 +169,7 @@ describe("the loop line reads the REAL loop-state shape", () => {
   // it loudly instead of silently blanking the line.
   const seeded = JSON.parse(
     readFileSync(
-      new URL("../templates/conductor/1-workbench/loop-state.json", import.meta.url),
+      new URL("../templates/carja/1-workbench/loop-state.json", import.meta.url),
       "utf8"
     )
   );

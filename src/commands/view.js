@@ -1,6 +1,6 @@
 // src/commands/view.js
 //
-// `conductor view` — render `conductor/` into ONE self-contained HTML file.
+// `carja view` — render `carja/` into ONE self-contained HTML file.
 //
 // WHAT THIS IS FOR. The methodology's read path was built for an IDE: browse a
 // file tree, read markdown in a rendered preview, edit in place. Working from a
@@ -20,7 +20,7 @@ import {
   openerFor,
   clickableUrl,
   VIEWS_REL,
-} from "../conductor-state.js";
+} from "../carja-state.js";
 import { renderPage, VIEW_FILENAME } from "../view/render.js";
 import { statePath } from "../names.js";
 
@@ -94,7 +94,7 @@ export function outPathWarning(outPath, checkIgnoreExitCode) {
   if (checkIgnoreExitCode !== 1) return null;
   return (
     `  ⚠  ${outPath} is inside a git repository and is not ignored.\n` +
-    "     This page is derived from conductor/ — regenerated whole on every run, and noise in a\n" +
+    "     This page is derived from carja/ — regenerated whole on every run, and noise in a\n" +
     "     diff. Add it to .gitignore, or write it outside the repo, so it is never committed."
   );
 }
@@ -119,8 +119,8 @@ export async function viewCommand(args, context) {
   const { ok, state } = await collectState(root, { staleDays: opts.staleDays });
   if (!ok) {
     context.stderr.write(
-      `  No \`conductor/\` folder in ${root}\n` +
-        "  Scaffold one with:  npx github:charlus/conductor-framework init\n"
+      `  No \`carja/\` folder in ${root}\n` +
+        "  Scaffold one with:  npx github:charlus/carja init\n"
     );
     return 1;
   }
@@ -156,7 +156,7 @@ export async function viewCommand(args, context) {
   );
 
   if (opts.open) openInBrowser(outPath, context.stderr);
-  else context.stdout.write(`     open it with:  conductor view --open\n`);
+  else context.stdout.write(`     open it with:  carja view --open\n`);
 
   return 0;
 }

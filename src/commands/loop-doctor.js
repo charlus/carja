@@ -1,6 +1,6 @@
 // src/commands/loop-doctor.js
 //
-// `conductor loop doctor [dir] [--beat]`: gather the facts `diagnose`
+// `carja loop doctor [dir] [--beat]`: gather the facts `diagnose`
 // (src/loop/doctor.js) judges. Read-only for the project, except one probe
 // worktree under `.agents/.worktrees/`, where real loop worktrees live so a
 // setup with relative paths behaves as in a run. The probe is always removed.
@@ -31,9 +31,10 @@ import { defaultBranchRef } from "../loop/reconcile.js";
 import { harvestBlueprints } from "../loop/blueprint.js";
 import { nextAfterDoctor } from "../next-step.js";
 import { configPath as configPathOf } from "../names.js";
+import { isOldLayout, oldLayoutMessage } from "../names.js";
 
-const STATE_REL = "conductor/1-workbench/loop-state.json";
-const PROBE_REL = ".agents/.worktrees/conductor-doctor-probe";
+const STATE_REL = "carja/1-workbench/loop-state.json";
+const PROBE_REL = ".agents/.worktrees/carja-doctor-probe";
 
 async function onPath(bin) {
   return (await runCli("sh", ["-c", `command -v ${bin}`], process.cwd())).ok;
@@ -69,7 +70,7 @@ async function probeBeat({ cwd, verifyCommand, settingsPath }) {
 }
 
 /**
- * The Conductor project that contains `path`, or null: the nearest folder above
+ * The Carja project that contains `path`, or null: the nearest folder above
  * it with a loop-state.json. `path` need not exist (a typo'd project name).
  */
 async function enclosingProject(path) {
@@ -83,27 +84,31 @@ async function enclosingProject(path) {
 async function notAProject(root, cwd) {
   const project = await enclosingProject(root);
   if (!project) {
-    return [{ id: "state", level: "fail", title: `no ${STATE_REL}`, detail: "", fix: "Run `conductor init` or `conductor upgrade`." }];
+    return [{ id: "state", level: "fail", title: `no ${STATE_REL}`, detail: "", fix: "Run `carja init` or `carja upgrade`." }];
   }
   // Relative only when the owner stands inside the project, as they usually do.
   const rel = relative(cwd, project);
   const shown = rel === "" ? "." : rel.split(sep).every((s) => s === "..") ? rel : project;
-  // conductor/2-backlog/project-backlog/<name>/…: they meant to choose that project.
+  // carja/2-backlog/project-backlog/<name>/…: they meant to choose that project.
   const [area, backlog, kind, name] = relative(project, root).split(sep);
-  const named = area === "conductor" && backlog === "2-backlog" && kind === "project-backlog" && name;
-  const chooseOne = named && (await exists(join(project, "conductor/2-backlog/project-backlog", name))) ? `conductor loop on ${name}` : "conductor loop on";
+  const named = area === "carja" && backlog === "2-backlog" && kind === "project-backlog" && name;
+  const chooseOne = named && (await exists(join(project, "carja/2-backlog/project-backlog", name))) ? `carja loop on ${name}` : "carja loop on";
   return [
     {
       id: "state",
       level: "fail",
       title: `${root} is not the project folder`,
       detail: `the project folder is ${project}; doctor takes that folder, not a project inside it`,
-      fix: `Run \`conductor loop doctor ${shown}\`. To choose the project the loop works on: \`${chooseOne}\`.`,
+      fix: `Run \`carja loop doctor ${shown}\`. To choose the project the loop works on: \`${chooseOne}\`.`,
     },
   ];
 }
 
 export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd() }) {
+  if (isOldLayout(root)) {
+    stdout.write(oldLayoutMessage(resolve(root)));
+    return 1;
+  }
   const statePath = join(root, STATE_REL);
   if (!(await exists(statePath))) {
     stdout.write(renderDoctor(await notAProject(resolve(root), cwd)));
@@ -114,7 +119,7 @@ export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd
   try {
     rawConfig = (await exists(configPathOf(root))) ? await readJson(configPathOf(root)) : {};
   } catch (e) {
-    facts.configErrors = [`conductor.config.json is not valid JSON: ${e.message}`];
+    facts.configErrors = [`carja.config.json is not valid JSON: ${e.message}`];
   }
   const loopConfig = parseLoopConfig(rawConfig);
   facts.configErrors = [...(facts.configErrors ?? []), ...loopConfig.errors];
@@ -127,7 +132,7 @@ export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd
   const workOn = ["blueprint", "slices", "require_ready", "code_dir"].some((k) => lb[k] !== undefined && lb[k] !== false && !(Array.isArray(lb[k]) && !lb[k].length));
   if (!workOn && state.phase === "discovery") {
     stdout.write(renderDoctor(diagnose({ notSetUp: true, state })));
-    stdout.write("  Next: `conductor loop on` (it lists your projects).\n");
+    stdout.write("  Next: `carja loop on` (it lists your projects).\n");
     return 1;
   }
   const verifyCommand = resolveVerifyCommand({
@@ -185,8 +190,8 @@ export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd
 
   const read = async (rel) => ((await exists(join(root, rel))) ? readFile(join(root, rel), "utf8") : "");
   const queue = harvestWorkQueue({
-    inboxMd: await read("conductor/1-workbench/inbox.md"),
-    backlogMd: await read("conductor/2-backlog/task-backlog.md"),
+    inboxMd: await read("carja/1-workbench/inbox.md"),
+    backlogMd: await read("carja/2-backlog/task-backlog.md"),
     readyIds: new Set(gitCommonDir(root) ? (await readReady(gitCommonDir(root))).map((e) => e.id) : []),
     requireReady: loopConfig.requireReady,
     priorities: loopConfig.priorities,
@@ -229,7 +234,7 @@ export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd
       let setupOk = true;
       if (loopConfig.setup) {
         const t0 = Date.now();
-        const r = await sh(`export CONDUCTOR_ROOT=${JSON.stringify(root)}${codeRoot ? ` CONDUCTOR_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; ${loopConfig.setup}`, where);
+        const r = await sh(`export CARJA_ROOT=${JSON.stringify(root)}${codeRoot ? ` CARJA_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; ${loopConfig.setup}`, where);
         setupOk = r.exitCode === 0;
         facts.probe.setup = { configured: true, ok: setupOk, secs: Math.round((Date.now() - t0) / 1000), reason: setupOk ? null : `exit ${r.exitCode}: ${tail(r.output)}` };
       }
@@ -245,7 +250,7 @@ export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd
         }
       }
       if (beat && setupOk && verifyCommand && claudeOk && state.sandbox === "cli-native" && profile) {
-        const dir = await mkdtemp(join(tmpdir(), "conductor-doctor-"));
+        const dir = await mkdtemp(join(tmpdir(), "carja-doctor-"));
         const settingsPath = join(dir, "claude-sandbox.settings.json");
         const cg = codeRoot ? await runCli("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], codeRoot) : null;
         await writeFile(settingsPath, JSON.stringify(mergeSandboxSettings(profile, loopConfig.allowedDomains, cg?.ok ? nestedSandboxWrites(cg.stdout.trim()) : [])), "utf8");

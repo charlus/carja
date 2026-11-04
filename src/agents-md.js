@@ -18,16 +18,16 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 export const FRAMEWORK_BEGIN =
-  "<!-- conductor:framework:begin — generated from .agents/ by `conductor upgrade`. Do not edit here: edit .agents/ and re-run upgrade. -->";
-export const FRAMEWORK_END = "<!-- conductor:framework:end -->";
-export const CARD_BEGIN = "<!-- conductor:project-card:begin status=draft -->";
-export const CARD_END = "<!-- conductor:project-card:end -->";
+  "<!-- carja:framework:begin — generated from .agents/ by `carja upgrade`. Do not edit here: edit .agents/ and re-run upgrade. -->";
+export const FRAMEWORK_END = "<!-- carja:framework:end -->";
+export const CARD_BEGIN = "<!-- carja:project-card:begin status=draft -->";
+export const CARD_END = "<!-- carja:project-card:end -->";
 
 const DRAFT_CARD = [
   CARD_BEGIN,
   "## Project card",
   "",
-  "Not written yet. Until it is, read `conductor/0-compass/north-star.md`, `conductor/4-context/technical/` and `conductor/3-product-areas/` before acting.",
+  "Not written yet. Until it is, read `carja/0-compass/north-star.md`, `carja/4-context/technical/` and `carja/3-product-areas/` before acting.",
   CARD_END,
 ].join("\n");
 
@@ -111,14 +111,14 @@ export function renderRootAgentsMd(existing, framework) {
 
 /**
  * The user's own text in an old CLAUDE.md / GEMINI.md stub: everything outside
- * Conductor's managed block, minus our frontmatter and our own comments. A stub
+ * Carja's managed block, minus our frontmatter and our own comments. A stub
  * without the markers is entirely the user's.
  */
 export function extractStubNotes(stub) {
   const managed = splitBlock(stub, marker("managed:begin"), marker("managed:end -->"));
   const text = (managed ? managed.before + managed.after : stub)
     .replace(FRONTMATTER_RE, "")
-    .replace(/<!-- (Add your project-specific instructions|⬆ Conductor manages)[^\n]*-->/g, "")
+    .replace(/<!-- (Add your project-specific instructions|⬆ Carja manages)[^\n]*-->/g, "")
     .split("\n")
     .filter((line) => !STUB_POINTER_LINES.some((re) => re.test(line)))
     .join("\n")
@@ -137,5 +137,5 @@ const STUB_POINTER_LINES = [
 export function appendMovedNotes(agentsMd, fromName, notes) {
   const heading = `## Notes moved from ${fromName}`;
   if (!notes || agentsMd.includes(heading)) return agentsMd;
-  return `${agentsMd.trimEnd()}\n\n${heading}\n\n<!-- Moved by \`conductor upgrade\`, which removed ${fromName}. Delete anything that duplicates the framework block. -->\n\n${notes}\n`;
+  return `${agentsMd.trimEnd()}\n\n${heading}\n\n<!-- Moved by \`carja upgrade\`, which removed ${fromName}. Delete anything that duplicates the framework block. -->\n\n${notes}\n`;
 }

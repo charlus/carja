@@ -4,7 +4,7 @@
 //
 // The two-month gap in every project's ship-log (test/ship-tail.test.js) was
 // found by hand: the last `## YYYY-MM-DD` heading against `git log --merges`
-// since that date. Nobody runs that by hand twice, and `conductor status`
+// since that date. Nobody runs that by hand twice, and `carja status`
 // exists precisely so the daily question costs zero tokens. So the digest now
 // carries the ship-log summary and the status screen shows it, and the same
 // digest reports whether the push gate has a verify command at all (O6) —
@@ -32,7 +32,7 @@ import {
   summariseShipLog,
   buildState,
   collectState,
-} from "../src/conductor-state.js";
+} from "../src/carja-state.js";
 import { renderStatus } from "../src/view/status.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -146,7 +146,7 @@ describe("renderStatus — the screen shows both lines", () => {
     assert.match(out, /OFF/, "the line must say the gate is off, in one word");
     // Naming the key was not enough: measured 2026-09-16, the reader could not
     // act on it. The line now carries the command that fixes it.
-    assert.match(out, /conductor verify --set /, "the fix must be a command, not a key to find");
+    assert.match(out, /carja verify --set /, "the fix must be a command, not a key to find");
   });
 
   test("a configured verify command is shown verbatim", () => {
@@ -169,12 +169,12 @@ describe("collectState — the IO half reads the real files and counts real merg
       .trim();
 
   async function scaffold(shipLog, config) {
-    const root = await mkdtemp(join(tmpdir(), "conductor-shiplog-"));
-    await mkdir(join(root, "conductor", "0-compass"), { recursive: true });
-    await mkdir(join(root, "conductor", "1-workbench"), { recursive: true });
-    await writeFile(join(root, "conductor", "1-workbench", "inbox.md"), "# Inbox\n");
+    const root = await mkdtemp(join(tmpdir(), "carja-shiplog-"));
+    await mkdir(join(root, "carja", "0-compass"), { recursive: true });
+    await mkdir(join(root, "carja", "1-workbench"), { recursive: true });
+    await writeFile(join(root, "carja", "1-workbench", "inbox.md"), "# Inbox\n");
     if (shipLog !== null) await writeFile(join(root, SHIP_LOG_REL), shipLog);
-    if (config !== null) await writeFile(join(root, "conductor.config.json"), JSON.stringify(config));
+    if (config !== null) await writeFile(join(root, "carja.config.json"), JSON.stringify(config));
     return root;
   }
 

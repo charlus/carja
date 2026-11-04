@@ -26,8 +26,8 @@
 // that git ignores, such as `.env`. The working-tree fingerprint leaves ignored
 // files out, so without it a changed `.env` would keep a verdict FRESH.
 //
-// MACHINE-LOCAL by design. The ledger lives under CONDUCTOR_HOME (default
-// ~/.conductor), not in the repo: a synced record claiming a run happened on a
+// MACHINE-LOCAL by design. The ledger lives under CARJA_HOME (default
+// ~/.carja, or ~/.conductor on a machine set up under 6.x), not in the repo: a synced record claiming a run happened on a
 // machine where it did not would be worse than no record at all. It is also
 // per-branch, so a record from another branch cannot grade this one FRESH.
 
@@ -36,8 +36,8 @@ import { createHash } from "node:crypto";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join, dirname } from "node:path";
-import { homedir } from "node:os";
 import { workingTreeFingerprint, repoRoot, headSha } from "./wtree.js";
+import { machineHome } from "../names.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -45,8 +45,8 @@ export function sha256(text) {
   return createHash("sha256").update(String(text)).digest("hex");
 }
 
-function conductorHome(home) {
-  return home || process.env.CONDUCTOR_HOME || join(process.env.HOME || homedir(), ".conductor");
+function carjaHome(home) {
+  return home || machineHome(process.env);
 }
 
 /** Filesystem-safe slug for a repo path or branch name. */
@@ -72,7 +72,7 @@ async function currentBranch(cwd) {
  * branch segment is resolved lazily by the async callers below.
  */
 export function ledgerPath({ cwd = process.cwd(), home = null, branch = null, project = null } = {}) {
-  const base = conductorHome(home);
+  const base = carjaHome(home);
   const proj = slug(project || cwd.split("/").filter(Boolean).at(-1));
   return join(base, "projects", proj, `${slug(branch || "current")}-evidence.jsonl`);
 }
@@ -127,7 +127,7 @@ export async function envDigest(cwd, envFiles) {
  * @param {string} opts.label     lane name, e.g. "tests" / "lint" / "evals"
  * @param {string} opts.command   the exact command string
  * @param {string} [opts.cwd]
- * @param {string|null} [opts.home]   CONDUCTOR_HOME override (tests)
+ * @param {string|null} [opts.home]   CARJA_HOME override (tests)
  * @param {object} [opts.io]      { stdout, stderr } sinks; defaults to process
  * @param {string[]|null} [opts.envFiles]  ignored files the command reads (`.env`)
  * @param {() => number} [opts.now]

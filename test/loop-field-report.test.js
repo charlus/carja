@@ -11,7 +11,7 @@ import { execFileSync } from "node:child_process";
 import { loopCommand } from "../src/commands/loop.js";
 import { harvestWorkQueue } from "../src/loop/harvester.js";
 
-const STATE_REL = "conductor/1-workbench/loop-state.json";
+const STATE_REL = "carja/1-workbench/loop-state.json";
 
 function sink() {
   let text = "";
@@ -19,9 +19,9 @@ function sink() {
 }
 
 async function withState(state, fn) {
-  const dir = await mkdtemp(join(tmpdir(), "conductor-field-"));
+  const dir = await mkdtemp(join(tmpdir(), "carja-field-"));
   try {
-    await mkdir(join(dir, "conductor/1-workbench"), { recursive: true });
+    await mkdir(join(dir, "carja/1-workbench"), { recursive: true });
     await writeFile(join(dir, STATE_REL), JSON.stringify(state), "utf8");
     return await fn(dir);
   } finally {
@@ -29,7 +29,7 @@ async function withState(state, fn) {
   }
 }
 
-// F9: `conductor loop --help` printed the sandbox refusal instead of help.
+// F9: `carja loop --help` printed the sandbox refusal instead of help.
 for (const flag of ["--help", "-h"]) {
   test(`F9: 'loop ${flag}' prints the loop help and exits 0, even with sandbox none`, async () => {
     await withState({ schema_version: 2, sandbox: "none" }, async (dir) => {
@@ -37,7 +37,7 @@ for (const flag of ["--help", "-h"]) {
       const stderr = sink();
       const code = await loopCommand([dir, flag], { cwd: dir, stdout, stderr });
       assert.equal(code, 0);
-      assert.match(stdout.text, /conductor loop \[dir\]/);
+      assert.match(stdout.text, /carja loop \[dir\]/);
       assert.match(stdout.text, /--dry-run/);
       assert.doesNotMatch(stderr.text, /UNSANDBOXED/);
     });
@@ -45,12 +45,12 @@ for (const flag of ["--help", "-h"]) {
 }
 
 test("F9: 'loop --help' works without a loop-state.json", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "conductor-field-"));
+  const dir = await mkdtemp(join(tmpdir(), "carja-field-"));
   try {
     const stdout = sink();
     const code = await loopCommand(["--help"], { cwd: dir, stdout, stderr: sink() });
     assert.equal(code, 0);
-    assert.match(stdout.text, /conductor loop/);
+    assert.match(stdout.text, /carja loop/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -60,12 +60,12 @@ test("F9: 'loop --help' works without a loop-state.json", async () => {
 
 async function withProject({ state, config, backlog, inbox, remote }, fn) {
   return withState(state, async (dir) => {
-    if (config) await writeFile(join(dir, "conductor.config.json"), JSON.stringify(config), "utf8");
+    if (config) await writeFile(join(dir, "carja.config.json"), JSON.stringify(config), "utf8");
     if (backlog) {
-      await mkdir(join(dir, "conductor/2-backlog"), { recursive: true });
-      await writeFile(join(dir, "conductor/2-backlog/task-backlog.md"), backlog, "utf8");
+      await mkdir(join(dir, "carja/2-backlog"), { recursive: true });
+      await writeFile(join(dir, "carja/2-backlog/task-backlog.md"), backlog, "utf8");
     }
-    if (inbox) await writeFile(join(dir, "conductor/1-workbench/inbox.md"), inbox, "utf8");
+    if (inbox) await writeFile(join(dir, "carja/1-workbench/inbox.md"), inbox, "utf8");
     execFileSync("git", ["init", "-q"], { cwd: dir });
     if (remote) execFileSync("git", ["remote", "add", "origin", remote], { cwd: dir });
     return fn(dir);
@@ -132,37 +132,37 @@ const BACKLOG = `# Backlog
 `;
 const INBOX = "# Inbox\n\n---\n\n- a raw thought\n";
 
-test("F5: --from-conductor honours require_ready, --priority and --no-inbox", async () => {
+test("F5: --from-carja honours require_ready, --priority and --no-inbox", async () => {
   await withProject({ state: L3, backlog: BACKLOG, inbox: INBOX, config: { loop: { require_ready: true } }, remote: "https://github.com/a/b.git" }, async (dir) => {
-    const { out } = await dry(dir, ["--from-conductor", "--priority", "P1"]);
-    assert.match(out, /harvested: 1 work item\(s\) from conductor\/ \(taken or loop-ready only, priorities P1\)/);
+    const { out } = await dry(dir, ["--from-carja", "--priority", "P1"]);
+    assert.match(out, /harvested: 1 work item\(s\) from carja\/ \(taken or loop-ready only, priorities P1\)/);
     assert.match(out, /T1 Export invoices/);
     assert.doesNotMatch(out, /T2|T4|T5|raw thought/);
   });
   await withProject({ state: L3, backlog: BACKLOG, inbox: INBOX, remote: "https://github.com/a/b.git" }, async (dir) => {
-    const { out } = await dry(dir, ["--from-conductor", "--no-inbox"]);
-    assert.match(out, /harvested: 3 work item\(s\) from conductor\/ \(no inbox\)/);
+    const { out } = await dry(dir, ["--from-carja", "--no-inbox"]);
+    assert.match(out, /harvested: 3 work item\(s\) from carja\/ \(no inbox\)/);
     assert.doesNotMatch(out, /T2|raw thought/);
   });
 });
 
 test("F5: --priority with a bad value is refused", async () => {
   await withProject({ state: L3 }, async (dir) => {
-    const { code, err } = await dry(dir, ["--from-conductor", "--priority", "high"]);
+    const { code, err } = await dry(dir, ["--from-carja", "--priority", "high"]);
     assert.equal(code, 1);
     assert.match(err, /--priority: 'high' is not a priority/);
   });
 });
 
-// F12: the shipped backlog held six example tasks, so --from-conductor on a fresh
+// F12: the shipped backlog held six example tasks, so --from-carja on a fresh
 // install dispatched agents on fake work. The templates must harvest to nothing.
 test("F12: a fresh install's inbox and backlog harvest to zero work items", async () => {
-  const backlogMd = await readFile(new URL("../templates/conductor/2-backlog/task-backlog.md", import.meta.url), "utf8");
-  const inboxMd = await readFile(new URL("../templates/conductor/1-workbench/inbox.md", import.meta.url), "utf8");
+  const backlogMd = await readFile(new URL("../templates/carja/2-backlog/task-backlog.md", import.meta.url), "utf8");
+  const inboxMd = await readFile(new URL("../templates/carja/1-workbench/inbox.md", import.meta.url), "utf8");
   assert.deepEqual(harvestWorkQueue({ backlogMd, inboxMd }), []);
 });
 
-// D1: an outer conductor repo with the code in a gitignored nested repo cannot
+// D1: an outer carja repo with the code in a gitignored nested repo cannot
 // work (the loop's worktrees never contain the code). It ran silently against
 // the outer repo; it must refuse and say why.
 async function withNestedRepo(config, fn) {

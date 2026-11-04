@@ -133,7 +133,7 @@ describe("E1 — the reviewer has a reachable definition of done", () => {
   test("reviewer.md excludes process artefacts and tooling-enforced items", () => {
     const body = read(REVIEWER);
     assert.match(body, /Not a finding|Never a finding|Do not flag/i, "reviewer.md has no exclusion list");
-    for (const excluded of ["conductor/", "linter"]) {
+    for (const excluded of ["carja/", "linter"]) {
       assert.ok(
         body.includes(excluded),
         `reviewer.md exclusion list does not cover ${excluded}`,

@@ -27,7 +27,7 @@ export async function isAvailable() {
  * Build the `claude` argv for one beat. Pure — extracted so the flag contract
  * is unit-testable without spawning a CLI.
  *
- * `--settings <file>` loads a Conductor-supplied sandbox profile WITHOUT
+ * `--settings <file>` loads a Carja-supplied sandbox profile WITHOUT
  * touching the user's own .claude/settings.json. When it enables Anthropic's
  * bubblewrap sandbox with `failIfUnavailable: true`, an unsandboxed beat can't
  * silently happen: claude exits non-zero if the sandbox can't start.

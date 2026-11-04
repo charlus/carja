@@ -40,7 +40,7 @@ export function prTitle(text, max = 120) {
 /** F11: the forge has not registered the branch pushed a moment ago. */
 const BRANCH_NOT_SEEN = /source[_ ]branch.*(does not exist|not found)|branch .*not found/i;
 
-export const DEFAULT_PR_BODY = "Opened by `conductor loop`: verify passed and the independent Checker approved. A human merges.";
+export const DEFAULT_PR_BODY = "Opened by `carja loop`: verify passed and the independent Checker approved. A human merges.";
 
 /**
  * The argv for opening a PR/MR on the chosen forge (pure — for testing). The
@@ -114,14 +114,14 @@ async function findExistingPr(forge, branch, run) {
 export async function openPullRequest({ branch, title, body, git, run, forge, base = null, stacked = false, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   title = prTitle(title);
   if (!forge) {
-    return { ok: false, reason: "no forge resolved to open a PR (set loop.forge in conductor.config.json)" };
+    return { ok: false, reason: "no forge resolved to open a PR (set loop.forge in carja.config.json)" };
   }
 
   // Push the branch (set upstream). Never touch a protected branch directly.
   let push = await git(["push", "-u", "origin", branch]);
   if (!push.ok) {
     // A leftover same-named loop branch from a PRIOR run (divergent history)
-    // rejects a plain non-fast-forward push. conductor/loop/* is machine-owned, so
+    // rejects a plain non-fast-forward push. carja/loop/* is machine-owned, so
     // refresh our view of the remote ref and replace it with --force-with-lease:
     // this overwrites a stale machine branch but STILL rejects a genuine concurrent
     // push we haven't fetched (lease mismatch). Only then do we give up.

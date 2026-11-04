@@ -4,13 +4,13 @@
 //
 // Measured 2026-09-16 on the maintainer's own `autopportunity` install: upgrade
 // printed "No verify command could be derived … set \"verify\" in
-// conductor.config.json" — and that file did not exist, because neither `init`
+// carja.config.json" — and that file did not exist, because neither `init`
 // nor `upgrade` creates one when nothing can be derived. The maintainer, who
 // helped BUILD this feature, could not act on the message. Their words: "I have
 // no idea how to enable it and the message is not self explanatory."
 //
 // Three things are pinned here:
-//   * `conductor verify` — one command that SHOWS the gate, SETS it (proving the
+//   * `carja verify` — one command that SHOWS the gate, SETS it (proving the
 //     command runs before writing it), or declares there is nothing to verify.
 //   * `"verify": "none"` — an explicit, honest OFF. A docs/state repo can never
 //     satisfy the gate; without this the warning is permanent noise, which
@@ -27,7 +27,7 @@ import { fileURLToPath } from "node:url";
 import { verifyCommand } from "../src/commands/verify.js";
 import { gateStateFrom, NO_VERIFY_WARNING } from "../src/verify-config.js";
 import { upgradeCommand } from "../src/commands/upgrade.js";
-import { buildState } from "../src/conductor-state.js";
+import { buildState } from "../src/carja-state.js";
 import { renderStatus } from "../src/view/status.js";
 
 const TEMPLATES = fileURLToPath(new URL("../templates", import.meta.url));
@@ -37,12 +37,12 @@ function sink() {
   let out = "";
   return { write: (s) => { out += s; }, get text() { return out; } };
 }
-const dir = () => mkdtempSync(join(tmpdir(), "conductor-gate-"));
+const dir = () => mkdtempSync(join(tmpdir(), "carja-gate-"));
 const write = (root, rel, content) => {
   mkdirSync(join(root, rel, ".."), { recursive: true });
   writeFileSync(join(root, rel), content);
 };
-const config = (root) => JSON.parse(readFileSync(join(root, "conductor.config.json"), "utf8"));
+const config = (root) => JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8"));
 
 async function run(args, cwd) {
   const stdout = sink();
@@ -58,7 +58,7 @@ describe("gateStateFrom — one resolver, three honest states", () => {
     const g = gateStateFrom(JSON.stringify({ verify: "make test" }), null);
     assert.equal(g.state, "set");
     assert.equal(g.command, "make test");
-    assert.equal(g.source, "conductor.config.json");
+    assert.equal(g.source, "carja.config.json");
   });
 
   test("the package.json test script is a SET gate, but the source says it is a fallback", () => {
@@ -83,23 +83,23 @@ describe("gateStateFrom — one resolver, three honest states", () => {
   });
 });
 
-describe("conductor verify — show", () => {
+describe("carja verify — show", () => {
   test("an unconfigured project is told the two commands that fix it", async () => {
     const d = dir();
     const { code, out } = await run([], d);
     assert.equal(code, 0, out);
-    assert.match(out, /conductor verify --set /, "give a command to paste, not a JSON key to find");
-    assert.match(out, /conductor verify --none/, "and the honest way out for a repo with nothing to verify");
+    assert.match(out, /carja verify --set /, "give a command to paste, not a JSON key to find");
+    assert.match(out, /carja verify --none/, "and the honest way out for a repo with nothing to verify");
     assert.match(out, /push/i, "say what is not happening on push");
   });
 
   test("a configured gate shows the command and where it came from", async () => {
     const d = dir();
-    write(d, "conductor.config.json", JSON.stringify({ verify: "make test" }));
+    write(d, "carja.config.json", JSON.stringify({ verify: "make test" }));
     const { code, out } = await run([], d);
     assert.equal(code, 0, out);
     assert.match(out, /make test/);
-    assert.match(out, /conductor\.config\.json/);
+    assert.match(out, /carja\.config\.json/);
   });
 
   test("a package.json fallback is shown as a fallback, not as a configured gate", async () => {
@@ -113,15 +113,15 @@ describe("conductor verify — show", () => {
 
   test("a declared OFF says so calmly and says how to turn it back on", async () => {
     const d = dir();
-    write(d, "conductor.config.json", JSON.stringify({ verify: "none" }));
+    write(d, "carja.config.json", JSON.stringify({ verify: "none" }));
     const { code, out } = await run([], d);
     assert.equal(code, 0, out);
     assert.doesNotMatch(out, /⚠️/, "a deliberate choice is not a warning");
-    assert.match(out, /conductor verify --set /, "but it must still be reversible in one command");
+    assert.match(out, /carja verify --set /, "but it must still be reversible in one command");
   });
 });
 
-describe("conductor verify --set — proves the command before trusting it", () => {
+describe("carja verify --set — proves the command before trusting it", () => {
   test("a passing command is run once, then written", async () => {
     const d = dir();
     const { code, out } = await run(["--set", "exit 0"], d);
@@ -134,7 +134,7 @@ describe("conductor verify --set — proves the command before trusting it", () 
     const d = dir();
     const { code, out } = await run(["--set", "exit 3"], d);
     assert.equal(code, 1);
-    assert.equal(existsSync(join(d, "conductor.config.json")), false, "nothing was written");
+    assert.equal(existsSync(join(d, "carja.config.json")), false, "nothing was written");
     assert.match(out, /--no-run/, "and the escape hatch is named");
   });
 
@@ -148,12 +148,12 @@ describe("conductor verify --set — proves the command before trusting it", () 
   test("the config file is CREATED when missing (the autopportunity failure)", async () => {
     const d = dir();
     await run(["--set", "exit 0"], d);
-    assert.ok(existsSync(join(d, "conductor.config.json")));
+    assert.ok(existsSync(join(d, "carja.config.json")));
   });
 
   test("other config keys survive the write", async () => {
     const d = dir();
-    write(d, "conductor.config.json", JSON.stringify({ registry: "https://example.com/r", eval: "npm run eval" }));
+    write(d, "carja.config.json", JSON.stringify({ registry: "https://example.com/r", eval: "npm run eval" }));
     await run(["--set", "exit 0"], d);
     assert.equal(config(d).registry, "https://example.com/r");
     assert.equal(config(d).eval, "npm run eval");
@@ -161,7 +161,7 @@ describe("conductor verify --set — proves the command before trusting it", () 
   });
 });
 
-describe("conductor verify --none / --detect", () => {
+describe("carja verify --none / --detect", () => {
   test("--none records the declared OFF in the config", async () => {
     const d = dir();
     const { code, out } = await run(["--none"], d);
@@ -181,35 +181,35 @@ describe("conductor verify --none / --detect", () => {
     const d = dir();
     const { code, out } = await run(["--detect"], d);
     assert.equal(code, 1);
-    assert.equal(existsSync(join(d, "conductor.config.json")), false);
+    assert.equal(existsSync(join(d, "carja.config.json")), false);
     assert.match(out, /--set|--none/);
   });
 });
 
 describe("the messages that led here", () => {
   test("the init/upgrade warning names the command, not the JSON key", () => {
-    assert.match(NO_VERIFY_WARNING, /conductor verify --set /);
-    assert.match(NO_VERIFY_WARNING, /conductor verify --none/);
+    assert.match(NO_VERIFY_WARNING, /carja verify --set /);
+    assert.match(NO_VERIFY_WARNING, /carja verify --none/);
   });
 
-  test("upgrade CREATES conductor.config.json so the file it names exists", async () => {
+  test("upgrade CREATES carja.config.json so the file it names exists", async () => {
     const d = dir();
     cpSync(join(TEMPLATES, ".agents"), join(d, ".agents"), { recursive: true });
-    cpSync(join(TEMPLATES, "conductor"), join(d, "conductor"), { recursive: true });
+    cpSync(join(TEMPLATES, "carja"), join(d, "carja"), { recursive: true });
     const stdout = sink();
     const stderr = sink();
     const code = await upgradeCommand([d], { cwd: tmpdir(), stdout, stderr });
     assert.equal(code, 0, stdout.text + stderr.text);
     assert.ok(
-      existsSync(join(d, "conductor.config.json")),
+      existsSync(join(d, "carja.config.json")),
       "the warning names this file — it must be there to edit",
     );
   });
 
-  test("`conductor status` prints a runnable fix, and shows a declared OFF as a choice", () => {
+  test("`carja status` prints a runnable fix, and shows a declared OFF as a choice", () => {
     const base = { root: "/repo", projectName: "repo", now: Date.now() };
     const off = renderStatus(buildState({ ...base, verifyCommand: null }), { color: false });
-    assert.match(off, /conductor verify --set /, "the status line must carry the fix");
+    assert.match(off, /carja verify --set /, "the status line must carry the fix");
 
     const declared = renderStatus(buildState({ ...base, verifyCommand: "none" }), { color: false });
     assert.match(declared, /choice|declared/i);
@@ -221,8 +221,8 @@ describe("the messages that led here", () => {
     // The OFF branch is what the reader sees when the gate is not configured.
     const branch = PRE_PUSH.split(/elif \[ -z "\$cmd" \]; then/)[1]?.split("elif")[0] ?? "";
     const shown = branch.replace(/\\(["`])/g, "$1");
-    assert.match(shown, /conductor verify --set /, "the fix is a command, not a JSON key");
-    assert.match(shown, /conductor verify --none/);
+    assert.match(shown, /carja verify --set /, "the fix is a command, not a JSON key");
+    assert.match(shown, /carja verify --none/);
     assert.match(shown, /OFF/, "and it says plainly that nothing is enforced");
   });
 });
@@ -230,7 +230,7 @@ describe("the messages that led here", () => {
 describe("--repo: the push check of a nested code repository (outer layout)", () => {
   test("--set writes repos.<dir>.verify and keeps the outer verify", async () => {
     const root = dir();
-    write(root, "conductor.config.json", '{ "verify": "none" }\n');
+    write(root, "carja.config.json", '{ "verify": "none" }\n');
     mkdirSync(join(root, "app"));
     const r = await run(["--repo", "app", "--set", "true"], root);
     assert.equal(r.code, 0, r.out);
@@ -254,7 +254,7 @@ describe("--repo: the push check of a nested code repository (outer layout)", ()
 
   test("showing the state reads the repository's own command", async () => {
     const root = dir();
-    write(root, "conductor.config.json", '{ "verify": "none", "repos": { "app": { "verify": "make check" } } }\n');
+    write(root, "carja.config.json", '{ "verify": "none", "repos": { "app": { "verify": "make check" } } }\n');
     mkdirSync(join(root, "app"));
     const r = await run(["--repo", "app"], root);
     assert.match(r.out, /make check/);

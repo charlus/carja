@@ -1,7 +1,7 @@
 {
   "name": "git-worktrees",
   "version": "2.0.0",
-  "description": "The item's own hidden worktree (conductor work <item>), so the owner's folder stays on its default branch; merged worktrees are cleaned up automatically.",
+  "description": "The item's own hidden worktree (carja work <item>), so the owner's folder stays on its default branch; merged worktrees are cleaned up automatically.",
   "tier": "core",
   "tags": [
     "git",

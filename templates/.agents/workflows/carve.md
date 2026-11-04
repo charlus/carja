@@ -19,7 +19,7 @@ description: Carve (Slicing the Blueprint)
 
 ## Who You Are
 
-You are the Conductor wearing both **hats simultaneously**:
+You are the Carja wearing both **hats simultaneously**:
 - **Product Hat:** Every slice must deliver testable user value (vertical slices, not horizontal layers)
 - **Technical Hat:** Every slice must respect dependencies and be buildable in isolation
 
@@ -28,7 +28,7 @@ You are the Conductor wearing both **hats simultaneously**:
 - **Vertical over Horizontal.** "Build the auth UI + API + DB together" beats "Build all the DB first, then all the API."
 - **Tracer bullet first.** The very first slice should be the thinnest possible end-to-end path that touches every layer (UI → API → DB → back) and actually runs — a walking skeleton, not a foundation. It proves the architecture and gives a demo on day one; later slices thicken it. Prefer "a user can log in and see an empty dashboard" over "the entire auth subsystem."
 - **Small and Testable.** Each Implementation should be demo-able. If you can't show it to a user, it's too abstract.
-- **Name in the domain's words.** Every Implementation and folder name uses the ubiquitous language from `conductor/4-context/meta/domain-model.md`, never technical or phase names (`checkout`, not `order-service-phase-2`). If a slice can't be named in the domain language, its boundary is probably wrong — revisit it.
+- **Name in the domain's words.** Every Implementation and folder name uses the ubiquitous language from `carja/4-context/meta/domain-model.md`, never technical or phase names (`checkout`, not `order-service-phase-2`). If a slice can't be named in the domain language, its boundary is probably wrong — revisit it.
 - **Wide refactors are the exception to vertical slicing.** A mechanical change whose blast radius fans across the codebase (rename an entity everywhere, swap a library) can't be a thin vertical slice. Carve it as **expand → migrate-in-batches → contract**: add the new form alongside the old, migrate call sites in batches that each keep CI green, then remove the old form. Sequence these like any other slice, with explicit dependency edges.
 
 **Technique:** Runs `.agents/skills/collaborative-drafting/SKILL.md` — propose the full slicing, discuss, coverage-check against the Epics, converge. Confirm once per phase (each phase's output is the next phase's input), not once per slice.
@@ -41,13 +41,13 @@ You are the Conductor wearing both **hats simultaneously**:
 
 **Announce:** *"We're entering Phase 0: Loading the Blueprint."*
 
-1.  **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Project: read from it and do not ask. Otherwise list `conductor/2-backlog/project-backlog/` by last change and recommend the most recent unfinished Project. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open.
+1.  **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Project: read from it and do not ask. Otherwise list `carja/2-backlog/project-backlog/` by last change and recommend the most recent unfinished Project. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open.
 
 2.  **Load Context** (Read in this order, inside the Project folder):
     * `blueprint/grand-prd.md` — Epics and scope
     * `blueprint/ux-ui-design-brief.md` — Screens, navigation, and interactions
     * `blueprint/technical-vision.md` — Data model, architecture, and tech stack
-    * `conductor/4-context/meta/domain-model.md` — The ubiquitous language (slice names come from here)
+    * `carja/4-context/meta/domain-model.md` — The ubiquitous language (slice names come from here)
     * `genesis/world-transformation.md` — The vision (for prioritization decisions)
 
 3.  **Present Blueprint Summary:**
@@ -198,7 +198,7 @@ For each proposed Implementation:
 3.  **Create Implementation Folders:**
     * `implementations/01-[Name]/` with blank `feature-spec.md` and `implementation-plan.md`
     * `implementations/02-[Name]/` etc.
-    * Use templates from `conductor/5-templates/carve-workflow/` if available
+    * Use templates from `carja/5-templates/carve-workflow/` if available
 
 4.  **Verify:** List all created files and confirm they exist.
 
@@ -215,7 +215,7 @@ For each proposed Implementation:
 * Which Implementation is recommended to start with
 
 **Next Steps:**
-- **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/spec-it conductor/2-backlog/project-backlog/[ProjectName]/implementations/01-[Name]`."* Name the recommended first Implementation; the human may pick another.
+- **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/spec-it carja/2-backlog/project-backlog/[ProjectName]/implementations/01-[Name]`."* Name the recommended first Implementation; the human may pick another.
 
 ---
 

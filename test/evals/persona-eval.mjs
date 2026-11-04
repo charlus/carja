@@ -4,13 +4,13 @@
 // Does an agent running Build actually load the Designer and DESIGN.md before
 // it writes UI code, and does that change the code it writes?
 //
-// #53–#55 wired the personas into Build in prose (`conductor personas`, then
+// #53–#55 wired the personas into Build in prose (`carja personas`, then
 // read what it lists) and moved the design rules into DESIGN.md. The unit
 // suites prove the CLI maps paths correctly. They cannot prove an agent follows
 // the steps: that is this eval.
 //
 //   arm A (master)  `master`'s framework. The same design rules sit in
-//                   conductor/4-context/design/design-system.md. No persona step.
+//                   carja/4-context/design/design-system.md. No persona step.
 //   arm B (branch)  this branch's framework. The design rules sit in DESIGN.md.
 //
 // Same app, same feature spec, same task: a real Build run of a small UI
@@ -27,12 +27,12 @@
 // cut out of build.md, and expects the graded rate to drop by more than the
 // noise threshold. If it does not, the eval cannot see the step it grades.
 //
-// Gated behind CONDUCTOR_EVALS=1: every run is a real Build session.
+// Gated behind CARJA_EVALS=1: every run is a real Build session.
 //
-//   CONDUCTOR_EVALS=1 node test/evals/persona-eval.mjs
-//   CONDUCTOR_EVALS=1 node test/evals/persona-eval.mjs --runs 1 --verbose
-//   CONDUCTOR_EVALS=1 node test/evals/persona-eval.mjs --sensitivity
-//   CONDUCTOR_EVALS=1 node test/evals/persona-eval.mjs --scenario drift
+//   CARJA_EVALS=1 node test/evals/persona-eval.mjs
+//   CARJA_EVALS=1 node test/evals/persona-eval.mjs --runs 1 --verbose
+//   CARJA_EVALS=1 node test/evals/persona-eval.mjs --sensitivity
+//   CARJA_EVALS=1 node test/evals/persona-eval.mjs --scenario drift
 
 import { mkdtemp, mkdir, writeFile, readFile, chmod } from "node:fs/promises";
 import { spawn, execFileSync } from "node:child_process";
@@ -60,8 +60,8 @@ const SENSITIVITY = has("sensitivity");
 // UI. Grades the OUTCOME: does the new stylesheet use the tokens and no literal?
 const SCENARIO = val("scenario", "rules");
 
-if (process.env.CONDUCTOR_EVALS !== "1") {
-  console.log("Skipped: set CONDUCTOR_EVALS=1 to run (spawns real Build sessions).");
+if (process.env.CARJA_EVALS !== "1") {
+  console.log("Skipped: set CARJA_EVALS=1 to run (spawns real Build sessions).");
   process.exit(0);
 }
 
@@ -173,7 +173,7 @@ const DRIFTED = {
     ".product-card .buy { background: #1e88e5; color: white; border-radius: 4px; padding: 6px 12px; }\n",
 };
 
-const IMPL = "conductor/2-backlog/project-backlog/Shop/implementations/01-orders-list";
+const IMPL = "carja/2-backlog/project-backlog/Shop/implementations/01-orders-list";
 const TASK =
   `Run the Build workflow (.agents/workflows/build.md) for ${IMPL}. ` +
   "You are running unattended: treat every confirmation the workflow asks for as given and do not stop to ask. " +
@@ -184,16 +184,16 @@ const TASK =
 let masterTree = null;
 async function masterFramework() {
   if (masterTree) return masterTree;
-  masterTree = await mkdtemp(join(tmpdir(), "conductor-master-"));
+  masterTree = await mkdtemp(join(tmpdir(), "carja-master-"));
   execFileSync("sh", ["-c", `git -C "${ROOT}" archive master | tar -x -C "${masterTree}"`]);
   return masterTree;
 }
 
 /** arm: "master" | "branch" | "mutated" (branch with the persona step cut from build.md). */
 async function buildRepo(arm) {
-  const dir = await mkdtemp(join(tmpdir(), `conductor-persona-${arm}-`));
+  const dir = await mkdtemp(join(tmpdir(), `carja-persona-${arm}-`));
   const framework = arm === "master" ? await masterFramework() : ROOT;
-  execFileSync("node", [join(framework, "bin/conductor.js"), "init", dir, "--all", "--no-detect"], { stdio: "pipe" });
+  execFileSync("node", [join(framework, "bin/carja.js"), "init", dir, "--all", "--no-detect"], { stdio: "pipe" });
 
   for (const [rel, body] of Object.entries(APP)) {
     await mkdir(join(dir, rel, ".."), { recursive: true });
@@ -206,8 +206,8 @@ async function buildRepo(arm) {
   if (SCENARIO === "drift") {
     // nothing written down: master keeps its empty design-system.md template
   } else if (arm === "master") {
-    await mkdir(join(dir, "conductor/4-context/design"), { recursive: true });
-    await writeFile(join(dir, "conductor/4-context/design/design-system.md"), DESIGN_RULES);
+    await mkdir(join(dir, "carja/4-context/design"), { recursive: true });
+    await writeFile(join(dir, "carja/4-context/design/design-system.md"), DESIGN_RULES);
   } else {
     await writeFile(join(dir, "DESIGN.md"), DESIGN_RULES);
   }
@@ -215,15 +215,15 @@ async function buildRepo(arm) {
     const p = join(dir, ".agents/workflows/build.md");
     const kept = (await readFile(p, "utf8"))
       .split("\n")
-      .filter((l) => !/conductor personas|Design system first/.test(l))
+      .filter((l) => !/carja personas|Design system first/.test(l))
       .join("\n");
     await writeFile(p, kept);
   }
 
-  // `conductor` on PATH, bound to the arm's own framework version.
+  // `carja` on PATH, bound to the arm's own framework version.
   await mkdir(join(dir, ".eval-bin"));
-  const shim = join(dir, ".eval-bin", "conductor");
-  await writeFile(shim, `#!/bin/sh\nexec node "${join(framework, "bin/conductor.js")}" "$@"\n`);
+  const shim = join(dir, ".eval-bin", "carja");
+  await writeFile(shim, `#!/bin/sh\nexec node "${join(framework, "bin/carja.js")}" "$@"\n`);
   await chmod(shim, 0o755);
   await writeFile(join(dir, ".gitignore"), ".eval-bin/\n");
 
@@ -245,7 +245,7 @@ function runAgent(cwd) {
         "--verbose",
         "--max-turns", MAX_TURNS,
         "--allowed-tools",
-        "Read,Grep,Glob,Edit,Write,Bash(conductor:*),Bash(node:*),Bash(npm:*),Bash(git:*),Bash(ls:*)",
+        "Read,Grep,Glob,Edit,Write,Bash(carja:*),Bash(node:*),Bash(npm:*),Bash(git:*),Bash(ls:*)",
       ],
       {
         cwd,
@@ -291,7 +291,7 @@ function loadedBeforeWriting(calls, arm) {
   return {
     designer: read(/personas\/designer\.md/),
     rules: read(new RegExp(rules.replace(".", "\\."))),
-    personasCmd: calls.some((c) => c.name === "Bash" && /conductor personas/.test(String(c.input.command ?? ""))),
+    personasCmd: calls.some((c) => c.name === "Bash" && /carja personas/.test(String(c.input.command ?? ""))),
     wroteSrc: firstWrite !== -1,
   };
 }

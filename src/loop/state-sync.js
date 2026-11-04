@@ -1,7 +1,7 @@
 // src/loop/state-sync.js
 //
 // F15: give an agent beat the driver's LIVE loop-state.json. A worktree checks
-// out the committed state file, not the driver's live one, so with conductor/
+// out the committed state file, not the driver's live one, so with carja/
 // tracked (the common setup) the agent read an old goal and phase and refused to
 // work. The driver copies the live state into the worktree before every maker
 // and checker beat, and hides the copy from git so it never reaches a commit or
@@ -17,12 +17,12 @@ import { copyFile, mkdir, readFile, appendFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { VERDICT_REL } from "./checker.js";
 
-export const STATE_REL = "conductor/1-workbench/loop-state.json";
-export const MAKER_SIGNAL_REL = "conductor/1-workbench/maker-signal.json";
+export const STATE_REL = "carja/1-workbench/loop-state.json";
+export const MAKER_SIGNAL_REL = "carja/1-workbench/maker-signal.json";
 
 // F18: the driver's own files in a worktree. The auto-capture commit used to
 // sweep the signal files into the branch, so the PR carried them.
-export const PR_BODY_REL = "conductor/1-workbench/pr-body.md";
+export const PR_BODY_REL = "carja/1-workbench/pr-body.md";
 const DRIVER_FILES = [STATE_REL, MAKER_SIGNAL_REL, VERDICT_REL, PR_BODY_REL];
 
 /**
@@ -41,7 +41,7 @@ export async function syncLoopStateInto({ root, cwd, git, from = join(root, STAT
 /**
  * Make `rel` invisible to git in this worktree, whether tracked, ignored or
  * untracked. The exclude line matches at any depth: a beat that wrote the file
- * under a wrong folder (`conductor/conductor/…`, live run 2026-10-20) must not
+ * under a wrong folder (`carja/carja/…`, live run 2026-10-20) must not
  * commit it either.
  */
 export async function hideFromGit(rel, { cwd, git }) {

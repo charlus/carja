@@ -1,7 +1,7 @@
 // test/loop-team-facing.test.js
 //
 // A1 (C3-F21, autopportunity 2026-10-21): what the team sees of the loop. The
-// code MR was titled "Conductor task task:kb-retire…", and auto-capture commits
+// code MR was titled "Carja task task:kb-retire…", and auto-capture commits
 // named the internal task id. A2 (F8): `loop doctor` ran the tests in the
 // owner's checkout and left __pycache__/ there.
 
@@ -15,8 +15,8 @@ test("A1: the code MR carries the item's own title; the outer state MR says what
   const t = { id: "task:kb-retire-the-use-case-without-customer-", title: '**KB: retire the "Use case without customer" KM queue (decision 2026-10-20).** Always empty once … (loop-ready)' };
   const m = mrTitles(t);
   assert.equal(m.code, 'KB: retire the "Use case without customer" KM queue (decision 2026-10-20)');
-  assert.equal(m.state, 'Conductor state: KB: retire the "Use case without customer" KM queue (decision 2026-10-20)');
-  assert.doesNotMatch(m.code, /Conductor task|task:/);
+  assert.equal(m.state, 'Carja state: KB: retire the "Use case without customer" KM queue (decision 2026-10-20)');
+  assert.doesNotMatch(m.code, /Carja task|task:/);
   assert.equal(mrTitles({ id: "slice:p/01-a", title: "", type: "slice" }).code, "slice:p/01-a", "no title: the id, never empty");
 });
 

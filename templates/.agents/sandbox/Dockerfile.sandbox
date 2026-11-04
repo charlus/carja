@@ -1,4 +1,4 @@
-# Conductor Loop sandbox — starting point (document-only, ADR-0001 Q2).
+# Carja Loop sandbox — starting point (document-only, ADR-0001 Q2).
 # Adjust the base image and agent CLI install to your platform. The security
 # properties (default-deny network, resource caps) are enforced at `docker run`
 # time (see README.md), not in this Dockerfile.
@@ -10,8 +10,8 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends git ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# Install the Conductor CLI globally so `conductor loop` is on PATH.
-RUN npm install -g github:charlus/conductor-framework
+# Install the Carja CLI globally so `carja loop` is on PATH.
+RUN npm install -g github:charlus/carja
 
 # Install your agent CLI here (e.g. the Claude Code CLI). Left as a placeholder
 # because the exact package/name depends on your platform + license.
@@ -22,4 +22,4 @@ USER node
 WORKDIR /work
 
 # The model API key is passed at run time via -e ANTHROPIC_API_KEY, never baked in.
-CMD ["conductor", "loop", "--unsafe-no-sandbox"]
+CMD ["carja", "loop", "--unsafe-no-sandbox"]

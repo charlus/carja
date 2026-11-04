@@ -2,7 +2,7 @@
 //
 // O7 — the review ledger is written by the workflow that produces findings.
 //
-// E2 shipped `conductor review-log append|summary` (2026-09-03) so the review
+// E2 shipped `carja review-log append|summary` (2026-09-03) so the review
 // gate's convergence could be a number: rounds to APPROVE, dismissal rate per
 // class, blockers by category. Measured 2026-09-15: zero rows in all five live
 // projects. Not a habit problem — `templates/` never told the agent to append;
@@ -25,7 +25,7 @@ const SKILL = readFileSync(
   "utf8",
 );
 
-const APPEND = "conductor review-log append";
+const APPEND = "carja review-log append";
 
 describe("O7 — the ledger is written where findings are disposed", () => {
   test("Ship Phase 4 tells the agent to append every disposition", () => {

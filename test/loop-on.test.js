@@ -1,9 +1,9 @@
 // test/loop-on.test.js
 //
-// `conductor loop on <project>` / `off <project>`: the owner turns the loop on
+// `carja loop on <project>` / `off <project>`: the owner turns the loop on
 // for a project with one command, never by writing JSON (owner decision
 // 2026-10-20). The planner names each change in plain words; the command asks
-// once, then writes conductor.config.json and loop-state.json.
+// once, then writes carja.config.json and loop-state.json.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -32,7 +32,7 @@ test("on autopportunity's layout: Blueprint and slices, the code repository from
   assert.deepEqual(p.config.loop.slices, ["km-workload-relief"]);
   assert.equal(p.config.loop.code_dir, "repo");
   assert.equal(p.config.loop.allow_nested_repo, true);
-  assert.equal(p.config.loop.setup, 'ln -sfn "$CONDUCTOR_CODE_ROOT/.venv" .venv');
+  assert.equal(p.config.loop.setup, 'ln -sfn "$CARJA_CODE_ROOT/.venv" .venv');
   assert.deepEqual([p.state.phase, p.state.autonomy_level, p.state.sandbox, p.state.platform], ["execution", "L3", "cli-native", "claude"]);
   assert.equal(p.config.repos.repo.verify, "pytest tests/unit", "nothing else in the config is touched");
   assert.ok(p.changes.some((c) => /video\//.test(c)));
@@ -64,7 +64,7 @@ test("several nested repositories and none in `repos`: it asks which, with the c
 
 test("no test command for the code repository: a note with the command that sets it", () => {
   const p = planLoopOn({ ...AUTOPPORTUNITY, config: { repos: {} }, nestedRepos: ["repo/"] });
-  assert.match(p.notes.join(), /conductor verify --repo repo --detect/);
+  assert.match(p.notes.join(), /carja verify --repo repo --detect/);
 });
 
 test("off takes the project out of the Blueprint and the slices, and nothing else", () => {
@@ -77,20 +77,20 @@ test("off takes the project out of the Blueprint and the slices, and nothing els
 
 // ---- the command, through the real CLI ----------------------------------------
 
-test("`conductor loop on <project> --yes` writes the plan; without --yes and without a terminal it only shows it", () => {
+test("`carja loop on <project> --yes` writes the plan; without --yes and without a terminal it only shows it", () => {
   const REPO = new URL("..", import.meta.url).pathname;
   const root = mkdtempSync(join(tmpdir(), "loop-on-"));
   try {
-    execFileSync("node", [join(REPO, "bin/conductor.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
+    execFileSync("node", [join(REPO, "bin/carja.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
     execFileSync("git", ["init", "-q"], { cwd: root });
-    const p = join(root, "conductor/2-backlog/project-backlog/notes");
+    const p = join(root, "carja/2-backlog/project-backlog/notes");
     for (const rel of ["genesis/problem-solar-system.md", "genesis/world-transformation.md", "genesis/functional-animator.md", "storyboard/main-character.md", "storyboard/storyboard.md"]) {
       mkdirSync(join(p, rel, ".."), { recursive: true });
       writeFileSync(join(p, rel), `# ${rel}\n\nWriters keep notes.\n`);
     }
     const run = (...a) => {
       try {
-        return { code: 0, out: execFileSync("node", [join(REPO, "bin/conductor.js"), "loop", ...a], { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString() };
+        return { code: 0, out: execFileSync("node", [join(REPO, "bin/carja.js"), "loop", ...a], { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString() };
       } catch (e) {
         return { code: e.status, out: `${e.stdout}${e.stderr}` };
       }
@@ -99,17 +99,17 @@ test("`conductor loop on <project> --yes` writes the plan; without --yes and wit
     assert.equal(shown.code, 2, shown.out);
     assert.match(shown.out, /The loop may write the Grand PRD, UX\/UI Brief, Technical Vision and Carve for notes/);
     assert.match(shown.out, /--yes/);
-    assert.equal(JSON.parse(readFileSync(join(root, "conductor.config.json"), "utf8")).loop?.blueprint, undefined, "nothing written without consent");
+    assert.equal(JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).loop?.blueprint, undefined, "nothing written without consent");
 
     const done = run("on", "notes", "--yes");
     assert.equal(done.code, 0, done.out);
-    assert.deepEqual(JSON.parse(readFileSync(join(root, "conductor.config.json"), "utf8")).loop.blueprint, ["notes"]);
-    assert.equal(JSON.parse(readFileSync(join(root, "conductor/1-workbench/loop-state.json"), "utf8")).autonomy_level, "L3");
+    assert.deepEqual(JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).loop.blueprint, ["notes"]);
+    assert.equal(JSON.parse(readFileSync(join(root, "carja/1-workbench/loop-state.json"), "utf8")).autonomy_level, "L3");
     assert.match(done.out, /Next:/);
 
     const off = run("off", "notes");
     assert.equal(off.code, 0, off.out);
-    assert.deepEqual(JSON.parse(readFileSync(join(root, "conductor.config.json"), "utf8")).loop.blueprint, []);
+    assert.deepEqual(JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).loop.blueprint, []);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

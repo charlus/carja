@@ -1,6 +1,6 @@
 // test/parallel-sessions.test.js
 //
-// F10 — parallel sessions do not collide on conductor/ state.
+// F10 — parallel sessions do not collide on carja/ state.
 //
 // Real usage (autopportunity, eurassistant, 2026-10): two sessions each added a
 // ship-log entry on their own branch and the merge request then conflicted
@@ -29,13 +29,13 @@ test("ensureUnionMerge adds each log once and keeps the user's lines", () => {
   const text = readFileSync(join(dir, ".gitattributes"), "utf8");
   assert.match(text, /^\*\.png binary$/m);
   for (const p of UNION_PATHS) assert.equal(text.split("\n").filter((l) => l.startsWith(`${p} `)).length, 1, p);
-  assert.ok(UNION_PATHS.includes("conductor/0-compass/ship-log.md"));
+  assert.ok(UNION_PATHS.includes("carja/0-compass/ship-log.md"));
 });
 
 test("two branches that each add a ship-log entry merge without conflict", () => {
   const dir = mkdtempSync(join(tmpdir(), "cond-union-"));
-  mkdirSync(join(dir, "conductor", "0-compass"), { recursive: true });
-  const log = join(dir, "conductor", "0-compass", "ship-log.md");
+  mkdirSync(join(dir, "carja", "0-compass"), { recursive: true });
+  const log = join(dir, "carja", "0-compass", "ship-log.md");
   writeFileSync(log, "# Ship Log\n\n## 2026-10-01 — Old\n- done\n");
   g(dir, "init", "-q", "-b", "main");
   ensureUnionMerge(dir);

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ============================================================
-# Conductor Framework V6 — Self-Test Suite
+# Carja Framework V6 — Self-Test Suite
 # ============================================================
 # Validates that all framework files exist, have proper naming,
 # and the framework is structurally intact.
 #
 # Usage:
-#   bash .agents/tests/check-conductor.sh
+#   bash .agents/tests/check-carja.sh
 #
 # Adapted from Antigravity Superpowers' check-antigravity-profile.sh
 # ============================================================
@@ -48,7 +48,7 @@ require_dir() {
 }
 
 echo "========================================"
-echo " Conductor Framework V6 — Self-Test"
+echo " Carja Framework V6 — Self-Test"
 echo "========================================"
 echo ""
 
@@ -56,13 +56,13 @@ echo ""
 echo "1. Core Structure..."
 
 required_dirs=(
-  "$ROOT_DIR/conductor/0-compass"
-  "$ROOT_DIR/conductor/1-workbench"
-  "$ROOT_DIR/conductor/2-backlog"
-  "$ROOT_DIR/conductor/3-product-areas"
-  "$ROOT_DIR/conductor/4-context"
-  "$ROOT_DIR/conductor/5-templates"
-  "$ROOT_DIR/conductor/6-archive"
+  "$ROOT_DIR/carja/0-compass"
+  "$ROOT_DIR/carja/1-workbench"
+  "$ROOT_DIR/carja/2-backlog"
+  "$ROOT_DIR/carja/3-product-areas"
+  "$ROOT_DIR/carja/4-context"
+  "$ROOT_DIR/carja/5-templates"
+  "$ROOT_DIR/carja/6-archive"
   "$AGENT_DIR/workflows"
   "$AGENT_DIR/skills"
   "$AGENT_DIR/personas"
@@ -82,7 +82,7 @@ required_files=(
   "$AGENT_DIR/AGENTS.md"
   "$AGENT_DIR/how-it-works.md"
   "$ROOT_DIR/CHANGELOG.md"
-  "$ROOT_DIR/conductor/1-workbench/loop-state.json"
+  "$ROOT_DIR/carja/1-workbench/loop-state.json"
 )
 
 for file in "${required_files[@]}"; do
@@ -108,7 +108,7 @@ echo ""
 echo "4. Personas..."
 
 personas=(
-  "cto" "architect" "product-manager" "designer" "conductor-assistant"
+  "cto" "architect" "product-manager" "designer" "carja-assistant"
   "code-archaeologist" "security-auditor" "database-architect"
   "performance-optimizer" "checker"
 )
@@ -142,7 +142,7 @@ for skill in "${skills[@]}"; do
   require_file "$AGENT_DIR/skills/$skill/SKILL.md"
 done
 
-# Level C: Conductor's own LLM-judge surfaces must carry a versioned rubric.
+# Level C: Carja's own LLM-judge surfaces must carry a versioned rubric.
 judge_surfaces=(
   "skills/judge-panel/SKILL.md"
   "skills/independent-review/SKILL.md"
@@ -214,10 +214,10 @@ fi
 echo ""
 echo "8. Version Check..."
 
-if grep -q "Conductor Framework" "$AGENT_DIR/AGENTS.md"; then
-  pass "AGENTS.md references Conductor Framework"
+if grep -q "Carja Framework" "$AGENT_DIR/AGENTS.md"; then
+  pass "AGENTS.md references Carja Framework"
 else
-  fail "AGENTS.md does not reference Conductor Framework"
+  fail "AGENTS.md does not reference Carja Framework"
 fi
 
 # ---- 9. Dead Path References ----
@@ -226,7 +226,7 @@ fi
 echo ""
 echo "9. Dead Path References..."
 
-dead_refs=$(grep -rEl '\.?conductor/[0-9]-[A-Z]|\.agents/workflows/[A-Z][a-zA-Z-]*\.md|\.agents/skills/[A-Z][a-zA-Z-]*/SKILL\.md' "$AGENT_DIR" 2>/dev/null || true)
+dead_refs=$(grep -rEl '\.?carja/[0-9]-[A-Z]|\.agents/workflows/[A-Z][a-zA-Z-]*\.md|\.agents/skills/[A-Z][a-zA-Z-]*/SKILL\.md' "$AGENT_DIR" 2>/dev/null || true)
 
 if [ -z "$dead_refs" ]; then
   pass "No dead Title-Case path references found"
@@ -283,7 +283,7 @@ else
 fi
 
 # Eval-Driven Law: the gate + its detection helpers must be present.
-for helper in conductor_is_llm_feature_file conductor_is_eval_file; do
+for helper in carja_is_llm_feature_file carja_is_eval_file; do
   if grep -q "$helper" "$AGENT_DIR/hooks/lib.sh" 2>/dev/null; then
     pass "lib.sh defines eval-gate helper: $helper"
   else
@@ -295,7 +295,7 @@ if grep -q "Eval-Driven Law" "$AGENT_DIR/hooks/pre-commit" 2>/dev/null; then
 else
   fail "pre-commit does not enforce the Eval-Driven Law"
 fi
-for helper in conductor_eval_cmd conductor_has_eval_files; do
+for helper in carja_eval_cmd carja_has_eval_files; do
   if grep -q "$helper" "$AGENT_DIR/hooks/lib.sh" 2>/dev/null; then
     pass "lib.sh defines eval run-gate helper: $helper"
   else
@@ -312,7 +312,7 @@ fi
 echo ""
 echo "12. Autonomous Loop Backend (deterministic driver)..."
 
-LOOP_STATE="$ROOT_DIR/conductor/1-workbench/loop-state.json"
+LOOP_STATE="$ROOT_DIR/carja/1-workbench/loop-state.json"
 if [ -f "$LOOP_STATE" ]; then
   for field in '"schema_version": 2' '"budget"' '"verification"' '"stall"' '"maker_reported_done"' '"platform"' '"sandbox"' '"checker_votes"'; do
     if grep -q "$field" "$LOOP_STATE"; then

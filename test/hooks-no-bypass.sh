@@ -2,7 +2,7 @@
 # ============================================================
 # Hook-bypass blocker — PreToolUse BEHAVIOR test (F11).
 #
-# Every Conductor gate lives in a git hook, and `git commit --no-verify` skips
+# Every Carja gate lives in a git hook, and `git commit --no-verify` skips
 # all of them in one flag, silently, with no ship-log line. Our only defence
 # was a sentence in hooks/README.md asking nicely. This hook makes it a block.
 #
@@ -49,7 +49,7 @@ blocked "N3: git push --no-verify"              'git push --no-verify origin mai
 blocked "N4: -c core.hooksPath= override"       'git -c core.hooksPath=/dev/null commit -m "x"'
 blocked "N5: an abbreviated --no-veri prefix"   'git commit --no-veri -m "x"'
 blocked "N6: a bypass later in a chain"         'npm test && git commit --no-verify -m "x"'
-blocked "N7: CONDUCTOR_HOOKS=off on a commit"   'CONDUCTOR_HOOKS=off git commit -m "x"'
+blocked "N7: CARJA_HOOKS=off on a commit"   'CARJA_HOOKS=off git commit -m "x"'
 
 echo ""
 echo "Hook-bypass blocker — the independent review's counterexamples (B2):"
@@ -60,7 +60,7 @@ blocked "R1: grouped short flags, -nm"             'git commit -nm x'
 blocked "R2: grouped short flags, -anm"            'git commit -anm x'
 blocked "R3: -an then a separate -m"               'git commit -an -m x'
 blocked "R4: the '\'' quoting idiom"                "git commit -m 'it'\\''s' --no-verify"
-blocked "R5: env prefix"                           'env CONDUCTOR_HOOKS=off git commit -m x'
+blocked "R5: env prefix"                           'env CARJA_HOOKS=off git commit -m x'
 blocked "R6: command prefix"                       'command git commit --no-verify'
 blocked "R7: sh -c wrapper"                        'sh -c "git commit --no-verify"'
 blocked "R8: bash -c with single quotes"           "bash -c 'git commit -n -m x'"
@@ -100,7 +100,7 @@ echo "Hook-bypass blocker — allowed commands:"
 
 allowed "A1: an ordinary commit"                'git commit -m "feat: thing"'
 allowed "A2: an ordinary push"                  'git push origin main'
-allowed "A3: a logged Conductor waiver"         'CONDUCTOR_NO_TEST="config only" git commit -m "x"'
+allowed "A3: a logged Carja waiver"         'CARJA_NO_TEST="config only" git commit -m "x"'
 allowed "A4: -n on a command that is not commit" 'git clean -n'
 allowed "A5: --no-verify inside a quoted string" 'git commit -m "document --no-verify here"'
 allowed "A6: a non-git command"                 'npm run build --no-verify-ssl'
@@ -136,16 +136,16 @@ if [ "$code" = "0" ]; then ok "E3: empty input fails open"; else no "E3: empty i
 # E4: the denial must name the logged alternative, or the reader learns nothing.
 out="$(printf '{"tool_name":"Bash","tool_input":{"command":"git commit --no-verify -m x"}}' \
   | bash "$HOOK" 2>&1)"
-if printf '%s' "$out" | grep -q "CONDUCTOR_NO_TEST"; then
+if printf '%s' "$out" | grep -q "CARJA_NO_TEST"; then
   ok "E4: the denial points at the logged waiver instead"
 else
   no "E4: the denial does not tell the caller what to do instead"
 fi
 
-# E5: CONDUCTOR_HOOKS=off disables this hook too — one master switch, not two.
+# E5: CARJA_HOOKS=off disables this hook too — one master switch, not two.
 code="$(printf '{"tool_name":"Bash","tool_input":{"command":"git commit --no-verify -m x"}}' \
-  | CONDUCTOR_HOOKS=off bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
-if [ "$code" = "0" ]; then ok "E5: CONDUCTOR_HOOKS=off disables the hook"; else no "E5: hook still fired with CONDUCTOR_HOOKS=off (exit $code)"; fi
+  | CARJA_HOOKS=off bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
+if [ "$code" = "0" ]; then ok "E5: CARJA_HOOKS=off disables the hook"; else no "E5: hook still fired with CARJA_HOOKS=off (exit $code)"; fi
 
 # E6: bounded without coreutils `timeout` (stock macOS) — same run_bounded.
 FAKE="$(mktemp -d)"
@@ -153,7 +153,7 @@ printf '#!/bin/sh\n/bin/sleep 30\n' > "$FAKE/node"; chmod +x "$FAKE/node"
 ln -s "$(command -v perl)" "$FAKE/perl"
 START=$(date +%s)
 code="$(printf '{"tool_name":"Bash","tool_input":{"command":"git commit --no-verify -m x"}}' \
-  | PATH="$FAKE" CONDUCTOR_HOOK_TIMEOUT=2 /bin/bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
+  | PATH="$FAKE" CARJA_HOOK_TIMEOUT=2 /bin/bash "$HOOK" >/dev/null 2>&1; printf '%s' "$?")"
 ELAPSED=$(( $(date +%s) - START ))
 rm -rf "$FAKE"
 if [ "$code" = "0" ] && [ "$ELAPSED" -lt 8 ]; then ok "E6: bounded without a timeout binary (${ELAPSED}s)"; else no "E6: unbounded without coreutils timeout (exit $code after ${ELAPSED}s)"; fi

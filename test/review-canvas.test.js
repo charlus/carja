@@ -1,7 +1,7 @@
 // The review canvas (F4, slice 1).
 //
-// Conductor's human is a PO, and on Claude Code there is no file browser: the
-// terminal is the only surface. `conductor view` fixed the READ half — every
+// Carja's human is a PO, and on Claude Code there is no file browser: the
+// terminal is the only surface. `carja view` fixed the READ half — every
 // document rendered into one page. This is the missing return path: the human
 // reads a plan in a browser, says approve or request changes, and the verdict
 // comes back to a blocked CLI call the agent is waiting on.
@@ -116,7 +116,7 @@ describe("F4 — feedback records", () => {
   });
 
   test("an annotation's anchor fields are bounded and stringified", () => {
-    // The anchor comes from a browser and is written into conductor/. A
+    // The anchor comes from a browser and is written into carja/. A
     // 2MB snippet or a nested object would land in the knowledge base.
     const f = normalizeFeedback({
       kind: "annotation",
@@ -142,7 +142,7 @@ describe("F4 — feedback survives an interrupted wait", () => {
   let home;
 
   test("pending feedback round-trips through the store", async () => {
-    home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    home = await mkdtemp(join(tmpdir(), "carja-review-"));
     const artifact = "/p/plan.md";
     assert.deepEqual(await loadPending(artifact, home), []);
 
@@ -157,7 +157,7 @@ describe("F4 — feedback survives an interrupted wait", () => {
   });
 
   test("each artifact has its own queue", async () => {
-    home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    home = await mkdtemp(join(tmpdir(), "carja-review-"));
     await appendPending("/p/a.md", { kind: "comment", text: "for a", at: "t" }, home);
     await appendPending("/p/b.md", { kind: "comment", text: "for b", at: "t" }, home);
     assert.equal((await loadPending("/p/a.md", home))[0].text, "for a");
@@ -167,7 +167,7 @@ describe("F4 — feedback survives an interrupted wait", () => {
   });
 
   test("a resolved review clears its queue", async () => {
-    home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    home = await mkdtemp(join(tmpdir(), "carja-review-"));
     await appendPending("/p/a.md", { kind: "comment", text: "x", at: "t" }, home);
     await clearPending("/p/a.md", home);
     assert.deepEqual(await loadPending("/p/a.md", home), []);
@@ -177,7 +177,7 @@ describe("F4 — feedback survives an interrupted wait", () => {
   test("a corrupt queue file reads as empty, it does not throw", async () => {
     // The store sits in front of a blocking CLI call. A half-written line
     // must not be the thing that stops the human being able to approve.
-    home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    home = await mkdtemp(join(tmpdir(), "carja-review-"));
     await appendPending("/p/a.md", { kind: "comment", text: "good", at: "t" }, home);
     const { writeFile } = await import("node:fs/promises");
     await writeFile(pendingPathFor("/p/a.md", home), '{"kind":"comment"\nnot json\n', "utf8");
@@ -310,7 +310,7 @@ describe("F4 — the server resolves when the human decides", () => {
   });
 
   test("a wait that died replays what the human already said", async () => {
-    const home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const home = await mkdtemp(join(tmpdir(), "carja-review-"));
     const artifact = "/p/replay.md";
     try {
       // First wait: the human comments, then the process dies.
@@ -332,7 +332,7 @@ describe("F4 — the server resolves when the human decides", () => {
   });
 
   test("a verdict given to a dead wait is honoured, not asked for twice", async () => {
-    const home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const home = await mkdtemp(join(tmpdir(), "carja-review-"));
     const artifact = "/p/verdict.md";
     try {
       const first = await createReviewServer({ markdown: MD, title: "P", artifactPath: artifact, home });
@@ -368,7 +368,7 @@ describe("F4 — the server resolves when the human decides", () => {
     // Reproduces B4 against a live server: a cross-origin text/plain POST —
     // a "simple request", so no CORS preflight ever fires — carrying an
     // approval. It must not end the wait.
-    const home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const home = await mkdtemp(join(tmpdir(), "carja-review-"));
     const server = await createReviewServer({ markdown: MD, title: "P", artifactPath: "/p/atk.md", home });
     try {
       const status = await rawPost(server.port, {
@@ -389,7 +389,7 @@ describe("F4 — the server resolves when the human decides", () => {
     // Defence in depth: a cross-site page can only send JSON after a CORS
     // preflight, which this server never grants. Requiring JSON means a
     // no-preflight simple request cannot reach the handler at all.
-    const home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const home = await mkdtemp(join(tmpdir(), "carja-review-"));
     const server = await createReviewServer({ markdown: MD, title: "P", artifactPath: "/p/ct.md", home });
     try {
       const status = await rawPost(server.port, {
@@ -407,7 +407,7 @@ describe("F4 — the server resolves when the human decides", () => {
     // Review IMPORTANT: the queue was keyed by path, so an approval given to
     // v1 was honoured after the agent rewrote the document into v2 — an
     // approval of text the human never saw.
-    const home = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const home = await mkdtemp(join(tmpdir(), "carja-review-"));
     const artifact = "/p/versions.md";
     try {
       const v1 = await createReviewServer({ markdown: "# v1\n", title: "P", artifactPath: artifact, home });

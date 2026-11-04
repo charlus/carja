@@ -1,6 +1,6 @@
 // src/commands/agents-md.js
 //
-// `conductor agents-md <facts|write|check> [dir]` — the project card in the root
+// `carja agents-md <facts|write|check> [dir]` — the project card in the root
 // AGENTS.md (docs/roadmap/Agents-MD-Project-Card.md §5).
 //
 //   facts   print the sections the code can state (Stack, Commands, Layout, areas)
@@ -57,7 +57,7 @@ export async function gatherFacts(root) {
   if (config.verify) commands.push({ what: "verify", cmd: config.verify });
   if (config.eval) commands.push({ what: "eval", cmd: config.eval });
   if (config.loop?.setup) commands.push({ what: "setup", cmd: config.loop.setup });
-  sources["conductor.config.json#commands"] = JSON.stringify([config.verify, config.eval, config.loop?.setup]);
+  sources["carja.config.json#commands"] = JSON.stringify([config.verify, config.eval, config.loop?.setup]);
 
   for (const cr of codeRoots) {
     const base = resolve(root, cr);
@@ -126,7 +126,7 @@ export async function gatherFacts(root) {
   return { facts, sources };
 }
 
-/** "draft" | "ok" | { stale: [paths] } | null (no AGENTS.md / no card), for `conductor status`. */
+/** "draft" | "ok" | { stale: [paths] } | null (no AGENTS.md / no card), for `carja status`. */
 export async function cardState(root) {
   const text = await readOr(join(root, "AGENTS.md"));
   if (!text) return null;
@@ -142,7 +142,7 @@ export async function agentsMdCommand(args, { cwd, stdout, stderr }) {
   const root = resolve(cwd, dirArg ?? ".");
   const agentsPath = join(root, "AGENTS.md");
   if (!["facts", "write", "check"].includes(sub)) {
-    stderr.write("Usage: conductor agents-md <facts|write|check> [dir]\n");
+    stderr.write("Usage: carja agents-md <facts|write|check> [dir]\n");
     return 1;
   }
   const { facts, sources } = await gatherFacts(root);
@@ -153,7 +153,7 @@ export async function agentsMdCommand(args, { cwd, stdout, stderr }) {
 
   const text = await readOr(agentsPath);
   if (text == null) {
-    stderr.write(`No AGENTS.md in ${root}. Run \`conductor upgrade\` (or \`conductor init\`) first.\n`);
+    stderr.write(`No AGENTS.md in ${root}. Run \`carja upgrade\` (or \`carja init\`) first.\n`);
     return 1;
   }
 
@@ -167,7 +167,7 @@ export async function agentsMdCommand(args, { cwd, stdout, stderr }) {
     await writeFile(agentsPath, out, "utf8");
     const todos = (card.match(/TODO/g) ?? []).length;
     stdout.write(`Project card refreshed in AGENTS.md: facts from the code${todos ? `, ${todos} TODO to write` : ""}.\n`);
-    stdout.write(todos ? "Write the TODO sections, then run: conductor agents-md check\n" : "Run: conductor agents-md check\n");
+    stdout.write(todos ? "Write the TODO sections, then run: carja agents-md check\n" : "Run: carja agents-md check\n");
     return 0;
   }
 

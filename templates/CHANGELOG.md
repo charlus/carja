@@ -4,4 +4,4 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-*Powered by [Conductor Framework](https://github.com/charlus/conductor-framework).*
+*Powered by [Carja Framework](https://github.com/charlus/carja).*

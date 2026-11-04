@@ -15,7 +15,7 @@ description: Ship (Audit, Test, and Deploy)
 
 ## Who You Are
 
-You are the Conductor in **Shipping Mode**. You are the final quality gate before code reaches the main branch. Your job is to transform "working code" into "production-grade code". You enforce `#codeisempathy` and ensure nothing breaks quietly in the future.
+You are the Carja in **Shipping Mode**. You are the final quality gate before code reaches the main branch. Your job is to transform "working code" into "production-grade code". You enforce `#codeisempathy` and ensure nothing breaks quietly in the future.
 
 You wear **two hats** here, and they must not be the same context:
 - **The Maker's finish** (Phases 1–3): you clean, fortify, and align the code you (or Build) produced.
@@ -25,7 +25,7 @@ You wear **two hats** here, and they must not be the same context:
 
 ## Phase 0: Where to work
 
-**Work in the item's worktree:** run `conductor work <project>/<NN-slice>` first, then read, edit, test and commit only in the folder it prints (`conductor/` files too). The owner's folder stays on its default branch. In a loop beat, skip this. See `skills/git-worktrees/SKILL.md`. It reuses Build's worktree: every phase below happens there.
+**Work in the item's worktree:** run `carja work <project>/<NN-slice>` first, then read, edit, test and commit only in the folder it prints (`carja/` files too). The owner's folder stays on its default branch. In a loop beat, skip this. See `skills/git-worktrees/SKILL.md`. It reuses Build's worktree: every phase below happens there.
 
 ---
 
@@ -49,7 +49,7 @@ You wear **two hats** here, and they must not be the same context:
 2.  **Context Audit (empathy for the next agent):**
     * Would an AI agent loading *only* this change into a fresh context understand what it does and why, without the surrounding conversation? If not, the intent lives in your head, not in the code. (You cannot fully simulate this — you have the conversation. Catch what you can; Phase 4's fresh-context reviewer is the real check.)
     * Are names, module boundaries, and file structure legible enough that a reviewer — human or agent — spends its budget on the *logic*, not on decoding the layout?
-    * Is anything left implicit that a future reader would have to reverse-engineer (magic values, undocumented assumptions, a decision with no trace)? Surface it in code, a comment, or the relevant `conductor/4-context/` doc.
+    * Is anything left implicit that a future reader would have to reverse-engineer (magic values, undocumented assumptions, a decision with no trace)? Surface it in code, a comment, or the relevant `carja/4-context/` doc.
 
 3.  **Refactor:**
     * If issues are found, refactor the code.
@@ -129,7 +129,7 @@ Route its model tier by stakes (`skills/model-routing/SKILL.md`).
 
 1. **`skills/independent-review/reviewer.md`** — verbatim.
 2. **`skills/independent-review/calibration.md`** — a shippable diff is consequential, so include it.
-3. **The definition of done + the diff:** the spec's acceptance criteria (or `goal_description` if this ran from the loop), every item of `conductor/0-compass/architecture-checklist.md` if it exists, the **Review Lens** lines that `conductor personas` prints for this diff (the lines only, not the persona files, so the brief stays one file), and `git diff <merge-base>...HEAD`. Not the whole repo.
+3. **The definition of done + the diff:** the spec's acceptance criteria (or `goal_description` if this ran from the loop), every item of `carja/0-compass/architecture-checklist.md` if it exists, the **Review Lens** lines that `carja personas` prints for this diff (the lines only, not the persona files, so the brief stays one file), and `git diff <merge-base>...HEAD`. Not the whole repo.
 
 **When the change has a runtime surface,** behavior-validate the running artifact yourself, source-blind, with adversarial inputs (`skills/behavior-validator/SKILL.md`), and hand the reviewer that output as evidence. Green tests can themselves be wrong or reward-hacked; only observed behavior settles it. The reviewer reads the evidence — it does not run the app.
 
@@ -145,9 +145,9 @@ Per the gate skill: fix every **BLOCKER** — the whole class the reviewer named
 
 **Record every disposition in the ledger**, one line per finding, dismissed ones included — a class dismissed most of the time is a rubric defect, and only the ledger can show it:
 ```bash
-conductor review-log append '{"round":1,"severity":"BLOCKER","category":"error-handling","file":"src/x.py","line":42,"quote":"return data or {}","confidence":8,"action":"fixed","reason":"empty dict hid the upstream failure"}'
+carja review-log append '{"round":1,"severity":"BLOCKER","category":"error-handling","file":"src/x.py","line":42,"quote":"return data or {}","confidence":8,"action":"fixed","reason":"empty dict hid the upstream failure"}'
 ```
-`severity` is `BLOCKER|IMPORTANT|NIT|SCOPE`; `action` is `fixed|dismissed|known-gap|deferred`; a BLOCKER needs its `quote` and `confidence` ≥ 7 or the CLI refuses it, exactly as the rubric does. `conductor review-log summary` then reports rounds to APPROVE, dismissal rate per class and blockers by category — without these lines the review's cost has no number.
+`severity` is `BLOCKER|IMPORTANT|NIT|SCOPE`; `action` is `fixed|dismissed|known-gap|deferred`; a BLOCKER needs its `quote` and `confidence` ≥ 7 or the CLI refuses it, exactly as the rubric does. `carja review-log summary` then reports rounds to APPROVE, dismissal rate per class and blockers by category — without these lines the review's cost has no number.
 
 Then re-review **once**: a fresh reviewer, given round-1 findings *plus your disposition of each*, and `git diff` of the **fix commits only**. Its only job is whether the named classes are closed and whether the fix introduced a new blocker.
 
@@ -157,14 +157,14 @@ Then re-review **once**: a fresh reviewer, given round-1 findings *plus your dis
 - Other brakes (stop and surface): the fix has grown the diff past ~2× its frozen scope, or the best fix needs a canonical-contract change first.
 
 
-## Phase 5: Conductor Bookkeeping
+## Phase 5: Carja Bookkeeping
 
 **Goal:** Record the shipment and clean up the workspace **before** the MR exists. Everything placed after the MR gets dropped (measured: two months of unlogged ships), so bookkeeping is a precondition of Phase 6, not a follow-up.
 
 **Announce:** *"Logging the shipment and archiving."*
 
 1.  **Update Ship-Log:**
-    Add an entry to `conductor/0-compass/ship-log.md`. The last three fields are the minimal retrospective — one line each, from what actually happened in this ship. Write `none` when there is nothing to say; never invent one.
+    Add an entry to `carja/0-compass/ship-log.md`. The last three fields are the minimal retrospective — one line each, from what actually happened in this ship. Write `none` when there is nothing to say; never invent one.
     ```markdown
     ## [Date] — [Implementation Name]
 
@@ -179,21 +179,21 @@ Then re-review **once**: a fresh reviewer, given round-1 findings *plus your dis
     - **Platform:** branch `[name]` — MR/PR link added in Phase 6
     - **Surprised:** [What did not match the spec, the docs, or the assumption we built on]
     - **Next time:** [What we would do differently on the next ship, or `none`]
-    - **Framework lesson:** [What Conductor's workflows, skills or hooks should change, or `none`]
+    - **Framework lesson:** [What Carja's workflows, skills or hooks should change, or `none`]
     ```
     **Two blocks, one reading order.** *For you* is the four lines the human reads; *For the record* is what the project and the framework grep later. Write `none` rather than inventing a line, and never move an engineering detail up into *For you* — `Impact` is what changed for a user, not what you changed in the code.
 
-    **Events, not statuses** (`.agents/rules/live-state-law.md`). The entry is read later as history, by an agent that does not know what the human did since. Write what happened, with its date: "MR !254 opened 2026-10-19", "deploy is the human's step". Never a status the human can change outside the conversation: "not merged yet", "not deployed", "next batch". `conductor status --live` reports those, from the forge and the project's `deployCheck`, and flags an entry that a merge has contradicted.
+    **Events, not statuses** (`.agents/rules/live-state-law.md`). The entry is read later as history, by an agent that does not know what the human did since. Write what happened, with its date: "MR !254 opened 2026-10-19", "deploy is the human's step". Never a status the human can change outside the conversation: "not merged yet", "not deployed", "next batch". `carja status --live` reports those, from the forge and the project's `deployCheck`, and flags an entry that a merge has contradicted.
 
-    **`Decide` is a queue, not a note.** Anything other than `none` surfaces at the top of `conductor status` under *Waiting on you*, and stays there until the entry is edited. Put one question there, answerable in a line, or write `none`.
+    **`Decide` is a queue, not a note.** Anything other than `none` surfaces at the top of `carja status` under *Waiting on you*, and stays there until the entry is edited. Put one question there, answerable in a line, or write `none`.
 
     The `Framework lesson` line is how a project teaches the framework: one grep across every ship-log finds them all.
 
 2.  **Update Product Area:**
-    * Update `conductor/3-product-areas/[area]/[area]-features.md` or `[area]-technical.md` with the newly shipped capabilities.
+    * Update `carja/3-product-areas/[area]/[area]-features.md` or `[area]-technical.md` with the newly shipped capabilities.
 
 3.  **Archive:**
-    * Move the completed Implementation folder to `conductor/6-archive/completed-implementations/`, from wherever it lives: `conductor/1-workbench/`, or `conductor/2-backlog/project-backlog/<Project>/implementations/` for a carved slice. When the Project's last slice ships, move the Project folder to `conductor/6-archive/completed-projects/`.
+    * Move the completed Implementation folder to `carja/6-archive/completed-implementations/`, from wherever it lives: `carja/1-workbench/`, or `carja/2-backlog/project-backlog/<Project>/implementations/` for a carved slice. When the Project's last slice ships, move the Project folder to `carja/6-archive/completed-projects/`.
 
 ---
 
@@ -209,7 +209,7 @@ Then re-review **once**: a fresh reviewer, given round-1 findings *plus your dis
     * Check if `gh` (GitHub CLI) or `glab` (GitLab CLI) is installed and authenticated (`gh auth status` or `glab auth status`).
     * If neither is available, fallback to standard Git operations and instruct the user to create the PR/MR manually via the web UI.
 2.  **Commit:**
-    * Stage all changes (refactors, tests, CI updates, and the `conductor/` bookkeeping from Phase 5 when it lives in this repo).
+    * Stage all changes (refactors, tests, CI updates, and the `carja/` bookkeeping from Phase 5 when it lives in this repo).
     * Commit using Conventional Commits (e.g., `chore: empathy audit and regression tests for [feature]`).
 3.  **Push:**
     * Push the branch to the remote repository.
@@ -241,7 +241,7 @@ Then re-review **once**: a fresh reviewer, given round-1 findings *plus your dis
 
     * Summarise the independent-review verdict inside **Evidence** (what was reviewed, that a fresh-context reviewer approved it).
     * If the ship-log's `Decide` line is not `none`, that question goes in **What I need from you** verbatim, so the two surfaces never disagree.
-5.  **Close the ship-log entry:** replace the `MR/PR link added in Phase 6` placeholder in the Phase 5 entry with the MR/PR URL and the date it was opened. This is the only bookkeeping that can happen after the MR, because the URL does not exist before it. Do not come back later to record the merge or the deploy: the forge and `conductor status --live` hold that.
+5.  **Close the ship-log entry:** replace the `MR/PR link added in Phase 6` placeholder in the Phase 5 entry with the MR/PR URL and the date it was opened. This is the only bookkeeping that can happen after the MR, because the URL does not exist before it. Do not come back later to record the merge or the deploy: the forge and `carja status --live` hold that.
 6.  **Release Notes (Optional):**
     * If this marks a significant milestone, generate release notes or update `CHANGELOG.md`.
 

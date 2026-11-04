@@ -1,16 +1,16 @@
 // src/loop/projects-registry.js
 //
 // The watch tower (A4a, 2026-10-21): the products the loop works on, on this
-// machine, so `conductor watch --all` can show them on one screen. Machine
-// state, never in a repository: `~/.config/conductor/loop-projects.json`, or
-// `$CONDUCTOR_HOME/loop-projects.json`. `conductor loop on` adds a product.
+// machine, so `carja watch --all` can show them on one screen. Machine
+// state, never in a repository: `~/.config/carja/loop-projects.json` (`~/.config/conductor/` when only that exists), or
+// `$CARJA_HOME/loop-projects.json`. `carja loop on` adds a product.
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { configHome } from "../names.js";
 
 export function registryPath(env = process.env) {
-  return join(env.CONDUCTOR_HOME || join(homedir(), ".config", "conductor"), "loop-projects.json");
+  return join(configHome(env), "loop-projects.json");
 }
 
 /** The registered product folders, in the order they were added. Never throws. */

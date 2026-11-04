@@ -7,7 +7,7 @@
 // gstack's `bin/gstack-wtree` (Garry Tan, MIT), reimplemented here in JavaScript
 // with the same three-property argument. Credited in README.md.
 //
-// WHY THIS SHAPE. Conductor's Evidence Rule verifies an exit code and then
+// WHY THIS SHAPE. Carja's Evidence Rule verifies an exit code and then
 // trusts that result forever, because nothing can tell whether the code under
 // test still matches the code that WAS tested. A fingerprint fixes that, but
 // only if it has three properties — each of which rules out an obvious
@@ -91,7 +91,7 @@ export async function workingTreeFingerprint(cwd) {
   let realIndex = idx.ok ? idx.out : "";
   if (realIndex && !isAbsolute(realIndex)) realIndex = join(root, realIndex);
 
-  const dir = await mkdtemp(join(tmpdir(), "conductor-wtree-"));
+  const dir = await mkdtemp(join(tmpdir(), "carja-wtree-"));
   const tmpIndex = join(dir, "index");
   const env = { GIT_INDEX_FILE: tmpIndex };
 

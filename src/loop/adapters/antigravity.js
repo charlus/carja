@@ -1,6 +1,6 @@
 // src/loop/adapters/antigravity.js
 //
-// The Antigravity platform adapter. Conductor was originally Antigravity-first;
+// The Antigravity platform adapter. Carja was originally Antigravity-first;
 // the V5 stub hardcoded `antigravity run workflows/unattended-loop.md` inside the
 // driver. Phase 2 demotes that to just another adapter behind the shared
 // interface — the driver no longer knows any platform name.

@@ -1,9 +1,9 @@
 // src/loop/harvester.js
 //
 // Fleet Bridge FB-1 + FB-4 (Loop-Robustness-Plan §5). Turns the ONE source of
-// truth — the human's `./conductor/` folder — into a typed work queue the swarm
+// truth — the human's `./carja/` folder — into a typed work queue the swarm
 // can drain, and maps each work type onto the workflow a beat should run. This is
-// what makes the autonomous fleet (Client B) read from the same `conductor/` that
+// what makes the autonomous fleet (Client B) read from the same `carja/` that
 // the interactive agent (Client A) reads and writes; there is no second database.
 //
 // All parsers are PURE (string in, work-items out) so they unit-test without a
@@ -113,7 +113,7 @@ const READY_RE = /(^|[\s[(#])loop-ready\b/i;
 /**
  * Should the loop take this backlog item? Never one marked BLOCKED or
  * NEEDS_DECISION. With `requireReady`, only one tagged `loop-ready` or given
- * with `conductor loop take` (its id in `readyIds`). With `priorities`, only one
+ * with `carja loop take` (its id in `readyIds`). With `priorities`, only one
  * under those headings.
  */
 export function isHarvestable(item, { requireReady = false, priorities = [], readyIds = new Set() } = {}) {
@@ -259,7 +259,7 @@ export function renderAttempts(attempts) {
 /** The escalate instruction every beat carries (F3). */
 export const ESCALATE_HINT =
   "If you cannot go on without something only a human can give (an approval, access, a decision), write " +
-  "`conductor/1-workbench/maker-signal.json` `{ \"escalate\": true, \"reason\": \"<what you need, at most 1500 characters>\" }` " +
+  "`carja/1-workbench/maker-signal.json` `{ \"escalate\": true, \"reason\": \"<what you need, at most 1500 characters>\" }` " +
   "and stop. The driver ends the run and puts your reason in the inbox. Retrying a beat you know is blocked only burns budget.";
 
 /** Render the per-beat assignment a fleet agent reads to know its work item. */
@@ -268,14 +268,14 @@ export function renderAssignment(task) {
   return [
     "# Loop Assignment (this beat)",
     "",
-    "> The driver assigned you ONE work item from `./conductor/` this beat. Do exactly this, commit, then write `conductor/1-workbench/maker-signal.json` `{ \"done\": true }` only if the whole item is complete.",
+    "> The driver assigned you ONE work item from `./carja/` this beat. Do exactly this, commit, then write `carja/1-workbench/maker-signal.json` `{ \"done\": true }` only if the whole item is complete.",
     "",
     `- **Task id:** ${task.id}`,
     `- **Type:** ${task.type}`,
     `- **Item:** ${task.title}`,
-    `- **Source:** ${task.source?.kind ?? "conductor"} (\`${task.source?.title ?? task.title}\`)`,
+    `- **Source:** ${task.source?.kind ?? "carja"} (\`${task.source?.title ?? task.title}\`)`,
     ...(task.source?.path ? [`- **Folder:** \`${task.source.path}\` (read your inputs from here)`] : []),
-    `- **Questions file:** \`conductor/1-workbench/questions/${roundKeyOf(task.id)}.md\` (only for a one-way door: see the loop workflow)`,
+    `- **Questions file:** \`carja/1-workbench/questions/${roundKeyOf(task.id)}.md\` (only for a one-way door: see the loop workflow)`,
     ...(task.answered_round ? [`- **Your questions were answered:** read \`${task.answered_round}\` first, apply each answer, and record it as a decision in the stage's document.`] : []),
     route.workflow ? `- **Run workflow:** \`${route.workflow}\`` : "- **Run workflow:** (none — follow the brief)",
     ...(task.details ? ["", "**Item details** (from the backlog, verbatim):", "", task.details] : []),

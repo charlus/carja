@@ -1,13 +1,13 @@
 // test/loop-deps.test.js
 //
 // I4, the dependency gate (owner, 2026-10-23): "Not only PyPI, any package
-// repo. Conductor works with any language and package manager." The agent never
+// repo. Carja works with any language and package manager." The agent never
 // reaches a registry. After a beat the driver reads what changed in the
 // manifests; a dependency the approved Technical Vision names is checked against
 // the registry (exists, old enough, not yanked, pinned, no known vulnerability)
 // and installed outside the sandbox; any other is a one-way door for the owner.
 // Here: the pure part, with the registry stubbed. Live check at the end, skipped
-// unless CONDUCTOR_LIVE_REGISTRY=1.
+// unless CARJA_LIVE_REGISTRY=1.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -186,7 +186,7 @@ test("registry hosts are known, so the loop config can refuse to open them to th
   assert.equal(REGISTRY_HOSTS.some((re) => re.test("code.euranova.eu")), false);
 });
 
-test("live: the real deps.dev and OSV answer for a known package and a known-vulnerable version", { skip: process.env.CONDUCTOR_LIVE_REGISTRY !== "1" }, async () => {
+test("live: the real deps.dev and OSV answer for a known package and a known-vulnerable version", { skip: process.env.CARJA_LIVE_REGISTRY !== "1" }, async () => {
   const ok = await checkPackage({ ecosystem: "pypi", name: "holidays", spec: "==0.58" }, { now: Date.now(), minAgeDays: 7 });
   assert.equal(ok.ok, true, ok.reasons.join("; "));
   const bad = await checkPackage({ ecosystem: "npm", name: "lodash", spec: "4.17.20" }, { now: Date.now(), minAgeDays: 7 });

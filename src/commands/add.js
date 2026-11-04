@@ -1,5 +1,5 @@
 /**
- * conductor add <skill-name> [--registry <url>]
+ * carja add <skill-name> [--registry <url>]
  *
  * Downloads a skill from the registry into .agents/skills/.
  */
@@ -33,13 +33,13 @@ function parseAddArgs(args) {
       throw new Error(`Unknown option: ${arg}`);
     }
     if (parsed.skillName) {
-      throw new Error("Too many arguments. Usage: conductor add <skill-name>");
+      throw new Error("Too many arguments. Usage: carja add <skill-name>");
     }
     parsed.skillName = arg;
   }
 
   if (!parsed.skillName) {
-    throw new Error("Missing skill name. Usage: conductor add <skill-name>");
+    throw new Error("Missing skill name. Usage: carja add <skill-name>");
   }
 
   return parsed;
@@ -61,7 +61,7 @@ export async function addCommand(args, { cwd, stdout, stderr }) {
   if (!(await exists(skillsDir))) {
     stderr.write(
       "No .agents/skills/ directory found.\n" +
-      'Run "conductor init" first to set up the project.\n'
+      'Run "carja init" first to set up the project.\n'
     );
     return 1;
   }
@@ -95,7 +95,7 @@ export async function addCommand(args, { cwd, stdout, stderr }) {
   if (!skill) {
     stderr.write(
       `Skill "${parsed.skillName}" not found in registry.\n` +
-      `Run "conductor search ${parsed.skillName}" to find similar skills.\n`
+      `Run "carja search ${parsed.skillName}" to find similar skills.\n`
     );
     return 1;
   }

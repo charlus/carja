@@ -26,7 +26,7 @@ Run these per section of the document — not per workflow, and never as a gate 
 ## Laws
 
 - **Recommend, don't ask.** Every choice you surface carries your recommended answer. (Shared with Grilling.)
-- **Look facts up.** Read the upstream `conductor/` docs and existing code yourself; never ask the human for something the context already holds. (Shared with Grilling.)
+- **Look facts up.** Read the upstream `carja/` docs and existing code yourself; never ask the human for something the context already holds. (Shared with Grilling.)
 - **Engineering decisions are yours.** Never draft two options for a library, a pattern, a schema shape or a test seam and ask which one. Decide, draft with it, and note the choice in one line. Only a **product decision** goes to the human — see Grilling's *Whose Decision Is It*.
 - **One gate per document, at convergence.** No per-phase "X locked?" checkpoints. Do maximal drafting, then ask once — the human is involved late, with everything prepared.
 - **Stay at the workflow's altitude.** Respect the calling workflow's persona and bans (e.g. no tech in a product-discovery draft, no implementation detail in a design brief).

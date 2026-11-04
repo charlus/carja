@@ -66,7 +66,7 @@ describe("D1 — Build never stops to ask permission to continue", () => {
 describe("F6 — personas follow the files actually changed", () => {
   test("the batch review re-runs personas on the real diff and loads any new one", () => {
     const review = BUILD.slice(BUILD.indexOf("## Phase 2"), BUILD.indexOf("## Phase 3"));
-    assert.match(review, /conductor personas/);
+    assert.match(review, /carja personas/);
     assert.match(review, /not (yet )?in the tracker header|new persona/i);
     assert.match(review, /Designer[^.]*no `?DESIGN\.md`?|no `?DESIGN\.md`?[^.]*Designer/i);
   });

@@ -1,9 +1,9 @@
 // src/commands/loop-on.js
 //
-// `conductor loop on <project> [dir] [--code-dir <d>] [--yes] [--dry-run]` and
-// `conductor loop off <project> [dir]`. Reads the facts, shows the plan from
+// `carja loop on <project> [dir] [--code-dir <d>] [--yes] [--dry-run]` and
+// `carja loop off <project> [dir]`. Reads the facts, shows the plan from
 // src/loop/enable.js in plain words, asks once (or takes --yes), then writes
-// conductor.config.json and loop-state.json and runs the doctor.
+// carja.config.json and loop-state.json and runs the doctor.
 
 import { readFile, writeFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -16,7 +16,7 @@ import { PROJECTS_REL } from "../loop/slices.js";
 import { STATE_REL } from "../loop/state-sync.js";
 import { configPath as configPathOf } from "../names.js";
 
-const CONFIG = "conductor.config.json";
+const CONFIG = "carja.config.json";
 const readJsonOr = async (p, fallback) => ((await exists(p)) ? JSON.parse(await readFile(p, "utf8")) : fallback);
 const writeJson = (p, obj) => writeFile(p, `${JSON.stringify(obj, null, 2)}\n`, "utf8");
 
@@ -37,16 +37,16 @@ export async function loopOnCommand(root, project, { args, stdout, stderr, confi
     const config = await readJsonOr(configPathOf(root), {});
     const list = await readProjects(root, { config, readBlueprints, exists });
     if (!list.length) {
-      stdout.write("  No project in conductor/2-backlog/project-backlog/ yet. Start one in your agent with /genesis.\n");
+      stdout.write("  No project in carja/2-backlog/project-backlog/ yet. Start one in your agent with /genesis.\n");
       return 0;
     }
     stdout.write(`\n${renderProjects(list)}\n\n`);
     const off = list.filter((p) => p.canTurnOn && p.loop === "loop off");
-    stdout.write(off.length ? `  Next: \`conductor loop on ${off[0].name}\` (it shows what changes first).\n` : "  Every project the loop can take is on.\n");
+    stdout.write(off.length ? `  Next: \`carja loop on ${off[0].name}\` (it shows what changes first).\n` : "  Every project the loop can take is on.\n");
     return 0;
   }
   if (!(await exists(join(root, STATE_REL)))) {
-    stderr.write(`No ${STATE_REL} found. Run 'conductor init' or 'conductor upgrade' first.\n`);
+    stderr.write(`No ${STATE_REL} found. Run 'carja init' or 'carja upgrade' first.\n`);
     return 1;
   }
   const config = await readJsonOr(configPathOf(root), {});
@@ -84,11 +84,11 @@ export async function loopOnCommand(root, project, { args, stdout, stderr, confi
     stderr.write(`⛔  ${plan.error}\n`);
     return 1;
   }
-  stdout.write(`\n  conductor loop on ${project ?? "--backlog"}\n\n`);
+  stdout.write(`\n  carja loop on ${project ?? "--backlog"}\n\n`);
   for (const c of plan.changes) stdout.write(`  • ${c}\n`);
   for (const n of plan.notes) stdout.write(`  ⚠️  ${n}\n`);
   const prof = plan.config.loop?.profile;
-  stdout.write(`  Models: ${prof ? `the ${prof} profile` : "the engine's default for every role"}. \`conductor loop profile\` shows them and switches by budget.\n`);
+  stdout.write(`  Models: ${prof ? `the ${prof} profile` : "the engine's default for every role"}. \`carja loop profile\` shows them and switches by budget.\n`);
   // The watch tower lists every product the loop is on, even one already set up.
   const { addLoopProject } = await import("../loop/projects-registry.js");
   await addLoopProject(root).catch(() => {});
@@ -120,7 +120,7 @@ export async function loopOnCommand(root, project, { args, stdout, stderr, confi
 
 export async function loopOffCommand(root, project, { stdout, stderr }) {
   if (!project) {
-    stderr.write("usage: conductor loop off <project> [dir]\n");
+    stderr.write("usage: carja loop off <project> [dir]\n");
     return 1;
   }
   const config = await readJsonOr(configPathOf(root), {});

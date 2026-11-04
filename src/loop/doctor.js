@@ -1,6 +1,6 @@
 // src/loop/doctor.js
 //
-// `conductor loop doctor` (F1 + F6 of the first unattended crossing,
+// `carja loop doctor` (F1 + F6 of the first unattended crossing,
 // docs/roadmap/Unattended-Crossing.md). Preparing a project for the loop took
 // six project facts that nothing checked, and the prep notes were proven wrong
 // only by a live run. The doctor checks those facts before any beat.
@@ -35,13 +35,13 @@ export function diagnose(f) {
         "fail",
         "the loop is not set up for this project yet",
         `loop-state.json says ${s.phase ?? "no phase"}, sandbox ${s.sandbox ?? "unset"}, and no work is turned on.`,
-        "`conductor loop on` lists your projects; `conductor loop on <project>` sets the loop up for one, after showing each change; `conductor loop on --backlog` for backlog items you give it with `conductor loop take`."
+        "`carja loop on` lists your projects; `carja loop on <project>` sets the loop up for one, after showing each change; `carja loop on --backlog` for backlog items you give it with `carja loop take`."
       ),
     ];
   }
 
   if (f.configErrors?.length) {
-    out.push(check("config", "fail", "conductor.config.json loop block", f.configErrors.join("; "), "Fix the listed values; the run refuses an invalid loop block."));
+    out.push(check("config", "fail", "carja.config.json loop block", f.configErrors.join("; "), "Fix the listed values; the run refuses an invalid loop block."));
   }
 
   if (f.preflightHalt) {
@@ -51,14 +51,14 @@ export function diagnose(f) {
   }
 
   if (f.projectVersion && f.cliVersion && f.projectVersion !== f.cliVersion) {
-    out.push(check("version", "warn", `project framework ${f.projectVersion}, CLI ${f.cliVersion}`, "The loop runs the CLI's code against the project's templates.", "Run `conductor upgrade` in the project."));
+    out.push(check("version", "warn", `project framework ${f.projectVersion}, CLI ${f.cliVersion}`, "The loop runs the CLI's code against the project's templates.", "Run `carja upgrade` in the project."));
   }
 
   if (s.sandbox === "cli-native") {
     const p = f.profile ?? {};
     if (!p.credentials || !p.strict) {
       const missing = [!p.credentials && "forge credentials are not withheld", !p.strict && "headless beats can stall on commands that need approval"].filter(Boolean);
-      out.push(check("sandbox-profile", "fail", "sandbox profile is out of date", missing.join("; "), "Run `conductor upgrade` (6.17.0 or later)."));
+      out.push(check("sandbox-profile", "fail", "sandbox profile is out of date", missing.join("; "), "Run `carja upgrade` (6.17.0 or later)."));
     } else {
       out.push(check("sandbox-profile", "pass", "sandbox profile withholds credentials and runs headless"));
     }
@@ -79,19 +79,19 @@ export function diagnose(f) {
   if (c.available === false && (s.platform === "claude" || !s.platform)) {
     out.push(check("claude", "fail", "claude is not on PATH", "", "Install Claude Code, or set platform in loop-state.json."));
   } else if (c.available) {
-    for (const w of c.warnings ?? []) out.push(check("instructions", "warn", "Claude Code may not see the framework", w, "See the warning; `conductor status` shows the same."));
+    for (const w of c.warnings ?? []) out.push(check("instructions", "warn", "Claude Code may not see the framework", w, "See the warning; `carja status` shows the same."));
     if (!(c.warnings ?? []).length) out.push(check("instructions", "pass", "Claude Code reads AGENTS.md here"));
   }
 
   const fg = f.forge ?? {};
   if (fg.needed) {
-    if (!fg.forge) out.push(check("forge", "fail", "cannot tell which forge opens the PR", fg.error ?? "", 'Set loop.forge to "gh" or "glab" in conductor.config.json.'));
+    if (!fg.forge) out.push(check("forge", "fail", "cannot tell which forge opens the PR", fg.error ?? "", 'Set loop.forge to "gh" or "glab" in carja.config.json.'));
     else if (!fg.authOk) out.push(check("forge", "fail", `${fg.forge} is not logged in${fg.host ? ` to ${fg.host}` : ""}`, "", `Run \`${fg.forge} auth login${fg.host ? ` --hostname ${fg.host}` : ""}\`.`));
     else out.push(check("forge", "pass", `${fg.forge} is logged in${fg.host ? ` to ${fg.host}` : ""}`));
   }
 
   if (f.nestedRepos?.length) {
-    out.push(check("nested", "fail", `nested repositories: ${f.nestedRepos.join(", ")}`, "Loop worktrees would not contain that code.", "`conductor loop on <project>` sets it up (the code repository, and the others ignored). Or by hand: loop.code_dir for the code, loop.allow_nested_repo: true if unrelated."));
+    out.push(check("nested", "fail", `nested repositories: ${f.nestedRepos.join(", ")}`, "Loop worktrees would not contain that code.", "`carja loop on <project>` sets it up (the code repository, and the others ignored). Or by hand: loop.code_dir for the code, loop.allow_nested_repo: true if unrelated."));
   }
   const cd = f.code;
   if (cd) {
@@ -108,9 +108,9 @@ export function diagnose(f) {
   const q = f.queue;
   if (q) {
     if (q.count === 0) {
-      out.push(check("queue", "warn", "--from-conductor would find no work", "", `Turn it on for a project: \`conductor loop on <project>\`. Or ${q.requireReady ? "give it a backlog item: `conductor loop take \"<item>\"`" : "add a backlog item"}.`));
+      out.push(check("queue", "warn", "--from-carja would find no work", "", `Turn it on for a project: \`carja loop on <project>\`. Or ${q.requireReady ? "give it a backlog item: `carja loop take \"<item>\"`" : "add a backlog item"}.`));
     } else {
-      out.push(check("queue", "pass", `--from-conductor would take ${q.count} item${q.count === 1 ? "" : "s"}`));
+      out.push(check("queue", "pass", `--from-carja would take ${q.count} item${q.count === 1 ? "" : "s"}`));
     }
   }
 
@@ -119,7 +119,7 @@ export function diagnose(f) {
   const makerTier = modelTier(f.models?.maker);
   const checkerTier = modelTier(f.models?.checker);
   if (makerTier !== null && checkerTier !== null && checkerTier < makerTier) {
-    out.push(check("models", "warn", `the Checker runs on ${f.models.checker}, a weaker model than the Maker's ${f.models.maker}`, "The loop opens an MR on the Checker's approval alone. A weaker reviewer passes mistakes the Maker made.", "Use a profile: `conductor loop profile quality` or `balanced` both review on Opus. Or give `loop.models.checker` the Maker's model or a stronger one."));
+    out.push(check("models", "warn", `the Checker runs on ${f.models.checker}, a weaker model than the Maker's ${f.models.maker}`, "The loop opens an MR on the Checker's approval alone. A weaker reviewer passes mistakes the Maker made.", "Use a profile: `carja loop profile quality` or `balanced` both review on Opus. Or give `loop.models.checker` the Maker's model or a stronger one."));
   }
 
   if (f.dotenv?.present && !f.dotenv.copiedBySetup) {
@@ -173,7 +173,7 @@ export function diagnose(f) {
 
   const b = f.beat;
   if (b?.ran) {
-    if (b.blocked) out.push(check("beat", "fail", "a sandboxed beat could not run the verify command", b.blocked, "Run `conductor upgrade`; if it persists, the command needs a host or path the sandbox blocks: add it to loop.allowed_domains or loop.setup."));
+    if (b.blocked) out.push(check("beat", "fail", "a sandboxed beat could not run the verify command", b.blocked, "Run `carja upgrade`; if it persists, the command needs a host or path the sandbox blocks: add it to loop.allowed_domains or loop.setup."));
     else if (b.exitCode !== 0) out.push(check("beat", "fail", `in a sandboxed beat the verify command exits ${b.exitCode}`, b.tail ?? "", "It passes outside the sandbox, so the sandbox blocks something it needs: read the tail and add the host to loop.allowed_domains."));
     else out.push(check("beat", "pass", "a sandboxed beat ran the verify command green"));
   }
@@ -183,7 +183,7 @@ export function diagnose(f) {
 
 /** The report, one line per check, a fix under each non-pass, and a verdict. */
 export function renderDoctor(checks) {
-  const lines = ["conductor loop doctor", ""];
+  const lines = ["carja loop doctor", ""];
   for (const c of checks) {
     lines.push(`  ${ICON[c.level]} ${c.title}`);
     if (c.level !== "pass" && c.detail) lines.push(`      ${c.detail}`);

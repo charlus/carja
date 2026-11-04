@@ -35,7 +35,7 @@ You cannot test everything, so decide *where* the tests attach before writing an
 - **Never skip the RED phase.** You must prove the test can fail before making it pass.
 - **Work vertical slices, not horizontal.** Each cycle is one thin end-to-end slice (a tracer bullet), driven by what the last cycle taught — never "write all the tests, then all the implementation," which only verifies imagined behavior.
 - **Micro-commits**: Consider committing or using `using-git-worktrees` after a successful GREEN or REFACTOR phase.
-- **Traceability**: If this code fulfills a specific requirement from `conductor/2-backlog/task-backlog.md`, ensure the commit message or the `trace.md` file references the exact task.
+- **Traceability**: If this code fulfills a specific requirement from `carja/2-backlog/task-backlog.md`, ensure the commit message or the `trace.md` file references the exact task.
 
 ## Test anti-patterns (reject these in REFACTOR and review)
 

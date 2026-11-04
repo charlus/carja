@@ -14,13 +14,13 @@ import assert from "node:assert/strict";
 import { prTitle, openPullRequest } from "../src/loop/merge.js";
 import { diagnose } from "../src/loop/doctor.js";
 
-const ITEM = "Conductor task task:p3-cover: **P3 — Cover MR !49's coverage strip and advisory banner with a component test.** (loop-ready) *(AC1, the \"Not Observed\" tri-state's fresh-form default, was the third part of this item and is **verified** — see below. Retitled 2026-08-03 to what actually remains.)* Neither the strip nor the banner is pinned by anything that renders it, and both are **conditional**.";
+const ITEM = "Carja task task:p3-cover: **P3 — Cover MR !49's coverage strip and advisory banner with a component test.** (loop-ready) *(AC1, the \"Not Observed\" tri-state's fresh-form default, was the third part of this item and is **verified** — see below. Retitled 2026-08-03 to what actually remains.)* Neither the strip nor the banner is pinned by anything that renders it, and both are **conditional**.";
 
 test("prTitle keeps the item's first sentence, without markdown or tags, within 120 characters", () => {
   const t = prTitle(ITEM);
   assert.ok(t.length <= 120, `${t.length}: ${t}`);
   assert.doesNotMatch(t, /\*\*|loop-ready|Retitled/);
-  assert.match(t, /^Conductor task task:p3-cover: P3 — Cover MR !49's coverage strip and advisory banner/);
+  assert.match(t, /^Carja task task:p3-cover: P3 — Cover MR !49's coverage strip and advisory banner/);
 });
 
 test("prTitle cuts a long sentence at a word, with an ellipsis", () => {

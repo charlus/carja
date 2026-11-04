@@ -19,7 +19,7 @@
 
 import { realpath } from "node:fs/promises";
 
-const LOOP_BRANCH = /^conductor\/loop\//;
+const LOOP_BRANCH = /^carja\/loop\//;
 
 /** Refusal reason when `git` does not run in the loop worktree at `path`, else null. */
 export async function isolationProblem({ git, path }) {

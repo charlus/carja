@@ -14,7 +14,7 @@ import { runSwarm, normalizeTask } from "../src/loop/swarm.js";
 import { runLoop, normalizeState } from "../src/loop/driver.js";
 
 const ROOT_LOG = "# Ship Log\n\n## 2026-10-01 — Older thing\n\n**For you**\n- **Impact:** a\n- **Cost:** none\n- **Risk:** none\n- **Decide:** none\n";
-const NEW_ENTRY = "\n## 2026-10-20 — Cover the banner\n\n**For you**\n- **Impact:** the banner can no longer silently break\n- **Cost:** none\n- **Risk:** none\n- **Decide:** none\n\n**For the record**\n- **Platform:** branch `conductor/loop/x` — MR opened by conductor loop\n";
+const NEW_ENTRY = "\n## 2026-10-20 — Cover the banner\n\n**For you**\n- **Impact:** the banner can no longer silently break\n- **Cost:** none\n- **Risk:** none\n- **Decide:** none\n\n**For the record**\n- **Platform:** branch `carja/loop/x` — MR opened by carja loop\n";
 const BODY = "The banner is now pinned by tests.\n\n## What changes for you\nNothing visible.\n\n## Decisions I took alone\n- none\n\n## Evidence\n- 754 tests passed\n\n## What I need from you\nNothing blocking.\n";
 const BACKLOG_BEFORE = "## Open\n\n- [ ] **Cover the banner with a test.** (loop-ready)\n";
 const BACKLOG_AFTER = "## Open\n\n- [x] **Cover the banner with a test.** **Done 2026-10-20.**\n";
@@ -53,10 +53,10 @@ test("the ship section in unattended-loop.md tells the beat what the driver does
 });
 
 test("the ship assignment names the item to tick and the branch", () => {
-  const t = renderShipAssignment({ id: "task:x", title: "**Cover the banner with a test.** (loop-ready)", source: { kind: "backlog" } }, { branch: "conductor/loop/x" });
+  const t = renderShipAssignment({ id: "task:x", title: "**Cover the banner with a test.** (loop-ready)", source: { kind: "backlog" } }, { branch: "carja/loop/x" });
   assert.match(t, /Cover the banner with a test\./);
   assert.match(t, /- \[x\]/);
-  assert.match(t, /conductor\/loop\/x/);
+  assert.match(t, /carja\/loop\/x/);
 });
 
 // ---- swarm ----------------------------------------------------------------

@@ -85,19 +85,19 @@ test("the code worktree starts from the code repository's default branch, not th
     G(code, "commit", "-qm", "owner wip");
 
     const wt = join(base, "outer-wt", "repo");
-    const r = await ensureCodeWorktree({ codeGit: git(code), path: wt, branch: "conductor/loop/x" });
+    const r = await ensureCodeWorktree({ codeGit: git(code), path: wt, branch: "carja/loop/x" });
     assert.equal(r.ok, true, r.reason);
     assert.equal(r.base, "origin/main");
     assert.equal(existsSync(join(wt, "app.py")), true);
     assert.equal(existsSync(join(wt, "owner.py")), false, "the owner's work in progress is not the base");
     assert.equal(G(code, "branch", "--show-current"), "feat/owner", "the owner's checkout is untouched");
-    assert.equal(await codeHasWork({ codeGit: git(code), branch: "conductor/loop/x" }), false);
+    assert.equal(await codeHasWork({ codeGit: git(code), branch: "carja/loop/x" }), false);
 
     writeFileSync(join(wt, "built.py"), "built = True\n");
     G(wt, "add", "-A");
     G(wt, "commit", "-qm", "loop work");
-    assert.equal(await codeHasWork({ codeGit: git(code), branch: "conductor/loop/x" }), true);
-    assert.equal((await ensureCodeWorktree({ codeGit: git(code), path: wt, branch: "conductor/loop/x" })).reused, true, "a second run reuses it");
+    assert.equal(await codeHasWork({ codeGit: git(code), branch: "carja/loop/x" }), true);
+    assert.equal((await ensureCodeWorktree({ codeGit: git(code), path: wt, branch: "carja/loop/x" })).reused, true, "a second run reuses it");
   } finally {
     rmSync(base, { recursive: true, force: true });
   }

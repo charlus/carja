@@ -15,7 +15,7 @@ import { execFileSync } from "node:child_process";
 import { REPO, G, OWNER_DOCS, layout, loop } from "./helpers/stacked-layout.js";
 
 const prs = (l) => JSON.parse(readFileSync(l.db, "utf8")).prs;
-const stack = (l) => JSON.parse(readFileSync(join(l.root, ".git/conductor-loop-logs/runs/notes/stack.json"), "utf8"));
+const stack = (l) => JSON.parse(readFileSync(join(l.root, ".git/carja-loop-logs/runs/notes/stack.json"), "utf8"));
 const isCode = (pr) => pr.repo.endsWith("code.git");
 
 test("S8: the loop starts only after the owner's approved Technical Vision, and names what is missing", () => {
@@ -66,7 +66,7 @@ test("one command builds the Carve and every slice, stacked; a closed MR is rebu
     const wts = join(l.root, ".agents/.worktrees");
     assert.deepEqual(existsSync(wts) ? readdirSync(wts) : [], []);
     // S6: one report, in merge order.
-    const report = readFileSync(join(l.root, "conductor/1-workbench/loop-report-notes.md"), "utf8");
+    const report = readFileSync(join(l.root, "carja/1-workbench/loop-report-notes.md"), "utf8");
     assert.match(report, /Merge these MRs in this order \(4 items\)[\s\S]*### 1\. the Carve[\s\S]*### 2\. slice 01-slice-1[\s\S]*### 4\. slice 03-slice-3/);
     assert.match(report, /Every item of the project is built/);
 

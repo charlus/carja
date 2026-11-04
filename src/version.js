@@ -51,7 +51,7 @@ export function writeVersionStamp(agentsDir, { nowIso } = {}) {
 export function detectShape(targetDir) {
   const has = (p) => existsSync(join(targetDir, p));
   // V4-era: singular .agent/, dotted .conductor/, or root Title/kebab numbered folders
-  // living outside a conductor/ wrapper.
+  // living outside a carja/ wrapper.
   if (has(".agent") || has(".conductor")) return "v4";
   const state = has("carja") || has("conductor");
   if ((has("0-Compass") || has("0-compass")) && !state) return "v4";

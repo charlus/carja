@@ -208,19 +208,19 @@ test("a new run resets cost, usage and the previous run's attempts", () => {
   assert.equal(s.rejected_beats, 0);
 });
 
-test("conductor status shows what the last run cost, by role", async () => {
+test("carja status shows what the last run cost, by role", async () => {
   const { mkdtemp, mkdir, writeFile, rm } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
-  const { collectState } = await import("../src/conductor-state.js");
+  const { collectState } = await import("../src/carja-state.js");
   const { renderStatus } = await import("../src/view/status.js");
   const dir = await mkdtemp(join(tmpdir(), "usage-status-"));
   try {
-    await mkdir(join(dir, "conductor/1-workbench"), { recursive: true });
+    await mkdir(join(dir, "carja/1-workbench"), { recursive: true });
     const state = normalizeState({ status: "completed", phase: "execution" });
     recordUsage(state, { role: "maker", result: { tokens: 10, costUsd: 0.42 } });
     recordUsage(state, { role: "checker", result: { tokens: 10, costUsd: 0.8 } });
-    await writeFile(join(dir, "conductor/1-workbench/loop-state.json"), JSON.stringify(state));
+    await writeFile(join(dir, "carja/1-workbench/loop-state.json"), JSON.stringify(state));
     const out = renderStatus((await collectState(dir)).state, { color: false });
     assert.match(out, /≈ \$1\.22 at list price \(maker 1 beat \$0\.42, checker 1 beat \$0\.80\)/);
   } finally {

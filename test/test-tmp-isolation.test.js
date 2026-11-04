@@ -1,7 +1,7 @@
 // test/test-tmp-isolation.test.js
 //
 // 2026-10-20: /tmp ran out of inodes. Every full test run left about 108 temp
-// folders, each a full Conductor install, about 21,000 inodes a run: some 50
+// folders, each a full Carja install, about 21,000 inodes a run: some 50
 // runs filled /tmp for every session on the machine. The test scripts now run
 // under scripts/with-test-tmp.mjs, which gives the run its own TMPDIR and
 // deletes it at the end, whatever the tests left and however they exit.

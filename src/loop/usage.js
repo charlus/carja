@@ -65,7 +65,7 @@ export function costGateMessage(state, gate) {
   return null;
 }
 
-/** One line for `conductor status` and the run log, or "" before any beat. */
+/** One line for `carja status` and the run log, or "" before any beat. */
 export function usageSummary(state) {
   const usage = state?.budget?.usage ?? {};
   const parts = ROLES.filter((r) => usage[r]?.beats).map((r) => {

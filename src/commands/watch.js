@@ -1,4 +1,4 @@
-// src/commands/watch.js — `conductor watch [dir] [--once]` (Loop Monitor M2).
+// src/commands/watch.js — `carja watch [dir] [--once]` (Loop Monitor M2).
 //
 // What the latest loop run is doing, from its event log: each item, the beat
 // in progress (stage, model, minutes so far), the last recorded fact, the run's
@@ -31,7 +31,7 @@ async function towerScreen(roots, now, { color = false } = {}) {
     const path = eventsPath(root);
     const models = watchModels(readEvents(path ? await readFile(path, "utf8").catch(() => "") : ""), { isAlive: isPidAlive });
     const rounds = await readRounds(root).catch(() => ({ waiting: [] }));
-    // One row per live run: two `conductor loop <project>` runs in one folder show as two.
+    // One row per live run: two `carja loop <project>` runs in one folder show as two.
     if (!models.length) products.push({ name: basename(root), root, model: null, waiting: rounds.waiting });
     models.forEach((model, i) =>
       products.push({ name: model.project ? `${basename(root)} · ${model.project}` : basename(root), root, model, waiting: i === 0 ? rounds.waiting : [] })
@@ -68,7 +68,7 @@ export async function watchCommand(args, { cwd, stdout }) {
   }
   for (;;) {
     const text = await screen();
-    stdout.write(`\x1b[2J\x1b[H  conductor watch · ${root} · Ctrl-C to leave\n\n${text}`);
+    stdout.write(`\x1b[2J\x1b[H  carja watch · ${root} · Ctrl-C to leave\n\n${text}`);
     const ms = await models();
     if (!ms.length || ms.every((m) => m.ended)) return 0;
     await new Promise((r) => setTimeout(r, 2000));

@@ -1,6 +1,6 @@
 // src/loop/enable.js
 //
-// `conductor loop on <project>` / `off <project>` (owner decision 2026-10-20:
+// `carja loop on <project>` / `off <project>` (owner decision 2026-10-20:
 // nobody should have to write the loop's JSON). The command reads the facts,
 // this module turns them into a plan: each change in plain words, and the
 // config and loop-state they produce. Pure; the command shows the plan, asks
@@ -11,7 +11,7 @@ const ENV_DIRS = [".venv", "venv", "node_modules"];
 /**
  * @param {object} f facts:
  *   project, projects (names in project-backlog), discoveryDone, carved,
- *   config (raw conductor.config.json), state (loop-state.json),
+ *   config (raw carja.config.json), state (loop-state.json),
  *   nestedRepos (["repo/", "video/"]), envDirs (untracked env dirs in the code checkout),
  *   codeDirFlag (from --code-dir), claudeOnPath, stagesDone (Blueprint stage names already written)
  * @returns {{ok: boolean, error?: string, changes: string[], notes: string[], config: object, state: object}}
@@ -25,7 +25,7 @@ export function planLoopOn(f) {
 
   const backlogOnly = Boolean(f.backlog && !f.project);
   if (!backlogOnly && !f.projects.includes(f.project)) {
-    return { ok: false, error: `no project "${f.project}" in conductor/2-backlog/project-backlog/. Projects: ${f.projects.join(", ") || "none"}.`, changes, notes, config, state };
+    return { ok: false, error: `no project "${f.project}" in carja/2-backlog/project-backlog/. Projects: ${f.projects.join(", ") || "none"}.`, changes, notes, config, state };
   }
   if (!backlogOnly && !f.carved && !f.discoveryDone) {
     return {
@@ -53,7 +53,7 @@ export function planLoopOn(f) {
   // F11: never the whole backlog and inbox at once. An explicit choice is kept.
   if (loop.require_ready === undefined) {
     loop.require_ready = true;
-    changes.push("From the backlog, the loop takes only the items you give it with `conductor loop take \"<item>\"` (or tag (loop-ready) at the end of their line).");
+    changes.push("From the backlog, the loop takes only the items you give it with `carja loop take \"<item>\"` (or tag (loop-ready) at the end of their line).");
   }
   if (loop.inbox === undefined) {
     loop.inbox = false;
@@ -68,7 +68,7 @@ export function planLoopOn(f) {
     if (!pick) {
       return {
         ok: false,
-        error: `several nested repositories (${nested.join(", ")}): say which one holds the code, for example: conductor loop on ${f.project ?? "--backlog"} --code-dir ${nested[0]}`,
+        error: `several nested repositories (${nested.join(", ")}): say which one holds the code, for example: carja loop on ${f.project ?? "--backlog"} --code-dir ${nested[0]}`,
         changes, notes, config, state,
       };
     }
@@ -86,7 +86,7 @@ export function planLoopOn(f) {
   if (!loop.setup) {
     const envs = ENV_DIRS.filter((d) => (f.envDirs ?? []).includes(d));
     if (envs.length) {
-      const from = codeDir ? "$CONDUCTOR_CODE_ROOT" : "$CONDUCTOR_ROOT";
+      const from = codeDir ? "$CARJA_CODE_ROOT" : "$CARJA_ROOT";
       loop.setup = envs.map((d) => `ln -sfn "${from}/${d}" ${d}`).join(" && ");
       changes.push(`Each worktree links your ${envs.join(" and ")} instead of installing ${envs.length === 1 ? "it" : "them"} again.`);
     }
@@ -112,13 +112,13 @@ export function planLoopOn(f) {
 
   const verify = codeDir ? config.repos?.[codeDir]?.verify : config.verify;
   if (!verify || verify === "none") {
-    notes.push(`No test command for ${codeDir ? `${codeDir}/` : "this repository"} yet, and the loop needs one: conductor verify ${codeDir ? `--repo ${codeDir} ` : ""}--detect`);
+    notes.push(`No test command for ${codeDir ? `${codeDir}/` : "this repository"} yet, and the loop needs one: carja verify ${codeDir ? `--repo ${codeDir} ` : ""}--detect`);
   }
   if (!changes.length) notes.push(backlogOnly ? "The loop is already set up for tagged backlog items." : `${f.project} is already on.`);
   return { ok: true, changes, notes, config, state };
 }
 
-/** `conductor loop off <project>`: the project is no longer loop work. Nothing else changes. */
+/** `carja loop off <project>`: the project is no longer loop work. Nothing else changes. */
 export function planLoopOff({ project, config }) {
   const out = structuredClone(config ?? {});
   const loop = (out.loop = { ...(out.loop ?? {}) });

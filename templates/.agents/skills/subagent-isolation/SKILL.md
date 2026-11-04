@@ -37,7 +37,7 @@ Isolation is also a **safety** property:
 
 ## The Checker is a scout too
 
-Conductor's Maker/Checker split (see `personas/checker.md`) is this pattern applied to review: the Checker runs in a **fresh, separate context** precisely so it isn't biased by the Maker's reasoning. When you spawn a Checker, spawn it isolated — not as an in-context continuation of the work it's supposed to audit.
+Carja's Maker/Checker split (see `personas/checker.md`) is this pattern applied to review: the Checker runs in a **fresh, separate context** precisely so it isn't biased by the Maker's reasoning. When you spawn a Checker, spawn it isolated — not as an in-context continuation of the work it's supposed to audit.
 
 ## Platform notes
 

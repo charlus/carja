@@ -1,6 +1,6 @@
 // test/status-gates.test.js
 //
-// `conductor status` shows whether the gates are armed.
+// `carja status` shows whether the gates are armed.
 //
 // The hooks only enforce anything when git runs them, and git runs them only
 // when `core.hooksPath` points at `.agents/hooks`. A repo cloned after init, a
@@ -11,7 +11,7 @@
 // most installs do not have them.
 //
 // Fixtures use the exact waiver line the hooks write (lib.sh
-// conductor_log_waiver), and the git cases run real git in a temp repo.
+// carja_log_waiver), and the git cases run real git in a temp repo.
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
@@ -19,7 +19,7 @@ import { mkdtemp, mkdir, writeFile, chmod } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
-import { summariseWaivers, buildState, collectState } from "../src/conductor-state.js";
+import { summariseWaivers, buildState, collectState } from "../src/carja-state.js";
 import { renderStatus } from "../src/view/status.js";
 
 const NOW = Date.UTC(2026, 8, 24, 12, 0);
@@ -29,8 +29,8 @@ const SHIP_LOG = `# Ship Log
 ## 2026-09-20 — Billing export
 - **What:** CSV export.
 - [2026-09-21 10:02] Hook waiver (Boundary): removed obsolete v1 export tests
-- [2026-09-22 16:40] Hook waiver (Protected): conductor upgrade
-- [2026-09-23 09:15] Hook waiver (Protected): conductor upgrade
+- [2026-09-22 16:40] Hook waiver (Protected): carja upgrade
+- [2026-09-23 09:15] Hook waiver (Protected): carja upgrade
 - [2026-07-01 08:00] Hook waiver (TDD): docs only
 `;
 
@@ -59,7 +59,7 @@ describe("summariseWaivers", () => {
 describe("the Gates line", () => {
   test("hooks not wired: loud, and it carries its own fix", () => {
     const out = render({ hooks: "off", guards: { bypass: false, factGate: false } });
-    assert.match(out, /Gates\s+OFF — commits and pushes are not checked · fix: conductor install-hooks/);
+    assert.match(out, /Gates\s+OFF — commits and pushes are not checked · fix: carja install-hooks/);
   });
 
   test("a custom hooksPath names the path instead of claiming the gates are on", () => {
@@ -69,7 +69,7 @@ describe("the Gates line", () => {
 
   test("hooks directory missing points at upgrade", () => {
     const out = render({ hooks: "missing", guards: { bypass: false, factGate: false } });
-    assert.match(out, /Gates\s+OFF — \.agents\/hooks\/ is missing · fix: conductor upgrade/);
+    assert.match(out, /Gates\s+OFF — \.agents\/hooks\/ is missing · fix: carja upgrade/);
   });
 
   test("armed, with the opt-in guards reported", () => {
@@ -104,8 +104,8 @@ describe("collectState reads the real wiring", () => {
   async function repo() {
     const dir = await mkdtemp(join(tmpdir(), "status-gates-"));
     execFileSync("git", ["init", "-q"], { cwd: dir });
-    await mkdir(join(dir, "conductor", "1-workbench"), { recursive: true });
-    await writeFile(join(dir, "conductor", "1-workbench", "inbox.md"), "# Inbox\n");
+    await mkdir(join(dir, "carja", "1-workbench"), { recursive: true });
+    await writeFile(join(dir, "carja", "1-workbench", "inbox.md"), "# Inbox\n");
     await mkdir(join(dir, ".agents", "hooks"), { recursive: true });
     await writeFile(join(dir, ".agents", "hooks", "pre-commit"), "#!/bin/sh\n");
     await writeFile(join(dir, ".agents", "hooks", "pre-push"), "#!/bin/sh\n");
@@ -172,8 +172,8 @@ describe("collectState reads the real wiring", () => {
 
   test("not a git repository → not-git", async () => {
     const dir = await mkdtemp(join(tmpdir(), "status-gates-nogit-"));
-    await mkdir(join(dir, "conductor", "1-workbench"), { recursive: true });
-    await writeFile(join(dir, "conductor", "1-workbench", "inbox.md"), "# Inbox\n");
+    await mkdir(join(dir, "carja", "1-workbench"), { recursive: true });
+    await writeFile(join(dir, "carja", "1-workbench", "inbox.md"), "# Inbox\n");
     const { state } = await collectState(dir, { now: NOW });
     assert.equal(state.digest.gates.hooks, "not-git");
   });

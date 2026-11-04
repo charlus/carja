@@ -1,6 +1,6 @@
 # Rename Conductor to Carja
 
-> **Status:** in progress. Plan approved by the owner 2026-10-16 (D2 and D4 answered), resumed 2026-11-04 with the name `carja` confirmed. PR 1 (dual-name readers) in 6.54.0, `src/names.js`, proven by `test/names-dual.test.js`. Next: PR 2. Name chosen by the owner: `carja`, the Jacquard loom in verlan.
+> **Status:** built. PR 1 (dual-name readers) in 6.54.0. PR 2 (the rename and the migration) in 7.0.0, 2026-11-04: `src/rename-migration.js`, proven against a real 6.54.0 install by `test/rename-migration.test.js` and the fallbacks by `test/names-dual.test.js`. Next: the owner renames the repository (D4), then the local installs (Delivery 4). Name chosen by the owner: `carja`, the Jacquard loom in verlan.
 > **Release:** 7.0.0, one major. `Compatibility: upgrade plus a step` (the step: update scripts and your own instruction files that call `conductor`).
 
 ## Why
@@ -74,7 +74,28 @@ The step is idempotent: run twice, the second run does nothing.
    - The state folder falls back only in the commands an agent or the owner runs on an install not yet upgraded: `status` (with `--live`), `inbox`, `view`, `review-log`, `agents-md`.
    - Not dual, by decision (2026-11-04). The loop, `loop doctor` and the hooks: they are replaced together with the folder by `upgrade`, so they never meet the other name. Measured on `master` at `168c813`: 133 literal `conductor/` paths in `src/`, most in the loop. In PR 2 the loop refuses a 6.x layout with "run `carja upgrade` first". `design migrate` is a pre-6.8 migration and stays as it is.
    - Found for PR 2. The pre-commit hook loads the COMMITTED `lib.sh`, so the upgrade commit itself runs under the 6.x hooks: every waiver the CLI sets for that commit must be set under both names. `pre-commit` and `pre-push` read `CONDUCTOR_HOOKS` before they load `lib.sh`, so the hook rename edits the pinned `pre-commit` and its fingerprint.
-2. **PR 2: the rename and the migration.** Binary, package, templates, prose, writers, the upgrade step, `CHANGELOG.md` 7.0.0, README, `CLAUDE.md`, `how-it-works.md`, roadmap status blocks. `check-conductor.sh` becomes `check-carja.sh`. The README title changes to Carja and gets a short "Why Carja" section of three or four lines: *carja* is *jacquard* in verlan; the Jacquard loom was the first machine that ran a program unattended, as Carja runs coding agents unattended inside rules enforced by code; the project was called Conductor until 6.x and was renamed because of Google's Conductor, which uses the same `conductor/` folder. The credit to Test in Prod's Conductor stays.
+2. **PR 2: the rename and the migration (7.0.0).** Built as planned, with these findings:
+   - The rename runs first in `upgrade`, before anything is read: otherwise the upgrade saw no `carja/` and created one from the templates beside `conductor/`.
+   - `git mv -k` into a missing parent folder stages the rename and moves nothing on disk, with exit 0. The migration creates the parent and uses `git mv` without `-k`.
+   - The version stamp moves inside the rename commit, so it keeps its install date and the upgrade commit does not take its deletion for the owner's work.
+   - The upgrade commit runs the new `pre-commit` with the committed 6.x `lib.sh`. The existing fail-closed path (missing helpers, then the `CARJA_NO_PROTECTED` waiver that `upgrade` sets) already covers it. Every hook copies `CONDUCTOR_*` to `CARJA_*` before it reads one.
+   - Machine folders: `~/.carja` and `~/.config/carja`, or the 6.x ones while only those exist, so trust consents and the evidence ledger survive.
+   - Kept as written: `docs/roadmap/`, `docs/research/`, `docs/adr/` and old CHANGELOG entries are history; the remote registry field `minConductorVersion` is a data format; the V4 `.conductor/` migration.
+   - Not needed: the Claude Code settings hooks name `.agents/hooks/*.sh`, which does not move.
+   - eurassistant (live, 2026-11-04): the 6.x Brief gate refused the path-rewrite commit, because an archived feature spec with an old path read as a new spec. Both rename commits now carry the Protected, Brief and Report waivers under both names, recorded in the commit message, and a refused commit undoes the whole rename (files, commits, branch).
+   - Paths into the moved folder from a longer path (`~/Workspace/app/conductor/…`, `../conductor/…`) are rewritten too: four real projects had them. Only `.conductor/` (V4) and longer names are left.
+   - Independent review (14 findings, 4 reproduced live), all fixed with a test:
+     - F1: a `conductor/` ignored as a whole was committed in full. Every ignore rule naming `conductor` gets a `carja` twin, in `.gitignore` and `.git/info/exclude`. The rename commit also refuses any file git did not track before.
+     - F2: the upgrade branch could not be pushed. `pre-push` trusts the remote's committed 6.x `lib.sh`, whose helpers are named `conductor_*`. The hooks now give a 6.x library's helpers their `carja_*` names, and set both variable names, instead of failing closed. Trust stays with the remote's copy. Consequence, stated: that 6.x library looks for `conductor.config.json`, so the push of the upgrade itself runs the 6.x fallback verify command.
+     - F3: the bypass guard missed `CONDUCTOR_HOOKS=off`, which the hooks obey.
+     - F4: `--no-commit` printed a command that committed half the rename.
+     - F5: a 6.x `loop.setup` naming `$CONDUCTOR_CODE_ROOT`: the rename rewrites `CONDUCTOR_` in `carja.config.json`.
+     - F6: claims also read `conductor/loop/*` on the remote, so an item with an open 6.x MR is not taken twice.
+     - F7: the retired-files list and its test had been renamed into a tautology; both restored.
+     - F8: outside git, a name clash now refuses before anything moves.
+     - F10: the evidence fast path also accepts a `conductor` command on PATH. F11: `view` keys documents under either folder name.
+   - Proof: `carja upgrade` and a push through the real hooks on local clones of eurassistant, website (outer layout), evalapp-v2 and autopportunity: three commits each, clean tree, install check passed, push accepted. One real loop beat (`test/e2e-loop-real.sh`, $0.68) on `carja/loop/…`.
+   - Between the merge and the repository rename (D4), `github:charlus/carja` does not resolve: rename the repository right after the merge.
 3. **Owner: rename the repo** (D4), then verify `npx -y github:charlus/conductor-framework status` still resolves through the redirect.
 4. **Local installs**, one MR each, as for 6.12.0: eurassistant, evalapp-v2, website. autopportunity only when asked. euranova-os untouched.
 5. **Owner's own files.** `~/.claude/CLAUDE.md` section 11 names the `conductor` CLI and the repo URL. The Claude Code memory folder for this repo is keyed by its local path: if `~/Workspace/conductor-framework` is renamed, move the memory folder with it.

@@ -19,7 +19,7 @@ Unstructured text - raw thoughts, ideas, feature requests, or chaotic notes from
 
 ## Output
 
-Formatted Epic block(s) ready to paste into `conductor/3-product-areas/[area]/[area]-epics.md`:
+Formatted Epic block(s) ready to paste into `carja/3-product-areas/[area]/[area]-epics.md`:
 
 ```markdown
 ### [area]-E[XX]: [Action-Oriented Title]
@@ -38,8 +38,8 @@ Formatted Epic block(s) ready to paste into `conductor/3-product-areas/[area]/[a
 
 ## Protocol
 
-1. **Check for duplicates** - Scan `conductor/3-product-areas/` to ensure this epic doesn't already exist.
-2. **Filter bugs/tasks** - If it's a bug or small task, tell user to add to `conductor/2-backlog/task-backlog.md` instead. Stop.
+1. **Check for duplicates** - Scan `carja/3-product-areas/` to ensure this epic doesn't already exist.
+2. **Filter bugs/tasks** - If it's a bug or small task, tell user to add to `carja/2-backlog/task-backlog.md` instead. Stop.
 3. **Ask for clarity** - If the "who" or "why" is missing, ask. Don't guess motivation.
 4. **Extract the problem** - Identify the user and their pain.
 5. **Define the transformation** - How does their world change after this?

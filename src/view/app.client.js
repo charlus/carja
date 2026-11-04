@@ -18,7 +18,7 @@
 (function () {
   "use strict";
 
-  var S = JSON.parse(document.getElementById("conductor-data").textContent);
+  var S = JSON.parse(document.getElementById("carja-data").textContent);
 
   var docByKey = {};
   var docList = S.docs.slice();
@@ -29,7 +29,7 @@
   for (var j = 0; j < S.sections.length; j++) sectionByKey[S.sections[j].key] = S.sections[j];
 
   function docKey(relPath) {
-    return relPath.replace(/^conductor\//, "");
+    return relPath.replace(/^(carja|conductor)\//, "");
   }
 
   function esc(text) {
@@ -57,7 +57,7 @@
 
   function readTheme() {
     try {
-      return localStorage.getItem("conductor-theme");
+      return localStorage.getItem("carja-theme");
     } catch (e) {
       return null;
     }
@@ -73,8 +73,8 @@
     var current = readTheme() || "system";
     var next = order[(order.indexOf(current) + 1) % order.length];
     try {
-      if (next === "system") localStorage.removeItem("conductor-theme");
-      else localStorage.setItem("conductor-theme", next);
+      if (next === "system") localStorage.removeItem("carja-theme");
+      else localStorage.setItem("carja-theme", next);
     } catch (e) {
       /* private mode — the choice just will not persist */
     }
@@ -108,7 +108,7 @@
       '<div class="brand-name">' +
       esc(S.projectName) +
       "</div>" +
-      '<div class="brand-sub">Conductor</div>' +
+      '<div class="brand-sub">Carja</div>' +
       "</div></div>" +
       '<button class="search-trigger" id="search-btn"><span>◌</span><span>Search…</span><kbd>/</kbd></button>' +
       '<a class="nav-item' +
@@ -193,10 +193,10 @@
     if (!d.docCount && !d.inboxCount && !d.backlogOpen) {
       return (
         '<div class="empty-state"><h2>Nothing yet — this dashboard is empty</h2>' +
-        "<p>Drop a thought with <code>conductor inbox add \"…\"</code> or <code>/inbox</code>, " +
-        "add tasks to <code>conductor/2-backlog/task-backlog.md</code>, " +
+        "<p>Drop a thought with <code>carja inbox add \"…\"</code> or <code>/inbox</code>, " +
+        "add tasks to <code>carja/2-backlog/task-backlog.md</code>, " +
         "or start a new idea with <code>/genesis</code>.</p>" +
-        "<p>Then run <code>conductor view</code> again and refresh.</p></div>"
+        "<p>Then run <code>carja view</code> again and refresh.</p></div>"
       );
     }
 
@@ -238,7 +238,7 @@
           '</span><span class="right">' +
           (item.priority ? chip(item.priority, item.priority.toLowerCase()) : "") +
           '<span class="chip">' +
-          esc(item.source && item.source.kind ? item.source.kind : "conductor") +
+          esc(item.source && item.source.kind ? item.source.kind : "carja") +
           "</span></span></div>";
       }
       out += "</div></div>";
@@ -366,7 +366,7 @@
     if (!sec.docs.length) {
       return (
         out +
-        '<div class="empty-state"><h2>No documents here yet</h2><p><code>conductor/' +
+        '<div class="empty-state"><h2>No documents here yet</h2><p><code>carja/' +
         esc(sec.key) +
         "/</code> is empty.</p></div>"
       );
@@ -588,7 +588,7 @@
         ? renderDoc(route.doc)
         : '<div class="empty-state"><h2>That document is not in this build</h2><p><code>' +
           esc(route.key) +
-          "</code> was not found. Run <code>conductor view</code> again if you just added it.</p></div>";
+          "</code> was not found. Run <code>carja view</code> again if you just added it.</p></div>";
     } else if (route.kind === "section") {
       body = renderSection(route.key);
     } else {
@@ -598,7 +598,7 @@
 
     document.getElementById("search-btn").addEventListener("click", openSearch);
     document.title =
-      (route.kind === "doc" && route.doc ? route.doc.title + " · " : "") + S.projectName + " · Conductor";
+      (route.kind === "doc" && route.doc ? route.doc.title + " · " : "") + S.projectName + " · Carja";
 
     // A hash that also names a heading anchor still has to scroll there.
     window.scrollTo({ top: 0 });

@@ -28,7 +28,7 @@ const FACTS = {
     { what: "test", cmd: "cd client && npm run test" },
   ],
   layout: [{ dir: "app", files: 90 }, { dir: "client", files: 85 }, { dir: "tests", files: 40 }],
-  areas: ["conductor/3-product-areas/billing/", "conductor/3-product-areas/auth/"],
+  areas: ["carja/3-product-areas/billing/", "carja/3-product-areas/auth/"],
 };
 
 test("buildCard on a first run: facts filled, agent sections marked TODO, status draft", () => {
@@ -41,7 +41,7 @@ test("buildCard on a first run: facts filled, agent sections marked TODO, status
   assert.match(card, /py \(120 files\), ts \(80 files\)/);
   assert.match(buildCard({ facts: { ...FACTS, languages: [{ lang: "ts", files: 1 }] }, previous: null }), /ts \(1 file\)/);
   assert.match(card, /`pytest -q && cd client && npm test`/);
-  assert.match(card, /- `conductor\/3-product-areas\/billing\/` — TODO/);
+  assert.match(card, /- `carja\/3-product-areas\/billing\/` — TODO/);
   assert.match(card, /### Purpose\n\nTODO/);
 });
 
@@ -49,7 +49,7 @@ test("buildCard on a refresh keeps the agent's text and regenerates the facts", 
   const first = buildCard({ facts: FACTS, previous: null })
     .replace("### Purpose\n\nTODO: 2–3 sentences: what the product is and for whom.", "### Purpose\n\nInvoicing for small agencies.")
     .replace("### Conventions\n\nTODO: up to 5 bullets that change how code is written.", "### Conventions\n\n- Services never import routers.")
-    .replace("`conductor/3-product-areas/billing/` — TODO", "`conductor/3-product-areas/billing/` — Invoices and payments");
+    .replace("`carja/3-product-areas/billing/` — TODO", "`carja/3-product-areas/billing/` — Invoices and payments");
   const facts2 = { ...FACTS, layout: [...FACTS.layout, { dir: "scripts", files: 3 }] };
   const second = buildCard({ facts: facts2, previous: parseCard(first) });
   assert.match(second, /Invoicing for small agencies\./);
@@ -89,7 +89,7 @@ test("checkCard: an edited fact, a missing heading, too many conventions, too bi
 });
 
 test("stampCard sets status ok and records one hash per source; staleSources names what changed", () => {
-  const sources = { "conductor/0-compass/north-star.md": "A", "requirements.txt": "flask" };
+  const sources = { "carja/0-compass/north-star.md": "A", "requirements.txt": "flask" };
   const stamped = stampCard(filled(), sources);
   assert.match(stamped, /status=ok/);
   assert.deepEqual(staleSources(stamped, sources), []);

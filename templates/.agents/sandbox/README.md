@@ -1,6 +1,6 @@
-# Conductor Loop — Sandbox
+# Carja Loop — Sandbox
 
-> **Why this exists.** `conductor loop` at autonomy **L3** runs an agent unattended
+> **Why this exists.** `carja loop` at autonomy **L3** runs an agent unattended
 > with shell access. That is only safe inside a sandbox (survey §5). The driver
 > **refuses L3 unless `loop-state.json` has an isolating `sandbox`** (terminal
 > `halted_sandbox_required`). You do **not** build or maintain a container image —
@@ -14,7 +14,7 @@ Use the agent CLI's **own, vendor-maintained** OS-level sandbox. Nothing for thi
 project (or you) to maintain but a host package.
 
 - **`claude` (primary):** Anthropic's built-in **bubblewrap + socat** sandbox.
-  Conductor passes [`claude-sandbox.settings.json`](./claude-sandbox.settings.json)
+  Carja passes [`claude-sandbox.settings.json`](./claude-sandbox.settings.json)
   to each headless `claude -p` beat via `--settings` (it never touches your own
   `.claude/settings.json`). That profile sets `sandbox.enabled: true`,
   `failIfUnavailable: true` (fail-closed — a beat exits non-zero if the sandbox
@@ -27,9 +27,9 @@ project (or you) to maintain but a host package.
     # (see https://code.claude.com/docs/en/sandboxing).
     ```
   - **Before a real run, list YOUR git host and the other hosts a beat needs** in
-    `conductor.config.json` under `loop.allowed_domains`, e.g. `["code.example.com"]`.
+    `carja.config.json` under `loop.allowed_domains`, e.g. `["code.example.com"]`.
     The loop merges them into a generated copy of this profile. Do not edit this
-    file: `conductor upgrade` replaces it. Everything not listed is blocked
+    file: `carja upgrade` replaces it. Everything not listed is blocked
     (default-deny egress).
   - **No package registry, ever.** A beat cannot reach PyPI, npm, crates.io,
     Maven Central or any other registry, and `loop.allowed_domains` refuses them.
@@ -60,7 +60,7 @@ project (or you) to maintain but a host package.
 - **`codex`:** uses **OpenAI's** Docker-based sandbox; ensure your codex CLI is
   configured for a sandboxed mode.
 
-Set in `conductor/1-workbench/loop-state.json`:
+Set in `carja/1-workbench/loop-state.json`:
 ```json
 { "autonomy_level": "L3", "sandbox": "cli-native", "concurrency": 4 }
 ```
@@ -74,14 +74,14 @@ image) and lock the network down at `docker run` time. `Dockerfile.sandbox` in
 this directory is a minimal starting point:
 
 ```bash
-docker build -f .agents/sandbox/Dockerfile.sandbox -t conductor-loop .
+docker build -f .agents/sandbox/Dockerfile.sandbox -t carja-loop .
 docker run --rm -it \
   --network none \                 # or an allowlisted proxy for the model API + git host
   --cpus 2 --memory 4g \
   -v "$PWD:/work" -w /work \
   -e ANTHROPIC_API_KEY \
-  conductor-loop \
-  conductor loop --from-conductor --unsafe-no-sandbox   # inside the container, this is honest
+  carja-loop \
+  carja loop --from-carja --unsafe-no-sandbox   # inside the container, this is honest
 ```
 
 Then set `"sandbox": "container"` and `"autonomy_level": "L3"`.

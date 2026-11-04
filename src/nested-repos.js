@@ -1,7 +1,7 @@
 // src/nested-repos.js
 //
 // Top-level gitignored directories that are git repositories themselves: the
-// outer layout, where conductor/ and .agents/ sit in a private outer repo and
+// outer layout, where carja/ and .agents/ sit in a private outer repo and
 // the team's code is a nested repository. The loop refuses that layout (D1); the
 // project card reads its facts from the nested code repository instead.
 

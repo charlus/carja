@@ -15,7 +15,7 @@ no() { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 fresh_repo() {
   local d; d="$(mktemp -d)"
-  mkdir -p "$d/.agents/hooks" "$d/conductor/0-compass"
+  mkdir -p "$d/.agents/hooks" "$d/carja/0-compass"
   cp "$REPO_ROOT/templates/.agents/hooks/"* "$d/.agents/hooks/"
   chmod +x "$d/.agents/hooks/pre-commit" "$d/.agents/hooks/pre-push" 2>/dev/null
   git -C "$d" init -q
@@ -24,7 +24,7 @@ fresh_repo() {
   git -C "$d" config core.hooksPath .agents/hooks
   printf '%s' "$d"
 }
-LOG=conductor/0-compass/ship-log.md
+LOG=carja/0-compass/ship-log.md
 WITH_BLOCK=$'## 2026-09-16 — Thing\n\n**For you**\n- **Impact:** users can page results\n- **Cost:** none\n- **Risk:** none\n- **Decide:** none\n\n**For the record**\n- **Quality:** review APPROVE\n'
 NO_BLOCK=$'## 2026-09-16 — Thing\n- **What:** something\n- **Quality:** review APPROVE\n'
 
@@ -65,7 +65,7 @@ rm -rf "$D"
 # ---- R4: waiver → COMMITS and is logged -----------------------------------
 D="$(fresh_repo)"; printf '%s' "$NO_BLOCK" > "$D/$LOG"
 git -C "$D" add -A >/dev/null 2>&1
-if CONDUCTOR_NO_REPORT="editing a pre-A4 entry" git -C "$D" commit -q -m "waived" >/dev/null 2>&1; then
+if CARJA_NO_REPORT="editing a pre-A4 entry" git -C "$D" commit -q -m "waived" >/dev/null 2>&1; then
   if grep -qi "report" "$D/$LOG"; then
     ok "R4: waiver commits AND is logged to the ship-log"
   else
@@ -87,12 +87,12 @@ fi
 rm -rf "$D"
 
 # ---- R7: a staged change that only adds waiver lines is bookkeeping -------
-# The hooks append "Hook waiver" lines themselves (conductor upgrade does it on
+# The hooks append "Hook waiver" lines themselves (carja upgrade does it on
 # every run). Blocking the commit of that line, on a log whose newest entry
 # predates the For-you rule, left every upgraded repository dirty.
 D="$(fresh_repo)"; printf '%s' "$NO_BLOCK" > "$D/$LOG"
-git -C "$D" add -A >/dev/null 2>&1; CONDUCTOR_HOOKS=off git -C "$D" commit -q -m "old entry" >/dev/null 2>&1
-printf -- '- [2026-10-06 14:43] Hook waiver (Protected): conductor upgrade to 6.8.2\n' >> "$D/$LOG"
+git -C "$D" add -A >/dev/null 2>&1; CARJA_HOOKS=off git -C "$D" commit -q -m "old entry" >/dev/null 2>&1
+printf -- '- [2026-10-06 14:43] Hook waiver (Protected): carja upgrade to 6.8.2\n' >> "$D/$LOG"
 git -C "$D" add -A >/dev/null 2>&1
 if git -C "$D" commit -q -m "log waiver" >/dev/null 2>&1; then
   ok "R7: a waiver-line-only change to the ship-log commits"
@@ -103,7 +103,7 @@ rm -rf "$D"
 
 # ---- R8: a waiver line does not smuggle in a report without For you -------
 D="$(fresh_repo)"; printf '%s' "$NO_BLOCK" > "$D/$LOG"
-git -C "$D" add -A >/dev/null 2>&1; CONDUCTOR_HOOKS=off git -C "$D" commit -q -m "old entry" >/dev/null 2>&1
+git -C "$D" add -A >/dev/null 2>&1; CARJA_HOOKS=off git -C "$D" commit -q -m "old entry" >/dev/null 2>&1
 printf -- '- [2026-10-06 14:43] Hook waiver (Protected): x\n- **What:** a real change\n' >> "$D/$LOG"
 git -C "$D" add -A >/dev/null 2>&1
 if git -C "$D" commit -q -m "waiver plus report" >/dev/null 2>&1; then
@@ -114,10 +114,10 @@ fi
 rm -rf "$D"
 
 # ---- R9: the loop's own audit lines are bookkeeping, not a report -------
-# evalapp-v2, 2026-10-19: conductor loop appended "[loop]" lines to the
+# evalapp-v2, 2026-10-19: carja loop appended "[loop]" lines to the
 # ship-log, and the gate then blocked the owner's next commit.
 D="$(fresh_repo)"; printf '%s' "$NO_BLOCK" > "$D/$LOG"
-git -C "$D" add -A >/dev/null 2>&1; CONDUCTOR_HOOKS=off git -C "$D" commit -q -m "old entry" >/dev/null 2>&1
+git -C "$D" add -A >/dev/null 2>&1; CARJA_HOOKS=off git -C "$D" commit -q -m "old entry" >/dev/null 2>&1
 printf -- '- [2026-10-19T13:26:31.120Z] [loop] swarm start: 1 tasks, concurrency=1\n- [2026-10-19T13:33:05.002Z] [loop] run cost: ≈ $0.73 at list price\n' >> "$D/$LOG"
 git -C "$D" add -A >/dev/null 2>&1
 if git -C "$D" commit -q -m "loop audit lines" >/dev/null 2>&1; then
@@ -129,7 +129,7 @@ rm -rf "$D"
 
 # ---- R10: loop lines do not smuggle in a report without For you ---------
 D="$(fresh_repo)"; printf '%s' "$NO_BLOCK" > "$D/$LOG"
-git -C "$D" add -A >/dev/null 2>&1; CONDUCTOR_HOOKS=off git -C "$D" commit -q -m "old entry" >/dev/null 2>&1
+git -C "$D" add -A >/dev/null 2>&1; CARJA_HOOKS=off git -C "$D" commit -q -m "old entry" >/dev/null 2>&1
 printf -- '- [2026-10-19T13:26:31.120Z] [loop] swarm start\n- **What:** a real change\n' >> "$D/$LOG"
 git -C "$D" add -A >/dev/null 2>&1
 if git -C "$D" commit -q -m "loop line plus report" >/dev/null 2>&1; then
@@ -142,10 +142,10 @@ rm -rf "$D"
 # ---- R6: hooks off → gate silent ------------------------------------------
 D="$(fresh_repo)"; printf '%s' "$NO_BLOCK" > "$D/$LOG"
 git -C "$D" add -A >/dev/null 2>&1
-if CONDUCTOR_HOOKS=off git -C "$D" commit -q -m "hooks off" >/dev/null 2>&1; then
-  ok "R6: CONDUCTOR_HOOKS=off disables the gate"
+if CARJA_HOOKS=off git -C "$D" commit -q -m "hooks off" >/dev/null 2>&1; then
+  ok "R6: CARJA_HOOKS=off disables the gate"
 else
-  no "R6: gate still fired with CONDUCTOR_HOOKS=off"
+  no "R6: gate still fired with CARJA_HOOKS=off"
 fi
 rm -rf "$D"
 

@@ -2,7 +2,7 @@
 //
 // The owner could not keep up with what the CLI offers (2026-10-20). The usage
 // reference lives in one source, src/usage.js, rendered into `--help`,
-// `conductor help`, and docs/Using-Conductor.md. This test fails when:
+// `carja help`, and docs/Using-Carja.md. This test fails when:
 //   - a command parses a flag, or the config reads a key, that the source omits;
 //   - a command in the dispatcher has no entry, or an entry no command;
 //   - the page's reference is not the rendering of the source;
@@ -31,7 +31,7 @@ const NOT_OURS = {
   work: ["-c"],
   personas: ["--exclude-standard", "--name-only", "--others"],
   "trust-verify": ["-c", "--show-toplevel"],
-  upgrade: ["-c", "-z", "--cached", "--git-path", "--is-inside-work-tree", "-m", "--porcelain", "-q", "--quiet", "--short", "--verify"],
+  upgrade: ["-c", "-z", "--cached", "--git-path", "--is-inside-work-tree", "-m", "--porcelain", "-q", "--quiet", "--short", "--verify", "--path-format=absolute", "--git-common-dir"],
   view: ["--quiet"],
 };
 const COMMAND_FOR_FILE = { "loop-doctor": "loop", "loop-on": "loop", "loop-profile": "loop", "loop-take": "loop" };
@@ -55,19 +55,19 @@ test("every command the CLI dispatches has an entry, and every entry a command",
   assert.deepEqual(COMMANDS.map((c) => c.name).sort(), dispatched);
 });
 
-test("every conductor.config.json key the CLI reads is in the usage source", () => {
+test("every carja.config.json key the CLI reads is in the usage source", () => {
   const keys = CONFIG_KEYS.map(([k]) => k);
   for (const m of src("src/loop/config.js").matchAll(/raw\.([a-z_]+)/g)) assert.ok(keys.includes(`loop.${m[1]}`), `loop.${m[1]} is read but not documented`);
-  for (const k of Object.keys(JSON.parse(src("templates/conductor.config.json")))) assert.ok(keys.includes(k), `${k} ships in the config template but is not documented`);
+  for (const k of Object.keys(JSON.parse(src("templates/carja.config.json")))) assert.ok(keys.includes(k), `${k} ships in the config template but is not documented`);
   for (const k of ["eval", "repos"]) assert.ok(keys.includes(k));
   for (const c of COMMANDS) for (const k of c.config ?? []) assert.ok(keys.includes(k), `${c.name} names an unknown config key ${k}`);
 });
 
-test("docs/Using-Conductor.md carries the rendering of the source (run scripts/write-usage-reference.js)", () => {
-  const page = src("docs/Using-Conductor.md");
+test("docs/Using-Carja.md carries the rendering of the source (run scripts/write-usage-reference.js)", () => {
+  const page = src("docs/Using-Carja.md");
   const between = page.slice(page.indexOf(REFERENCE_START) + REFERENCE_START.length, page.indexOf(REFERENCE_END));
   assert.equal(between.trim(), renderReference().trim());
-  assert.match(src("README.md"), /docs\/Using-Conductor\.md/, "the README points at the page");
+  assert.match(src("README.md"), /docs\/Using-Carja\.md/, "the README points at the page");
 });
 
 const io = (cwd) => {
@@ -76,7 +76,7 @@ const io = (cwd) => {
   return { stdout: out, stderr: err, cwd: () => cwd };
 };
 
-test("`conductor <command> --help` and `conductor help <command>` print the command's reference, without running it", async () => {
+test("`carja <command> --help` and `carja help <command>` print the command's reference, without running it", async () => {
   for (const c of COMMANDS) {
     const a = io(tmpdir());
     assert.equal(await runCli([c.name, "--help"], a), 0, c.name);
@@ -90,18 +90,18 @@ test("`conductor <command> --help` and `conductor help <command>` print the comm
   assert.doesNotMatch(e.stdout.text, /Record and check verification evidence/, "a flag after -- belongs to the wrapped command");
 });
 
-test("a bare `conductor` in a project says where it stands and the next command; outside one, the help", async () => {
+test("a bare `carja` in a project says where it stands and the next command; outside one, the help", async () => {
   const dir = mkdtempSync(join(tmpdir(), "usage-"));
   try {
     const outside = io(dir);
     await runCli([], outside);
     assert.equal(outside.stdout.text.trim(), mainHelp().trim());
-    mkdirSync(join(dir, "conductor/1-workbench/questions"), { recursive: true });
-    writeFileSync(join(dir, "conductor/1-workbench/questions/task-a.md"), "# Questions: task:a (build)\n\n## Q1. X?\nC.\n\n1. A — a\n2. B — b\n\n**Recommendation:** 1, because c\n**If wrong:** d\n\nAnswer:\n");
+    mkdirSync(join(dir, "carja/1-workbench/questions"), { recursive: true });
+    writeFileSync(join(dir, "carja/1-workbench/questions/task-a.md"), "# Questions: task:a (build)\n\n## Q1. X?\nC.\n\n1. A — a\n2. B — b\n\n**Recommendation:** 1, because c\n**If wrong:** d\n\nAnswer:\n");
     const inside = io(dir);
     await runCli([], inside);
-    assert.match(inside.stdout.text, /Conductor project:/);
-    assert.match(inside.stdout.text, /Next: answer conductor\/1-workbench\/questions\/task-a\.md/);
+    assert.match(inside.stdout.text, /Carja project:/);
+    assert.match(inside.stdout.text, /Next: answer carja\/1-workbench\/questions\/task-a\.md/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

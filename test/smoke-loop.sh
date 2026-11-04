@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# Conductor Loop — end-to-end smoke test (no LLM)
+# Carja Loop — end-to-end smoke test (no LLM)
 # ============================================================
 # Exercises the REAL pipeline — worktree isolation, a maker beat that makes a
 # real git commit, the driver's own verification, the independent Checker reading
@@ -47,9 +47,9 @@ case "$prompt" in
     echo "checker mode=$mode" >> "${CALLS_LOG:-/dev/null}"
     # A read-only checker produces no verdict file (the driver then fails safe).
     if [ "$writable" -eq 1 ]; then
-      mkdir -p conductor/1-workbench
+      mkdir -p carja/1-workbench
       printf '{"approved": true, "reason": "smoke: change looks complete"}' \
-        > conductor/1-workbench/checker-verdict.json
+        > carja/1-workbench/checker-verdict.json
     fi
     ;;
   *)
@@ -63,17 +63,17 @@ case "$prompt" in
       git add -A >/dev/null 2>&1
       git commit -q -m "feat: smoke feature" >/dev/null 2>&1 || true
     fi
-    mkdir -p conductor/1-workbench
-    printf '{"done": true}' > conductor/1-workbench/maker-signal.json
+    mkdir -p carja/1-workbench
+    printf '{"done": true}' > carja/1-workbench/maker-signal.json
     ;;
 esac
 exit 0
 FAKE
 chmod +x "$BIN/claude"
 
-# ---- 2. A conductor project ----
+# ---- 2. A carja project ----
 mkdir -p "$PROJ"
-node "$REPO_ROOT/bin/conductor.js" init "$PROJ" --all >/dev/null 2>&1
+node "$REPO_ROOT/bin/carja.js" init "$PROJ" --all >/dev/null 2>&1
 cd "$PROJ"
 git init -q
 git config user.email smoke@test.local
@@ -81,7 +81,7 @@ git config user.name "Smoke Test"
 git add -A >/dev/null 2>&1
 git commit -q -m "init"
 
-STATE="$PROJ/conductor/1-workbench/loop-state.json"
+STATE="$PROJ/carja/1-workbench/loop-state.json"
 node -e "
 const f='$STATE'; const s=require(f);
 s.goal_description='smoke test goal';
@@ -94,20 +94,20 @@ require('fs').writeFileSync(f, JSON.stringify(s,null,2));
 # P2.1: seed a recurring failure (2x the same pattern, differing specifics) so the
 # post-run self-improvement mining has something to detect. One line in the
 # git-dir audit trail (F21), one in the ship-log as installs before 6.44 have it.
-mkdir -p "$PROJ/.git/conductor-loop-logs"
-cat >> "$PROJ/.git/conductor-loop-logs/audit.md" <<'SEED'
+mkdir -p "$PROJ/.git/carja-loop-logs"
+cat >> "$PROJ/.git/carja-loop-logs/audit.md" <<'SEED'
 - [2026-07-20T10:00:00Z] [loop] checker rejected: `npm test` exits non-zero: 2 of 3 fail because src/sum.js is missing
 SEED
-cat >> "$PROJ/conductor/0-compass/ship-log.md" <<'SEED'
+cat >> "$PROJ/carja/0-compass/ship-log.md" <<'SEED'
 - [2026-07-21T11:00:00Z] [loop] checker rejected: `npm test` exits non-zero: 1 of 4 fail because src/multiply.js is missing
 SEED
-SHIPLOG="$PROJ/conductor/0-compass/ship-log.md"
+SHIPLOG="$PROJ/carja/0-compass/ship-log.md"
 SHIPLOG_BEFORE="$(cat "$SHIPLOG")"
 
 # ---- 3. Run the loop with the fake agent on PATH ----
-echo "Running: conductor loop (fake agent)..."
+echo "Running: carja loop (fake agent)..."
 set +e
-PATH="$BIN:$PATH" node "$REPO_ROOT/bin/conductor.js" loop "$PROJ" --unsafe-no-sandbox --platform claude > "$WORK/out.log" 2>&1
+PATH="$BIN:$PATH" node "$REPO_ROOT/bin/carja.js" loop "$PROJ" --unsafe-no-sandbox --platform claude > "$WORK/out.log" 2>&1
 code=$?
 set -e
 sed 's/^/    /' "$WORK/out.log"
@@ -122,11 +122,11 @@ status="$(node -e "console.log(require('$STATE').status)")"
 WT="$PROJ/.agents/.worktrees/smoke-test-goal"
 if [ -f "$WT/FEATURE.txt" ]; then ok "maker made a real commit in the isolated worktree"; else no "FEATURE.txt not found in worktree"; fi
 
-if git -C "$PROJ" branch --list 'conductor/loop/smoke-test-goal' | grep -q .; then
+if git -C "$PROJ" branch --list 'carja/loop/smoke-test-goal' | grep -q .; then
   ok "maker worked on the dedicated loop branch"
 else no "loop branch not created"; fi
 
-AUDIT="$PROJ/.git/conductor-loop-logs/audit.md"
+AUDIT="$PROJ/.git/carja-loop-logs/audit.md"
 if [ "$(grep -c '\[loop\]' "$AUDIT")" -gt 1 ]; then ok "auditable action trail written to the git dir"; else no "no audit trail in $AUDIT"; fi
 if [ "$(cat "$SHIPLOG")" = "$SHIPLOG_BEFORE" ]; then ok "the tracked ship-log is untouched by the driver"; else no "the driver wrote to the ship-log"; fi
 
@@ -144,7 +144,7 @@ fi
 
 # P2.1: the post-run self-improvement should have mined the seeded recurring
 # failure (2×) and proposed a rule — without auto-editing .agents/rules/.
-IMP="$PROJ/conductor/1-workbench/loop-improvements.md"
+IMP="$PROJ/carja/1-workbench/loop-improvements.md"
 if [ -f "$IMP" ] && grep -q 'seen 2' "$IMP"; then
   ok "self-improvement mined the recurring failure → loop-improvements.md proposal"
 else
@@ -164,7 +164,7 @@ echo ""
 echo "Scenario 2: maker forgets to commit (auto-capture backstop)..."
 PROJ2="$WORK/proj2"
 mkdir -p "$PROJ2"
-node "$REPO_ROOT/bin/conductor.js" init "$PROJ2" --all >/dev/null 2>&1
+node "$REPO_ROOT/bin/carja.js" init "$PROJ2" --all >/dev/null 2>&1
 cd "$PROJ2"
 git init -q
 git config user.email smoke@test.local
@@ -172,7 +172,7 @@ git config user.name "Smoke Test"
 git add -A >/dev/null 2>&1
 git commit -q -m "init"
 
-STATE2="$PROJ2/conductor/1-workbench/loop-state.json"
+STATE2="$PROJ2/carja/1-workbench/loop-state.json"
 node -e "
 const f='$STATE2'; const s=require(f);
 s.goal_description='backstop test goal';
@@ -183,7 +183,7 @@ require('fs').writeFileSync(f, JSON.stringify(s,null,2));
 "
 
 set +e
-MAKER_COMMIT=0 PATH="$BIN:$PATH" node "$REPO_ROOT/bin/conductor.js" loop "$PROJ2" --unsafe-no-sandbox --platform claude > "$WORK/out2.log" 2>&1
+MAKER_COMMIT=0 PATH="$BIN:$PATH" node "$REPO_ROOT/bin/carja.js" loop "$PROJ2" --unsafe-no-sandbox --platform claude > "$WORK/out2.log" 2>&1
 code2=$?
 set -e
 sed 's/^/    /' "$WORK/out2.log"
@@ -201,7 +201,7 @@ fi
 # And the work is durable: FEATURE.txt is COMMITTED on the loop branch (not just a
 # stray working-tree file that teardown would have destroyed).
 WT2="$PROJ2/.agents/.worktrees/backstop-test-goal"
-if git -C "$PROJ2" show "conductor/loop/backstop-test-goal:FEATURE.txt" >/dev/null 2>&1; then
+if git -C "$PROJ2" show "carja/loop/backstop-test-goal:FEATURE.txt" >/dev/null 2>&1; then
   ok "auto-captured work is a real commit on the loop branch (survives teardown)"
 else
   no "FEATURE.txt is not committed on the loop branch — work would be lost"

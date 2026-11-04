@@ -42,18 +42,18 @@ test("each beat kind runs on its role's model: specs and designs never on the Ma
   assert.deepEqual(seen, ["sonnet", "opus", "opus", "opus", "sonnet", "checker:opus"]);
 });
 
-test("`conductor loop profile` shows the models and the cost basis, and switches without JSON", () => {
+test("`carja loop profile` shows the models and the cost basis, and switches without JSON", () => {
   const REPO = new URL("..", import.meta.url).pathname;
   const root = mkdtempSync(join(tmpdir(), "profiles-"));
   try {
-    execFileSync("node", [join(REPO, "bin/conductor.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
-    const run = (...a) => execFileSync("node", [join(REPO, "bin/conductor.js"), "loop", "profile", ...a, root], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ANTHROPIC_API_KEY: "" } }).toString();
+    execFileSync("node", [join(REPO, "bin/carja.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
+    const run = (...a) => execFileSync("node", [join(REPO, "bin/carja.js"), "loop", "profile", ...a, root], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ANTHROPIC_API_KEY: "" } }).toString();
     assert.match(run(), /not set: every role uses the engine's default model/);
     const out = run("balanced");
     assert.match(out, /balanced/);
     assert.match(out, /Maker +sonnet \(opus after 2 rejections\)/);
     assert.match(out, /Checker +opus/);
-    assert.equal(JSON.parse(readFileSync(join(root, "conductor.config.json"), "utf8")).loop.profile, "balanced");
+    assert.equal(JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).loop.profile, "balanced");
     assert.match(run(), /subscription/, "without an API key, the cost is quota use at list price, not money");
   } finally {
     rmSync(root, { recursive: true, force: true });

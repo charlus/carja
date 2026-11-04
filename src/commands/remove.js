@@ -1,5 +1,5 @@
 /**
- * conductor remove <skill-name> [--force]
+ * carja remove <skill-name> [--force]
  *
  * Removes a skill from .agents/skills/.
  */
@@ -20,13 +20,13 @@ function parseRemoveArgs(args) {
       throw new Error(`Unknown option: ${arg}`);
     }
     if (parsed.skillName) {
-      throw new Error("Too many arguments. Usage: conductor remove <skill-name>");
+      throw new Error("Too many arguments. Usage: carja remove <skill-name>");
     }
     parsed.skillName = arg;
   }
 
   if (!parsed.skillName) {
-    throw new Error("Missing skill name. Usage: conductor remove <skill-name>");
+    throw new Error("Missing skill name. Usage: carja remove <skill-name>");
   }
 
   return parsed;
@@ -58,7 +58,7 @@ export async function removeCommand(args, { cwd, stdout, stderr }) {
   if (!skill) {
     stderr.write(
       `Skill "${parsed.skillName}" is not installed.\n` +
-      `Run "conductor list" to see installed skills.\n`
+      `Run "carja list" to see installed skills.\n`
     );
     return 1;
   }
@@ -66,7 +66,7 @@ export async function removeCommand(args, { cwd, stdout, stderr }) {
   // Warn if core skill
   if (skill.manifest?.tier === "core" && !parsed.force) {
     stderr.write(
-      `⚠️  "${skill.name}" is a core skill (bundled with Conductor).\n` +
+      `⚠️  "${skill.name}" is a core skill (bundled with Carja).\n` +
       `   Removing it may break workflows. It will be restored on upgrade.\n` +
       `   Use --force to remove anyway.\n`
     );

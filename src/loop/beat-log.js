@@ -2,13 +2,13 @@
 //
 // F11: keep each agent beat's output. Without it, a beat that did nothing left
 // no trace once teardown removed its clean worktree. Logs go in the main repo's
-// git dir (`.git/conductor-loop-logs/`): outside every worktree, never committed,
-// and untouched by `conductor upgrade`. The newest KEEP logs are kept.
+// git dir (`.git/carja-loop-logs/`): outside every worktree, never committed,
+// and untouched by `carja upgrade`. The newest KEEP logs are kept.
 
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const BEAT_LOG_DIR = "conductor-loop-logs";
+export const BEAT_LOG_DIR = "carja-loop-logs";
 /** F21: the driver's `- [<iso>] [loop] …` audit lines, in BEAT_LOG_DIR. */
 export const AUDIT_FILE = "audit.md";
 const KEEP = 200;

@@ -1,7 +1,7 @@
 // src/loop/writeback.js
 //
 // Fleet Bridge FB-2 (claim) + FB-3 (write-back). Pure string transforms over the
-// human's `./conductor/` files so the autonomous fleet reflects its progress into
+// human's `./carja/` files so the autonomous fleet reflects its progress into
 // the SAME source of truth the interactive agent reads: a claimed item shows as
 // "🤖 in progress" (so a human in VS Code doesn't double-book it), and a shipped
 // item is ticked done. IO (reading/writing the files) lives in the command shell.

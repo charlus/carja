@@ -1,9 +1,10 @@
 {
-  "name": "conductor-framework",
-  "version": "6.54.0",
-  "description": "The Conductor — an AI Software Engineering framework for the full development lifecycle. Workflows, skills, and personas for AI-assisted product engineering.",
+  "name": "carja",
+  "version": "7.0.0",
+  "description": "Carja — an AI Software Engineering framework for the full development lifecycle. Workflows, skills, and personas for AI-assisted product engineering.",
   "type": "module",
   "bin": {
+    "carja": "bin/carja.js",
     "conductor": "bin/conductor.js"
   },
   "files": [
@@ -14,7 +15,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node scripts/with-test-tmp.mjs bash templates/.agents/tests/check-conductor.sh",
+    "test": "node scripts/with-test-tmp.mjs bash templates/.agents/tests/check-carja.sh",
     "test:unit": "node scripts/with-test-tmp.mjs node --test test/*.test.js",
     "test:smoke": "node scripts/with-test-tmp.mjs bash test/smoke-loop.sh",
     "test:hooks": "node scripts/with-test-tmp.mjs bash test/hooks-eval-gate.sh",
@@ -22,7 +23,7 @@
     "eval:routing": "node test/evals/routing-eval.mjs",
     "eval:routing:sensitivity": "node test/evals/routing-eval.mjs --mutate deepen.md --case deepen",
     "test:e2e": "node scripts/with-test-tmp.mjs bash test/e2e-loop-real.sh",
-    "test:init": "node bin/conductor.js init /tmp/conductor-test-install --all && bash /tmp/conductor-test-install/.agents/tests/check-conductor.sh && rm -rf /tmp/conductor-test-install",
+    "test:init": "node bin/carja.js init /tmp/carja-test-install --all && bash /tmp/carja-test-install/.agents/tests/check-carja.sh && rm -rf /tmp/carja-test-install",
     "test:hooks:brief": "node scripts/with-test-tmp.mjs bash test/hooks-brief-gate.sh",
     "test:hooks:report": "node scripts/with-test-tmp.mjs bash test/hooks-report-gate.sh",
     "test:hooks:boundary": "node scripts/with-test-tmp.mjs bash test/hooks-boundary-gate.sh",
@@ -41,7 +42,7 @@
     "test:hooks:stable": "node scripts/with-test-tmp.mjs bash test/hooks-verify-stable-tree.sh"
   },
   "keywords": [
-    "conductor",
+    "carja",
     "ai",
     "framework",
     "agent",
@@ -60,6 +61,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR-USERNAME/conductor-framework"
+    "url": "https://github.com/YOUR-USERNAME/carja"
   }
 }

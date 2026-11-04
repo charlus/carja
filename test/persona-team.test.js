@@ -128,7 +128,7 @@ describe("O1–O4 + D3 — the personas upstream", () => {
 
   test("Spec-It turns each triggered persona's Review Lens into acceptance criteria", () => {
     const spec = read("workflows", "spec-it.md");
-    assert.match(spec, /conductor personas/);
+    assert.match(spec, /carja personas/);
     assert.match(spec, /Review Lens[^.]*acceptance criteria/i);
   });
 

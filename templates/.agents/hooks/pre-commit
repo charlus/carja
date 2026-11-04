@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Conductor — Test-Driven Law + Eval-Driven Law, deterministically enforced (ADR-0001 D1).
+# Carja — Test-Driven Law + Eval-Driven Law, deterministically enforced (ADR-0001 D1).
 #   TDD:  implementation change with no accompanying test change is rejected.
 #   Eval: LLM-feature code (calls a provider) with no accompanying eval is rejected.
 #   Brief: a feature-spec with no "Brief check" section is rejected (A5 / D1).
@@ -7,37 +7,41 @@
 #   Default branch: code committed on the default branch is rejected (2026-10-22).
 # The two gates are INDEPENDENT — waiving one never skips the other. LLM-feature
 # code needs BOTH a test (deterministic glue) and an eval (non-deterministic output).
-# Escape hatches (logged, never silent): CONDUCTOR_NO_TEST / CONDUCTOR_NO_EVAL /
-# CONDUCTOR_NO_BRIEF / CONDUCTOR_NO_REPORT / CONDUCTOR_ON_DEFAULT, each ="reason".
-# Disable everything: CONDUCTOR_HOOKS=off.
+# Escape hatches (logged, never silent): CARJA_NO_TEST / CARJA_NO_EVAL /
+# CARJA_NO_BRIEF / CARJA_NO_REPORT / CARJA_ON_DEFAULT, each ="reason".
+# Disable everything: CARJA_HOOKS=off.
 set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 [ -z "$ROOT" ] && exit 0
-[ "${CONDUCTOR_HOOKS:-on}" = "off" ] && exit 0
+# 6.x names still work through 7.x: each CONDUCTOR_X sets CARJA_X when unset.
+for _k in $(compgen -e); do case "$_k" in CONDUCTOR_*) _n="CARJA_${_k#CONDUCTOR_}"; [ -n "${!_n:-}" ] || export "$_n=${!_k}" ;; esac; done
+# …and each CARJA_X sets CONDUCTOR_X, for a 6.x committed lib.sh (the push of the upgrade itself).
+for _k in $(compgen -e); do case "$_k" in CARJA_*) _n="CONDUCTOR_${_k#CARJA_}"; [ -n "${!_n:-}" ] || export "$_n=${!_k}" ;; esac; done
+[ "${CARJA_HOOKS:-on}" = "off" ] && exit 0
 
-# Heartbeat: `conductor status` compares it with the reflog to name the commits
-# and pushes that skipped this hook (--no-verify, CONDUCTOR_HOOKS=off, a client
+# Heartbeat: `carja status` compares it with the reflog to name the commits
+# and pushes that skipped this hook (--no-verify, CARJA_HOOKS=off, a client
 # that ignores hooks). Written here, not in lib.sh, so the commit that upgrades
 # the hooks has one too.
 HB_DIR="$(git rev-parse --git-common-dir 2>/dev/null || true)"
 case "$HB_DIR" in "") ;; /*) ;; *) HB_DIR="$(pwd)/$HB_DIR" ;; esac
-[ -n "$HB_DIR" ] && printf '%s pre-commit\n' "$(date +%s)" >> "$HB_DIR/conductor-heartbeat" 2>/dev/null || true
+[ -n "$HB_DIR" ] && printf '%s pre-commit\n' "$(date +%s)" >> "$HB_DIR/carja-heartbeat" 2>/dev/null || true
 
-# ---- The project root: where .agents/, conductor/ and the config live -------
+# ---- The project root: where .agents/, carja/ and the config live -------
 # It is ROOT, except in the outer layout. There a gitignored nested code
 # repository has core.hooksPath set to the outer .agents/hooks by absolute path
-# (`conductor install-hooks`). The gates then judge the code repository's diff,
+# (`carja install-hooks`). The gates then judge the code repository's diff,
 # and the library, the config and the ship-log come from the outer repository.
 # The library is read from the outer repository's COMMITTED copy, which no
 # commit or push in the code repository can rewrite.
 PROJECT_ROOT="$ROOT"
 NESTED_REPO=""
-conductor_find_project_root() {
+carja_find_project_root() {
   local home common main rel
   home="$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd -P)" || return 0
   [ -n "$home" ] && [ "$home" != "$(cd "$ROOT" && pwd -P)" ] || return 0
-  [ -d "$home/.agents/hooks" ] && [ -d "$home/conductor" ] || return 0
+  [ -d "$home/.agents/hooks" ] && [ -d "$home/carja" ] || return 0
   common="$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null)" || return 0
   case "$common" in /*) ;; *) common="$ROOT/$common" ;; esac
   main="$(cd "$common/.." 2>/dev/null && pwd -P)" || return 0
@@ -47,7 +51,7 @@ conductor_find_project_root() {
   PROJECT_ROOT="$home"
   NESTED_REPO="$rel"
 }
-conductor_find_project_root
+carja_find_project_root
 
 # ---- Load the shared library from a copy the change cannot rewrite ----------
 # Both hooks source lib.sh, which makes it the single point that switches every
@@ -67,7 +71,17 @@ conductor_find_project_root
 # pre-commit is caught at pre-push below; rewriting both entry scripts defeats
 # every client-side hook, and the backstop for that is the PR gate and the
 # loop's Checker, not this file.
-conductor_load_lib() {
+# A trusted lib.sh committed under 6.x names its helpers conductor_*. Through
+# 7.x it is still the trusted copy (the remote's, at the push of the upgrade
+# itself): give each helper its carja_* name rather than failing closed.
+carja_compat_old_lib() {
+  local f
+  for f in $(compgen -A function conductor_); do
+    type "carja_${f#conductor_}" >/dev/null 2>&1 || eval "carja_${f#conductor_}() { $f \"\$@\"; }"
+  done
+}
+
+carja_load_lib() {
   local ref="$1" tmp
   if [ -n "$ref" ] && git -C "$PROJECT_ROOT" cat-file -e "$ref:.agents/hooks/lib.sh" 2>/dev/null; then
     tmp="$(mktemp 2>/dev/null)" || return 1
@@ -78,17 +92,19 @@ conductor_load_lib() {
     # shellcheck source=/dev/null
     . "$tmp"
     rm -f "$tmp"
+    carja_compat_old_lib
     return 0
   fi
   [ -f "$PROJECT_ROOT/.agents/hooks/lib.sh" ] || return 1
   # shellcheck source=/dev/null
   . "$PROJECT_ROOT/.agents/hooks/lib.sh"
+  carja_compat_old_lib
 }
 
 # Every helper `$1` needs, or the names that are missing. A committed lib.sh
 # older than this hook (mid-upgrade) lacks the newer helpers; running on with
 # them undefined would silently skip their gates, so a gap fails closed instead.
-conductor_missing_helpers() {
+carja_missing_helpers() {
   local fn missing=""
   for fn in $1; do
     type "$fn" >/dev/null 2>&1 || missing="$missing $fn"
@@ -98,8 +114,8 @@ conductor_missing_helpers() {
 
 # Minimal ship-log writer for the one path where lib.sh could not be loaded,
 # so even that waiver is recorded rather than silent.
-conductor_log_waiver_fallback() {
-  local log="$PROJECT_ROOT/conductor/0-compass/ship-log.md"
+carja_log_waiver_fallback() {
+  local log="$PROJECT_ROOT/carja/0-compass/ship-log.md"
   [ -f "$log" ] || return 0
   printf -- '- [%s] Hook waiver (%s): %s\n' "$(date '+%Y-%m-%d %H:%M')" "$1" "$2" >> "$log"
 }
@@ -107,19 +123,19 @@ conductor_log_waiver_fallback() {
 TRUSTED_REF=""
 git -C "$PROJECT_ROOT" rev-parse --verify -q HEAD >/dev/null 2>&1 && TRUSTED_REF="HEAD"
 
-REQUIRED="conductor_is_test_file conductor_is_impl_file conductor_is_eval_file conductor_is_llm_feature_file conductor_is_brief_doc conductor_has_brief_check conductor_is_ship_log conductor_newest_entry_has_for_you conductor_deleted_test_files conductor_staged_test_paths conductor_added_skip_markers conductor_assertion_delta conductor_protected_changes conductor_log_waiver"
+REQUIRED="carja_is_test_file carja_is_impl_file carja_is_eval_file carja_is_llm_feature_file carja_is_brief_doc carja_has_brief_check carja_is_ship_log carja_newest_entry_has_for_you carja_deleted_test_files carja_staged_test_paths carja_added_skip_markers carja_assertion_delta carja_protected_changes carja_log_waiver"
 lib_ok=1
-conductor_load_lib "$TRUSTED_REF" || lib_ok=0
-missing="$(conductor_missing_helpers "$REQUIRED")"
+carja_load_lib "$TRUSTED_REF" || lib_ok=0
+missing="$(carja_missing_helpers "$REQUIRED")"
 
-# A merge that brings in a newer Conductor (main merged into a branch cut before
+# A merge that brings in a newer Carja (main merged into a branch cut before
 # the upgrade): HEAD holds the old library, the branch being merged the new one.
 # Both are committed, so neither is the change judging itself: use MERGE_HEAD's.
 if { [ "$lib_ok" = "0" ] || [ -n "$missing" ]; } && git -C "$PROJECT_ROOT" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 \
    && git -C "$PROJECT_ROOT" cat-file -e "MERGE_HEAD:.agents/hooks/lib.sh" 2>/dev/null; then
   lib_ok=1
-  conductor_load_lib "MERGE_HEAD" || lib_ok=0
-  missing="$(conductor_missing_helpers "$REQUIRED")"
+  carja_load_lib "MERGE_HEAD" || lib_ok=0
+  missing="$(carja_missing_helpers "$REQUIRED")"
 fi
 
 if [ "$lib_ok" = "0" ] || [ -n "$missing" ]; then
@@ -127,24 +143,24 @@ if [ "$lib_ok" = "0" ] || [ -n "$missing" ]; then
   # CLOSED. Failing open here is exactly the hole — it is what let one deleted
   # file disable every gate at once.
   if [ -n "$TRUSTED_REF" ] && git -C "$PROJECT_ROOT" cat-file -e "HEAD:.agents/hooks/lib.sh" 2>/dev/null; then
-    if [ -n "${CONDUCTOR_NO_PROTECTED:-}" ]; then
-      conductor_log_waiver_fallback "Protected" "$CONDUCTOR_NO_PROTECTED"
-      echo "⚠️  Conductor enforcement library unavailable — WAIVED: $CONDUCTOR_NO_PROTECTED"
+    if [ -n "${CARJA_NO_PROTECTED:-}" ]; then
+      carja_log_waiver_fallback "Protected" "$CARJA_NO_PROTECTED"
+      echo "⚠️  Carja enforcement library unavailable — WAIVED: $CARJA_NO_PROTECTED"
       exit 0
     fi
     echo ""
-    echo "🛑 Conductor — the committed enforcement library cannot run this hook; commit blocked."
+    echo "🛑 Carja — the committed enforcement library cannot run this hook; commit blocked."
     echo ""
     if [ -n "$missing" ]; then
       echo "  The committed .agents/hooks/lib.sh is missing:$([ -n "$missing" ] && printf ' %s' "$missing")"
-      echo "  That is normal for the one commit that upgrades Conductor itself."
-      echo "  \`conductor upgrade\` makes that commit for you; to make it by hand:"
-      echo "    CONDUCTOR_NO_PROTECTED=\"conductor upgrade\" git commit …"
+      echo "  That is normal for the one commit that upgrades Carja itself."
+      echo "  \`carja upgrade\` makes that commit for you; to make it by hand:"
+      echo "    CARJA_NO_PROTECTED=\"carja upgrade\" git commit …"
       echo "  The push needs nothing — pre-push recognises the official hooks."
     else
       echo "  .agents/hooks/lib.sh is committed but cannot be read, so no gate could run."
-      echo "  If you are deliberately removing Conductor, say so:"
-      echo "    CONDUCTOR_NO_PROTECTED=\"why\" git commit …"
+      echo "  If you are deliberately removing Carja, say so:"
+      echo "    CARJA_NO_PROTECTED=\"why\" git commit …"
     fi
     echo ""
     exit 1
@@ -160,7 +176,7 @@ fi
 [ -z "$(git diff --cached --name-only)" ] && exit 0
 
 staged="$(git diff --cached --name-only --diff-filter=ACM)"
-deleted_tests="$(conductor_deleted_test_files "$ROOT")"
+deleted_tests="$(carja_deleted_test_files "$ROOT")"
 
 impl=0; tests=0; impl_files=""
 llm=0;  evals=0; llm_files=""
@@ -171,28 +187,28 @@ report=0; report_files=""
 staged_tests=()
 while IFS= read -r f; do
   [ -n "$f" ] && staged_tests+=("$f")
-done <<< "$(conductor_staged_test_paths "$ROOT")"
+done <<< "$(carja_staged_test_paths "$ROOT")"
 [ "${#staged_tests[@]}" -gt 0 ] && tests=1
 
 while IFS= read -r f; do
   [ -z "$f" ] && continue
-  if conductor_is_test_file "$f"; then
+  if carja_is_test_file "$f"; then
     tests=1
-  elif conductor_is_impl_file "$f"; then
+  elif carja_is_impl_file "$f"; then
     impl=1
     impl_files="$impl_files\n    - $f"
   fi
-  if conductor_is_ship_log "$f" && ! conductor_newest_entry_has_for_you "$ROOT/$f"; then
+  if carja_is_ship_log "$f" && ! carja_newest_entry_has_for_you "$ROOT/$f"; then
     report=1
     report_files="$report_files\n    - $f"
   fi
-  if conductor_is_brief_doc "$f" && ! conductor_has_brief_check "$ROOT/$f"; then
+  if carja_is_brief_doc "$f" && ! carja_has_brief_check "$ROOT/$f"; then
     brief=1
     brief_files="$brief_files\n    - $f"
   fi
-  if conductor_is_eval_file "$f"; then
+  if carja_is_eval_file "$f"; then
     evals=1
-  elif conductor_is_llm_feature_file "$ROOT/$f"; then
+  elif carja_is_llm_feature_file "$ROOT/$f"; then
     llm=1
     llm_files="$llm_files\n    - $f"
   fi
@@ -202,8 +218,8 @@ blocked=0
 
 # ---- The default branch: code arrives through a merged MR -----------------
 # The owner's folder stays on the default branch (2026-10-22). Code reaches it
-# only through a merged MR, built in the item's worktree (`conductor work
-# <item>`). Only where an MR flow exists (a remote named origin). Conductor's
+# only through a merged MR, built in the item's worktree (`carja work
+# <item>`). Only where an MR flow exists (a remote named origin). Carja's
 # own files may still be committed here: the inbox, the loop state, the
 # project card. In a nested code repository every file is code.
 default_branch_code=""
@@ -220,29 +236,29 @@ if git remote get-url origin >/dev/null 2>&1 && [ -z "$(git rev-parse -q --verif
     while IFS= read -r f; do
       [ -z "$f" ] && continue
       if [ -z "$NESTED_REPO" ]; then
-        case "$f" in conductor/*|.agents/*|AGENTS.md|conductor.config.json|.gitattributes) continue ;; esac
+        case "$f" in carja/*|.agents/*|AGENTS.md|carja.config.json|.gitattributes) continue ;; esac
       fi
       default_branch_code="$default_branch_code\n    - $f"
     done <<< "$(git diff --cached --name-only)"
   fi
 fi
 if [ -n "$default_branch_code" ]; then
-  if [ -n "${CONDUCTOR_ON_DEFAULT:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "Default branch" "$CONDUCTOR_ON_DEFAULT"
-    echo "⚠️  Conductor default-branch rule WAIVED: $CONDUCTOR_ON_DEFAULT"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+  if [ -n "${CARJA_ON_DEFAULT:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Default branch" "$CARJA_ON_DEFAULT"
+    echo "⚠️  Carja default-branch rule WAIVED: $CARJA_ON_DEFAULT"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
     echo ""
-    echo "🛑 Conductor — code on the default branch ($db); commit blocked."
+    echo "🛑 Carja — code on the default branch ($db); commit blocked."
     echo ""
     echo "  This folder stays on $db. Code reaches it through a merged MR:"
     echo -e "$default_branch_code"
     echo ""
     echo "  Work in the item's own worktree, then commit there:"
-    echo "    conductor work <project>/<slice>    (or a backlog item's name)"
+    echo "    carja work <project>/<slice>    (or a backlog item's name)"
     echo "  It prints the folder to use. If this commit must land on $db"
     echo "  (agreed with the team), say why:"
-    echo "    CONDUCTOR_ON_DEFAULT=\"why\" git commit …"
+    echo "    CARJA_ON_DEFAULT=\"why\" git commit …"
     echo ""
     blocked=1
   fi
@@ -250,13 +266,13 @@ fi
 
 # ---- Test-Driven Law ------------------------------------------------------
 if [ "$impl" = "1" ] && [ "$tests" = "0" ]; then
-  if [ -n "${CONDUCTOR_NO_TEST:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "TDD" "$CONDUCTOR_NO_TEST"
-    echo "⚠️  Conductor Test-Driven Law WAIVED: $CONDUCTOR_NO_TEST"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+  if [ -n "${CARJA_NO_TEST:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "TDD" "$CARJA_NO_TEST"
+    echo "⚠️  Carja Test-Driven Law WAIVED: $CARJA_NO_TEST"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
     echo ""
-    echo "🛑 Conductor Test-Driven Law — commit blocked."
+    echo "🛑 Carja Test-Driven Law — commit blocked."
     echo ""
     echo "  You are committing implementation code with no test change:"
     echo -e "$impl_files"
@@ -264,14 +280,14 @@ if [ "$impl" = "1" ] && [ "$tests" = "0" ]; then
     echo "  Red before green. Either:"
     echo "    • stage the failing/covering test alongside the code, or"
     echo "    • if this genuinely has no test surface (config, generated code),"
-    echo "      record the reason:  CONDUCTOR_NO_TEST=\"why\" git commit …"
+    echo "      record the reason:  CARJA_NO_TEST=\"why\" git commit …"
     echo ""
     blocked=1
   fi
 fi
 
 # ---- The Goodhart boundary ------------------------------------------------
-# Independent of the TDD gate above: CONDUCTOR_NO_TEST says "this change has no
+# Independent of the TDD gate above: CARJA_NO_TEST says "this change has no
 # test surface", which is not a licence to remove proof that already exists.
 boundary_why=""
 while IFS= read -r f; do
@@ -283,22 +299,22 @@ if [ "${#staged_tests[@]}" -gt 0 ]; then
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     boundary_why="$boundary_why\n    - test DISABLED: $hit"
-  done <<< "$(conductor_added_skip_markers "$ROOT" "${staged_tests[@]}")"
+  done <<< "$(carja_added_skip_markers "$ROOT" "${staged_tests[@]}")"
 
-  delta="$(conductor_assertion_delta "$ROOT" "${staged_tests[@]}")"
+  delta="$(carja_assertion_delta "$ROOT" "${staged_tests[@]}")"
   if [ "$delta" -lt 0 ]; then
     boundary_why="$boundary_why\n    - assertions REMOVED: net $delta across the staged tests"
   fi
 fi
 
 if [ -n "$boundary_why" ]; then
-  if [ -n "${CONDUCTOR_NO_BOUNDARY:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "Boundary" "$CONDUCTOR_NO_BOUNDARY"
-    echo "⚠️  Conductor Goodhart boundary WAIVED: $CONDUCTOR_NO_BOUNDARY"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+  if [ -n "${CARJA_NO_BOUNDARY:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Boundary" "$CARJA_NO_BOUNDARY"
+    echo "⚠️  Carja Goodhart boundary WAIVED: $CARJA_NO_BOUNDARY"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
     echo ""
-    echo "🛑 Conductor Goodhart boundary — commit blocked."
+    echo "🛑 Carja Goodhart boundary — commit blocked."
     echo ""
     echo "  This commit makes the test suite prove less than it did:"
     echo -e "$boundary_why"
@@ -309,7 +325,7 @@ if [ -n "$boundary_why" ]; then
     echo "    • fix the code the test was holding to account, or"
     echo "    • if the behaviour is genuinely gone (feature removed, test"
     echo "      merged elsewhere, assertion moved), say so:"
-    echo "      CONDUCTOR_NO_BOUNDARY=\"why\" git commit …"
+    echo "      CARJA_NO_BOUNDARY=\"why\" git commit …"
     echo ""
     blocked=1
   fi
@@ -320,16 +336,16 @@ protected_files=""
 while IFS= read -r f; do
   [ -z "$f" ] && continue
   protected_files="$protected_files\n    - $f"
-done <<< "$(conductor_protected_changes "$ROOT")"
+done <<< "$(carja_protected_changes "$ROOT")"
 
 if [ -n "$protected_files" ]; then
-  if [ -n "${CONDUCTOR_NO_PROTECTED:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "Protected" "$CONDUCTOR_NO_PROTECTED"
-    echo "⚠️  Conductor protected paths WAIVED: $CONDUCTOR_NO_PROTECTED"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+  if [ -n "${CARJA_NO_PROTECTED:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Protected" "$CARJA_NO_PROTECTED"
+    echo "⚠️  Carja protected paths WAIVED: $CARJA_NO_PROTECTED"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
     echo ""
-    echo "🛑 Conductor protected paths — commit blocked."
+    echo "🛑 Carja protected paths — commit blocked."
     echo ""
     echo "  This commit edits the enforcement surface itself:"
     echo -e "$protected_files"
@@ -338,9 +354,9 @@ if [ -n "$protected_files" ]; then
     echo "  brief are the acceptance conditions. Whatever is being built does not"
     echo "  get to edit what decides whether it passes. Either:"
     echo "    • make the change you actually meant, outside these paths, or"
-    echo "    • if you are deliberately changing the rules (a 'conductor"
+    echo "    • if you are deliberately changing the rules (a 'carja"
     echo "      upgrade', or a decision you have made), say so:"
-    echo "      CONDUCTOR_NO_PROTECTED=\"why\" git commit …"
+    echo "      CARJA_NO_PROTECTED=\"why\" git commit …"
     echo ""
     blocked=1
   fi
@@ -348,13 +364,13 @@ fi
 
 # ---- Eval-Driven Law ------------------------------------------------------
 if [ "$llm" = "1" ] && [ "$evals" = "0" ]; then
-  if [ -n "${CONDUCTOR_NO_EVAL:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "Eval" "$CONDUCTOR_NO_EVAL"
-    echo "⚠️  Conductor Eval-Driven Law WAIVED: $CONDUCTOR_NO_EVAL"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+  if [ -n "${CARJA_NO_EVAL:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Eval" "$CARJA_NO_EVAL"
+    echo "⚠️  Carja Eval-Driven Law WAIVED: $CARJA_NO_EVAL"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
     echo ""
-    echo "🛑 Conductor Eval-Driven Law — commit blocked."
+    echo "🛑 Carja Eval-Driven Law — commit blocked."
     echo ""
     echo "  You are committing code that calls an LLM with no eval change:"
     echo -e "$llm_files"
@@ -365,7 +381,7 @@ if [ "$llm" = "1" ] && [ "$evals" = "0" ]; then
     echo "      writing-evals skill for the three grading modes (rubric/judge,"
     echo "      property, reference), or"
     echo "    • if this has no eval surface (a stub, plumbing, config),"
-    echo "      record the reason:  CONDUCTOR_NO_EVAL=\"why\" git commit …"
+    echo "      record the reason:  CARJA_NO_EVAL=\"why\" git commit …"
     echo ""
     blocked=1
   fi
@@ -373,13 +389,13 @@ fi
 
 # ---- Outward Rigour: the brief check ---------------------------------------
 if [ "$brief" = "1" ]; then
-  if [ -n "${CONDUCTOR_NO_BRIEF:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "Brief" "$CONDUCTOR_NO_BRIEF"
-    echo "⚠️  Conductor brief check WAIVED: $CONDUCTOR_NO_BRIEF"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+  if [ -n "${CARJA_NO_BRIEF:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Brief" "$CARJA_NO_BRIEF"
+    echo "⚠️  Carja brief check WAIVED: $CARJA_NO_BRIEF"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
     echo ""
-    echo "🛑 Conductor brief check — commit blocked."
+    echo "🛑 Carja brief check — commit blocked."
     echo ""
     echo "  This spec records no brief check:"
     echo -e "$brief_files"
@@ -393,7 +409,7 @@ if [ "$brief" = "1" ]; then
     echo "  Add a '## Brief check' section with what you found, or 'None found.'"
     echo "  It is not a veto — state it, let the human answer, keep building."
     echo "    • carried over from a pre-A5 spec? record the reason:"
-    echo "      CONDUCTOR_NO_BRIEF=\"why\" git commit …"
+    echo "      CARJA_NO_BRIEF=\"why\" git commit …"
     echo ""
     blocked=1
   fi
@@ -401,13 +417,13 @@ fi
 
 # ---- The report shape: what the human actually reads ----------------------
 if [ "$report" = "1" ]; then
-  if [ -n "${CONDUCTOR_NO_REPORT:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "Report" "$CONDUCTOR_NO_REPORT"
-    echo "⚠️  Conductor report shape WAIVED: $CONDUCTOR_NO_REPORT"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+  if [ -n "${CARJA_NO_REPORT:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Report" "$CARJA_NO_REPORT"
+    echo "⚠️  Carja report shape WAIVED: $CARJA_NO_REPORT"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
     echo ""
-    echo "🛑 Conductor report shape — commit blocked."
+    echo "🛑 Carja report shape — commit blocked."
     echo ""
     echo "  This ship-log's newest entry has no '**For you**' block:"
     echo -e "$report_files"
@@ -421,7 +437,7 @@ if [ "$report" = "1" ]; then
     echo ""
     echo "  'none' is a valid answer to all four. An invented line is not."
     echo "    • editing an old entry, not shipping? record the reason:"
-    echo "      CONDUCTOR_NO_REPORT=\"why\" git commit …"
+    echo "      CARJA_NO_REPORT=\"why\" git commit …"
     echo ""
     blocked=1
   fi
@@ -434,8 +450,8 @@ fi
 case "${GIT_INDEX_FILE:-}" in
   *next-index-*) ;;
   *)
-    if [ "$blocked" = "0" ] && [ "$PROJECT_ROOT" = "$ROOT" ] && type conductor_stage_waiver_lines >/dev/null 2>&1; then
-      conductor_stage_waiver_lines "$ROOT"
+    if [ "$blocked" = "0" ] && [ "$PROJECT_ROOT" = "$ROOT" ] && type carja_stage_waiver_lines >/dev/null 2>&1; then
+      carja_stage_waiver_lines "$ROOT"
     fi
     ;;
 esac

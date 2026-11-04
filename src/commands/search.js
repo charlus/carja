@@ -1,5 +1,5 @@
 /**
- * conductor search <query> [--tag <tag>] [--tier <tier>]
+ * carja search <query> [--tag <tag>] [--tier <tier>]
  *
  * Searches the remote registry for skills matching a query.
  */
@@ -38,7 +38,7 @@ function parseSearchArgs(args) {
   }
 
   if (!parsed.query && !parsed.tag && !parsed.tier) {
-    throw new Error("Missing search query. Usage: conductor search <query> [--tag <tag>]");
+    throw new Error("Missing search query. Usage: carja search <query> [--tag <tag>]");
   }
 
   return parsed;
@@ -133,6 +133,6 @@ export async function searchCommand(args, { cwd, stdout, stderr }) {
 
   stdout.write("\n");
   stdout.write(`  ✓ = installed locally\n`);
-  stdout.write(`  Install with: conductor add <skill-name>\n\n`);
+  stdout.write(`  Install with: carja add <skill-name>\n\n`);
   return 0;
 }

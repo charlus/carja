@@ -3,7 +3,7 @@
 # boundary and the bounded stop-hook re-entry.
 #
 # This is a BEHAVIOR test, not a structural one: it builds a throwaway repo,
-# runs the real `conductor trust-verify` (Node) and the real stop hook (bash),
+# runs the real `carja trust-verify` (Node) and the real stop hook (bash),
 # and asserts on exit codes and on whether the declared command actually ran.
 # The cross-implementation check matters most — the hook reads a store the CLI
 # wrote, and a hash-format disagreement between them would silently disable the
@@ -12,8 +12,8 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TMP="$(mktemp -d "${TMPDIR:-/tmp}/conductor-trust-XXXXXX")"
-export CONDUCTOR_HOME="$TMP/home"
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/carja-trust-XXXXXX")"
+export CARJA_HOME="$TMP/home"
 PASS=0
 FAIL=0
 
@@ -27,7 +27,7 @@ check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$3', got '$2'
 # --- a throwaway project with the framework's hooks in place -----------------
 PROJ="$TMP/proj"
 mkdir -p "$PROJ"
-node "$REPO_ROOT/bin/conductor.js" init "$PROJ" --all >/dev/null 2>&1
+node "$REPO_ROOT/bin/carja.js" init "$PROJ" --all >/dev/null 2>&1
 cd "$PROJ" || exit 1
 git init -q .
 git config user.email t@t.t
@@ -35,7 +35,7 @@ git config user.name T
 
 # A verification command whose EXECUTION is observable: it touches a marker.
 MARKER="$TMP/verify-ran"
-cat > conductor.config.json <<JSON
+cat > carja.config.json <<JSON
 { "verify": "touch '$MARKER'; exit \${VERIFY_EXIT:-0}" }
 JSON
 
@@ -44,7 +44,7 @@ JSON
 mkdir -p src
 echo 'export const a = 1;' > src/app.js
 git add -A >/dev/null 2>&1
-CONDUCTOR_HOOKS=off git commit -qm init >/dev/null 2>&1
+CARJA_HOOKS=off git commit -qm init >/dev/null 2>&1
 echo 'export const a = 2;' > src/app.js
 
 STOP_HOOK="$PROJ/.agents/hooks/verification-stop-hook.sh"
@@ -68,13 +68,13 @@ else
   ok "untrusted command was never executed"
 fi
 if grep -q "trust-verify" "$TMP/out"; then
-  ok "the hook names the fix (conductor trust-verify)"
+  ok "the hook names the fix (carja trust-verify)"
 else
   bad "the hook does not tell the operator how to enable the gate"
 fi
 
 # 2. After trusting, a RED command blocks the stop.
-node "$REPO_ROOT/bin/conductor.js" trust-verify >/dev/null 2>&1
+node "$REPO_ROOT/bin/carja.js" trust-verify >/dev/null 2>&1
 code=$(run_stop_hook '{}' VERIFY_EXIT=1)
 check "trusted + red verification blocks the stop (exit 2)" "$code" "2"
 if [ -f "$MARKER" ]; then
@@ -93,7 +93,7 @@ code=$(run_stop_hook '{}' VERIFY_EXIT=0)
 check "trusted + green verification allows the stop" "$code" "0"
 
 # 4. Editing the declared command invalidates trust (hash is over the command).
-cat > conductor.config.json <<JSON
+cat > carja.config.json <<JSON
 { "verify": "touch '$MARKER'; exit 1" }
 JSON
 code=$(run_stop_hook '{}')
@@ -105,29 +105,29 @@ else
 fi
 
 # 5. Revoke removes the grant.
-cat > conductor.config.json <<JSON
+cat > carja.config.json <<JSON
 { "verify": "touch '$MARKER'; exit \${VERIFY_EXIT:-0}" }
 JSON
-node "$REPO_ROOT/bin/conductor.js" trust-verify >/dev/null 2>&1
-node "$REPO_ROOT/bin/conductor.js" trust-verify --revoke >/dev/null 2>&1
+node "$REPO_ROOT/bin/carja.js" trust-verify >/dev/null 2>&1
+node "$REPO_ROOT/bin/carja.js" trust-verify --revoke >/dev/null 2>&1
 code=$(run_stop_hook '{}' VERIFY_EXIT=1)
 check "after --revoke the gate is inactive again" "$code" "0"
 
 # 6. The grant is auditable.
-if [ -s "$CONDUCTOR_HOME/verify-trust-grants.log" ]; then
+if [ -s "$CARJA_HOME/verify-trust-grants.log" ]; then
   ok "every grant is appended to verify-trust-grants.log"
 else
   bad "no audit trail for trust grants"
 fi
-perms=$(stat -c '%a' "$CONDUCTOR_HOME/verify-trust" 2>/dev/null || echo "")
+perms=$(stat -c '%a' "$CARJA_HOME/verify-trust" 2>/dev/null || echo "")
 check "the trust store is mode 0600" "$perms" "600"
 
 echo "=== E4: bounded stop-hook re-entry ==="
 
 # Re-entry must NOT be a free pass (a red suite still blocks), but must be
 # BOUNDED so a permanently red check cannot trap the session forever.
-node "$REPO_ROOT/bin/conductor.js" trust-verify >/dev/null 2>&1
-rm -f "${TMPDIR:-/tmp}"/conductor-stop-reentry-* 2>/dev/null
+node "$REPO_ROOT/bin/carja.js" trust-verify >/dev/null 2>&1
+rm -f "${TMPDIR:-/tmp}"/carja-stop-reentry-* 2>/dev/null
 
 code=$(run_stop_hook '{"stop_hook_active": true}' VERIFY_EXIT=1)
 check "re-entry #1 on a red check still blocks" "$code" "2"

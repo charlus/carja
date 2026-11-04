@@ -1,6 +1,6 @@
 // src/loop/profiles.js
 //
-// `conductor loop profile [quality|balanced] [dir]` (owner decisions D1–D5,
+// `carja loop profile [quality|balanced] [dir]` (owner decisions D1–D5,
 // 2026-10-21): pick the models by budget, never per role by hand. Without a
 // name it shows the current profile, the model of each role and the last
 // run's cost per role, so the switch is an informed one.

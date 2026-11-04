@@ -35,7 +35,7 @@ async function agentsDir(files) {
 
 test("buildFrameworkBlock: classifier + inline rules, frontmatter stripped, rule headings demoted", async () => {
   const dir = await agentsDir({
-    "AGENTS.md": "---\ntrigger: manual\n---\n\n# Conductor Framework\n\nCLASSIFIER\n",
+    "AGENTS.md": "---\ntrigger: manual\n---\n\n# Carja Framework\n\nCLASSIFIER\n",
     "rules/b-law.md": "---\ntrigger: manual\ninline: true\n---\n\n# B Law\n\nB BODY\n\n## Detail\n",
     "rules/a-law.md": "---\ntrigger: manual\ninline: true\n---\n\n# A Law\n\nA BODY\n",
     "rules/loop-only.md": "---\ntrigger: manual\n---\n\n# Loop\n\nLOOP BODY\n",
@@ -45,7 +45,7 @@ test("buildFrameworkBlock: classifier + inline rules, frontmatter stripped, rule
     assert.ok(block.startsWith(FRAMEWORK_BEGIN));
     assert.ok(block.trimEnd().endsWith(FRAMEWORK_END));
     assert.doesNotMatch(block, /trigger:|inline:/);
-    assert.match(block, /# Conductor Framework\n\nCLASSIFIER/);
+    assert.match(block, /# Carja Framework\n\nCLASSIFIER/);
     assert.ok(block.indexOf("## A Law") < block.indexOf("## B Law"), "rules in file-name order");
     assert.match(block, /### Detail/);
     assert.doesNotMatch(block, /LOOP BODY/, "a rule without inline: true stays on demand");
@@ -92,12 +92,12 @@ test("renderRootAgentsMd: a team-written AGENTS.md keeps every byte, below the i
 
 test("extractStubNotes: managed stub → only the user's text, without our comments or frontmatter", () => {
   const stub =
-    "---\ntrigger: always_on\n---\n\n<!-- conductor:managed:begin — x -->\n# Conductor Framework V6\nREAD .agents/AGENTS.md\n<!-- conductor:managed:end -->\n\n<!-- Add your project-specific instructions below this line; they are preserved across `conductor upgrade`. -->\n\nUse plan mode for billing.\n";
+    "---\ntrigger: always_on\n---\n\n<!-- carja:managed:begin — x -->\n# Carja Framework V6\nREAD .agents/AGENTS.md\n<!-- carja:managed:end -->\n\n<!-- Add your project-specific instructions below this line; they are preserved across `carja upgrade`. -->\n\nUse plan mode for billing.\n";
   assert.equal(extractStubNotes(stub), "Use plan mode for billing.");
 });
 
 test("extractStubNotes: managed stub with nothing of the user's → empty", () => {
-  const stub = "<!-- conductor:managed:begin — x -->\nFRAMEWORK\n<!-- conductor:managed:end -->\n\n<!-- Add your project-specific instructions below this line; they are preserved across `conductor upgrade`. -->\n";
+  const stub = "<!-- carja:managed:begin — x -->\nFRAMEWORK\n<!-- carja:managed:end -->\n\n<!-- Add your project-specific instructions below this line; they are preserved across `carja upgrade`. -->\n";
   assert.equal(extractStubNotes(stub), "");
 });
 
@@ -117,7 +117,7 @@ test("appendMovedNotes: adds the notes once, under a heading naming the old file
 // GEMINI.md, a team's "Company OS" stubs). Moving them would copy boilerplate
 // into AGENTS.md. Pointer lines and frontmatter go; headings alone are not notes.
 test("extractStubNotes: an old pointer-only stub without markers has no notes", () => {
-  const v5 = "# Conductor Framework V5\n\n> This is a platform stub for auto-discovery. The full system instructions live in `.agents/AGENTS.md`.\n\nRead and follow the instructions in `.agents/AGENTS.md` before any action.\n";
+  const v5 = "# Carja Framework V5\n\n> This is a platform stub for auto-discovery. The full system instructions live in `.agents/AGENTS.md`.\n\nRead and follow the instructions in `.agents/AGENTS.md` before any action.\n";
   assert.equal(extractStubNotes(v5), "");
   const team = "---\ntrigger: always_on\n---\n\n# Company OS Architect\n\n> This is a platform stub for auto-discovery. The full system instructions live in `AGENTS.md`.\n\nRead and follow the instructions in `AGENTS.md` before any action.\n";
   assert.equal(extractStubNotes(team), "");

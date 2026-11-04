@@ -1,6 +1,6 @@
 // src/commands/personas.js
 //
-// `conductor personas [paths…]` — the IO shell around src/personas.js.
+// `carja personas [paths…]` — the IO shell around src/personas.js.
 //
 // With paths, it classifies those (Build passes the files a task will touch).
 // Without, it reads what this branch changed: committed since the merge base,
@@ -90,7 +90,7 @@ export async function personasCommand(args, { cwd, stdout, stderr }) {
     try {
       review = extractReviewLens(await readFile(join(root, file), "utf8"));
     } catch {
-      stderr.write(`⚠️  ${file} is missing: run \`conductor upgrade\`\n`);
+      stderr.write(`⚠️  ${file} is missing: run \`carja upgrade\`\n`);
     }
     personas.push({ name: m.name, persona: file, context: localise(m.context, m.files), files: m.files, review });
   }

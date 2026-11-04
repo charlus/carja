@@ -11,7 +11,7 @@
 >   "not a big deal" and approves. Cured by C1 and C5: a quotable defect in a blocker
 >   class is a BLOCKER regardless of how small the fix is.
 >
-> **Recalibrate when the ledger says to.** `conductor/1-workbench/review-log.jsonl`
+> **Recalibrate when the ledger says to.** `carja/1-workbench/review-log.jsonl`
 > records each finding's disposition. A class the author dismisses most of the time is
 > a rubric defect, not an author defect — add the case here and bump the rubric
 > version. A reviewer that has never rejected anything is a broken gate, not a clean
@@ -94,7 +94,7 @@ that its assertion could be stronger.
 
 ### C5 — BLOCKER: an architecture-checklist item is unsatisfied
 
-`conductor/0-compass/architecture-checklist.md` carries:
+`carja/0-compass/architecture-checklist.md` carries:
 
 ```
 - [ ] every write to `payments` runs inside a transaction — check: rg -n "payments\.insert" | rg -v "trx"

@@ -1,6 +1,6 @@
 // src/commands/verify.js
 //
-// `conductor verify` — the one command that answers "what does `git push` run
+// `carja verify` — the one command that answers "what does `git push` run
 // here, and how do I change it?"
 //
 // WHY. The push gate is the framework's central enforcement bet, and until now
@@ -11,7 +11,7 @@
 //
 // Setting a command RUNS it first. A gate configured with a command that cannot
 // pass is worse than no gate: it blocks every push and teaches the operator to
-// reach for CONDUCTOR_SKIP_VERIFY.
+// reach for CARJA_SKIP_VERIFY.
 
 import { spawn } from "node:child_process";
 import { statSync } from "node:fs";
@@ -55,7 +55,7 @@ function showState(gate, out) {
     out.write(
       "\n  Push gate: OFF, by declaration.\n" +
         `  This project states it has nothing to verify ("verify": "${NONE}" in ${CONFIG_FILE}).\n` +
-        '\n  Turn it on:   conductor verify --set "<command>"\n',
+        '\n  Turn it on:   carja verify --set "<command>"\n',
     );
     return;
   }
@@ -64,7 +64,7 @@ function showState(gate, out) {
       `\n  Push gate: ${gate.command}\n` +
         `  Source:    ${gate.source}\n` +
         "  Every `git push` runs this and blocks if it fails.\n" +
-        '\n  Change it:    conductor verify --set "<command>"\n' +
+        '\n  Change it:    carja verify --set "<command>"\n' +
         "  Prove it now: run the command above, or set it again (it runs once first)\n",
     );
     return;
@@ -72,9 +72,9 @@ function showState(gate, out) {
   out.write(
     "\n  Push gate: OFF — `git push` runs no test in this project.\n" +
       "  Nothing could be derived from the files that are here.\n" +
-      '\n  Set it:       conductor verify --set "npm test"     (the command that proves this project works)\n' +
-      "  Detect it:    conductor verify --detect\n" +
-      `  Nothing here: conductor verify --none               (a docs or state repo — recorded in ${CONFIG_FILE})\n`,
+      '\n  Set it:       carja verify --set "npm test"     (the command that proves this project works)\n' +
+      "  Detect it:    carja verify --detect\n" +
+      `  Nothing here: carja verify --none               (a docs or state repo — recorded in ${CONFIG_FILE})\n`,
   );
 }
 
@@ -95,8 +95,8 @@ export async function verifyCommand(args, context) {
     await writeVerify(root, NONE, repo);
     stdout.write(
       `\n  Push gate: OFF, recorded in ${CONFIG_FILE}.\n` +
-        "  Conductor will stop asking. `git push` verifies nothing here.\n" +
-        '\n  Changed your mind:  conductor verify --set "<command>"\n',
+        "  Carja will stop asking. `git push` verifies nothing here.\n" +
+        '\n  Changed your mind:  carja verify --set "<command>"\n',
     );
     return 0;
   }
@@ -107,8 +107,8 @@ export async function verifyCommand(args, context) {
     if (!command) {
       stderr.write(
         "\n  Nothing derivable from this project's files.\n" +
-          '  Set it by hand:  conductor verify --set "<command>"\n' +
-          "  Or declare it:   conductor verify --none\n",
+          '  Set it by hand:  carja verify --set "<command>"\n' +
+          "  Or declare it:   carja verify --none\n",
       );
       return 1;
     }
@@ -121,7 +121,7 @@ export async function verifyCommand(args, context) {
   }
 
   if (!command.trim()) {
-    stderr.write('\n  --set needs a command, e.g.  conductor verify --set "npm test"\n');
+    stderr.write('\n  --set needs a command, e.g.  carja verify --set "npm test"\n');
     return 1;
   }
 
@@ -132,7 +132,7 @@ export async function verifyCommand(args, context) {
       stderr.write(
         `\n  ✗ Exit ${code}. Nothing was written — a gate that cannot pass blocks every push.\n` +
           "  Fix the command (or the project), then run this again.\n" +
-          "  Meant to set it anyway:  conductor verify --set \"…\" --no-run\n",
+          "  Meant to set it anyway:  carja verify --set \"…\" --no-run\n",
       );
       return 1;
     }

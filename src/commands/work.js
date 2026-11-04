@@ -1,13 +1,14 @@
 // src/commands/work.js
 //
-// `conductor work <item>`: the hidden worktree an interactive Spec-It, Build or
+// `carja work <item>`: the hidden worktree an interactive Spec-It, Build or
 // Ship works in, so the owner's folder stays on the default branch.
-// `conductor work clean`: remove the merged ones now (they also go on `git pull`
+// `carja work clean`: remove the merged ones now (they also go on `git pull`
 // and at a loop run). The logic is in src/work.js.
 
 import { spawnSync, spawn } from "node:child_process";
 import { relative } from "node:path";
 import { ensureWorkWorktree, locate, cleanMerged } from "../work.js";
+import { isOldLayout, oldLayoutMessage } from "../names.js";
 
 const git = (cwd) => async (args) => {
   const r = spawnSync("git", args, { cwd, encoding: "utf8", timeout: 60_000 });
@@ -28,13 +29,17 @@ export async function workCommand(args, context) {
   const positional = args.filter((a) => !a.startsWith("-"));
   const [first, second] = positional;
   if (!first) {
-    stderr.write("Name the item: conductor work <project>/<slice> or conductor work <backlog item>. conductor work clean removes the merged ones.\n");
+    stderr.write("Name the item: carja work <project>/<slice> or carja work <backlog item>. carja work clean removes the merged ones.\n");
     return 1;
   }
   const where = await locate(second ?? context.cwd, git);
   if (where.inside) {
     stdout.write(`Already in an item's worktree: ${where.inside} (${where.branch}). Work and commit here.\n`);
     return 0;
+  }
+  if (where.root && isOldLayout(where.root)) {
+    stderr.write(oldLayoutMessage(where.root));
+    return 1;
   }
   if (!where.root) {
     stderr.write(`Not a git repository: ${second ?? context.cwd}\n`);

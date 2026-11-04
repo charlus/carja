@@ -45,7 +45,7 @@
     {
       "name": "Context-Engineering",
       "dir": "context-engineering",
-      "description": "Use when updating the task backlog, reading PRDs, or modifying project state in the conductor/ directory",
+      "description": "Use when updating the task backlog, reading PRDs, or modifying project state in the carja/ directory",
       "category": "core",
       "default": true
     },
@@ -101,7 +101,7 @@
     {
       "name": "using-git-worktrees",
       "dir": "git-worktrees",
-      "description": "Use before interactive Spec-It, Build or Ship - work in the item's hidden worktree (conductor work <item>); the owner's folder stays on its default branch",
+      "description": "Use before interactive Spec-It, Build or Ship - work in the item's hidden worktree (carja work <item>); the owner's folder stays on its default branch",
       "category": "core",
       "default": true
     },
@@ -136,7 +136,7 @@
     {
       "name": "Architecture-Checklist",
       "dir": "architecture-checklist",
-      "description": "Turn 'follow the architecture' into explicit checkable items. Technical-Vision/Carve write a machine-readable compliance checklist (conductor/0-compass/architecture-checklist.md) from the architecture decisions; the Checker (loop + independent-review) verifies the diff against each item — deterministic (a `check:` shell command) or semantic. The semantic half of the ship-contract; the Eval-Driven Law is the deterministic half.",
+      "description": "Turn 'follow the architecture' into explicit checkable items. Technical-Vision/Carve write a machine-readable compliance checklist (carja/0-compass/architecture-checklist.md) from the architecture decisions; the Checker (loop + independent-review) verifies the diff against each item — deterministic (a `check:` shell command) or semantic. The semantic half of the ship-contract; the Eval-Driven Law is the deterministic half.",
       "category": "core",
       "default": true
     },
@@ -164,7 +164,7 @@
     {
       "name": "Skill-Registry",
       "dir": "skill-registry",
-      "description": "Manages Conductor skills from the remote registry — install, remove, search, and list skills using the conductor CLI. Use during Technical Vision workflow or whenever the tech stack changes.",
+      "description": "Manages Carja skills from the remote registry — install, remove, search, and list skills using the carja CLI. Use during Technical Vision workflow or whenever the tech stack changes.",
       "category": "core",
       "default": true
     },
@@ -178,7 +178,7 @@
     {
       "name": "System-Janitor",
       "dir": "system-janitor",
-      "description": "Use this skill when the user asks to scan the Conductor Framework for misplaced files and recommend reorganization.",
+      "description": "Use this skill when the user asks to scan the Carja Framework for misplaced files and recommend reorganization.",
       "category": "core",
       "default": true
     },
@@ -385,7 +385,7 @@
     {
       "name": "unattended-loop",
       "file": "unattended-loop.md",
-      "description": "The autonomous loop's agent-side workflow: the per-beat judgment the deterministic `conductor loop` driver delegates. Reads loop-state.json, applies the Scoping Barrier and trigger-trust checks, loads the phase-appropriate persona, and does one beat of work. The driver owns every counter, gate and merge.",
+      "description": "The autonomous loop's agent-side workflow: the per-beat judgment the deterministic `carja loop` driver delegates. Reads loop-state.json, applies the Scoping Barrier and trigger-trust checks, loads the phase-appropriate persona, and does one beat of work. The driver owns every counter, gate and merge.",
       "category": "core",
       "default": true
     },
@@ -400,7 +400,7 @@
   "bundles": [
     {
       "name": "core",
-      "description": "Core conductor framework capabilities",
+      "description": "Core carja framework capabilities",
       "skills": [
         "Analyze-Tests",
         "architecture",

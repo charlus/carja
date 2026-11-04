@@ -1,7 +1,7 @@
 // test/projects.test.js
 //
 // D1, D2 (2026-10-20): the owner finds the projects, their stage and whether
-// the loop is on, in `conductor status` and in `conductor loop on` without a name.
+// the loop is on, in `carja status` and in `carja loop on` without a name.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { describeProject, renderProjects } from "../src/projects.js";
 
-const tpl = (rel) => readFileSync(new URL(`../templates/conductor/5-templates/${rel}`, import.meta.url), "utf8");
+const tpl = (rel) => readFileSync(new URL(`../templates/carja/5-templates/${rel}`, import.meta.url), "utf8");
 const TEMPLATES = {
   "genesis/problem-solar-system.md": tpl("genesis-workflow/problem-solar-system-template.md"),
   "genesis/world-transformation.md": tpl("genesis-workflow/world-transformation-template.md"),
@@ -37,13 +37,13 @@ test("each project's stage, read as the loop reads it", () => {
   assert.match(renderProjects([km, carved]), /^ {2}Projects\n {4}km +Blueprint 2 of 4/);
 });
 
-test("`conductor status` lists the projects; `conductor loop on` without a name lists the ones it can turn on and the next command", () => {
+test("`carja status` lists the projects; `carja loop on` without a name lists the ones it can turn on and the next command", () => {
   const REPO = new URL("..", import.meta.url).pathname;
   const root = mkdtempSync(join(tmpdir(), "projects-"));
   try {
-    execFileSync("node", [join(REPO, "bin/conductor.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
+    execFileSync("node", [join(REPO, "bin/carja.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
     execFileSync("git", ["init", "-q"], { cwd: root });
-    const p = join(root, "conductor/2-backlog/project-backlog");
+    const p = join(root, "carja/2-backlog/project-backlog");
     for (const [rel, text] of Object.entries(DISCOVERY)) {
       mkdirSync(join(p, "notes", rel, ".."), { recursive: true });
       writeFileSync(join(p, "notes", rel), text);
@@ -52,7 +52,7 @@ test("`conductor status` lists the projects; `conductor loop on` without a name 
     writeFileSync(join(p, "later/project-documentation.md"), "# later\n");
     const cli = (...a) => {
       try {
-        return execFileSync("node", [join(REPO, "bin/conductor.js"), ...a], { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString();
+        return execFileSync("node", [join(REPO, "bin/carja.js"), ...a], { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString();
       } catch (e) {
         return `${e.stdout}${e.stderr}`;
       }
@@ -61,8 +61,8 @@ test("`conductor status` lists the projects; `conductor loop on` without a name 
     assert.match(status, /Projects\n.*later +no Discovery yet[\s\S]*notes +Blueprint 0 of 4 \(Grand PRD next\) +· loop off/);
     const list = cli("loop", "on");
     assert.match(list, /notes +Blueprint 0 of 4/);
-    assert.match(list, /Next: `conductor loop on notes`/);
-    const elsewhere = execFileSync("node", [join(REPO, "bin/conductor.js"), "loop", "on", root], { cwd: tmpdir(), stdio: ["ignore", "pipe", "pipe"] }).toString();
+    assert.match(list, /Next: `carja loop on notes`/);
+    const elsewhere = execFileSync("node", [join(REPO, "bin/carja.js"), "loop", "on", root], { cwd: tmpdir(), stdio: ["ignore", "pipe", "pipe"] }).toString();
     assert.match(elsewhere, /notes +Blueprint 0 of 4/, "a lone path is the folder");
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -23,10 +23,10 @@ The Ship workflow appends one entry per shipment, newest last, **before** it cre
 - **Platform:** [MR/PR link]
 - **Surprised:** [What did not match the spec, the docs, or the assumption we built on]
 - **Next time:** [What we would do differently, or `none`]
-- **Framework lesson:** [What Conductor's workflows, skills or hooks should change, or `none`]
+- **Framework lesson:** [What Carja's workflows, skills or hooks should change, or `none`]
 ```
 
-`grep -h "Framework lesson" conductor/0-compass/ship-log.md` lists everything this project has to teach the framework. The full Retrospective workflow is still there for a project-level look back; this entry is the floor, not the ceiling.
+`grep -h "Framework lesson" carja/0-compass/ship-log.md` lists everything this project has to teach the framework. The full Retrospective workflow is still there for a project-level look back; this entry is the floor, not the ceiling.
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * conductor list [--remote] [--tier <core|tech-vision|domain>]
+ * carja list [--remote] [--tier <core|tech-vision|domain>]
  *
  * Lists installed skills or remote registry skills.
  */

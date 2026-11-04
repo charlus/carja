@@ -1,6 +1,6 @@
 // src/commands/context-bill.js
 //
-// `conductor context-bill [dir]` — show what the framework costs an agent
+// `carja context-bill [dir]` — show what the framework costs an agent
 // before it reads a line of project code (E2).
 //
 // Read-only, offline, deterministic. Ceilings live in bytes; token figures are

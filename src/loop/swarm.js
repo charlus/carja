@@ -21,7 +21,7 @@ import { runShipStage } from "./ship.js";
 import { roundKey as roundKeyOf } from "./questions.js";
 import { BLUEPRINT_STAGES } from "./blueprint.js";
 import { recordAttempt } from "./harvester.js";
-import { orderMergeQueue, onlyConductorDocs } from "./conflict.js";
+import { orderMergeQueue, onlyCarjaDocs } from "./conflict.js";
 import { planMergeAction } from "./merge.js";
 
 export const MAX_TASK_STALLS = 3;
@@ -109,7 +109,7 @@ export function normalizeTask(task, defaults = {}) {
     id: task.id,
     type: task.type ?? "general",
     status: task.status ?? "pending",
-    // Fleet-Bridge metadata (harvested from ./conductor/) — preserved so the beat
+    // Fleet-Bridge metadata (harvested from ./carja/) — preserved so the beat
     // can render its assignment and write-back can update the right source item.
     title: task.title ?? null,
     source: task.source ?? null,
@@ -440,7 +440,7 @@ export async function runSwarm(state, deps) {
     runChecker = null,
     merge = null,
     predictConflict = null, // ({task}) → {conflicted, files[], method}
-    resolveDocConflict = null, // ({task, prediction}) → {merged, files[], reason?}: I3, Conductor documents only
+    resolveDocConflict = null, // ({task, prediction}) → {merged, files[], reason?}: I3, Carja documents only
     gitHead,
     changedFiles = null, // ({task, from}) → string[]: files a beat changed (A13), optional
     assignWorktree = async () => null, // ({task}) → {path,branch}
@@ -469,7 +469,7 @@ export async function runSwarm(state, deps) {
     state.status = halt;
     await persist(state);
     const reason = describeHalt(state, halt);
-    log(`[CONDUCTOR SWARM] Pre-flight halt: ${halt} — ${reason}`);
+    log(`[CARJA SWARM] Pre-flight halt: ${halt} — ${reason}`);
     await audit(`swarm pre-flight halt: ${halt} — ${reason}`);
     return state;
   }
@@ -565,7 +565,7 @@ export async function runSwarm(state, deps) {
         task.status = "awaiting_answers";
         if (raised) {
           await emit("questions", { task: task.id, count });
-          await writeInbox(state, `task ${task.id} has ${count} question${count === 1 ? "" : "s"} waiting for you: conductor/1-workbench/questions/${roundKeyOf(task.id)}.md — answer each by number, then run the loop again.`, { title: "Questions" });
+          await writeInbox(state, `task ${task.id} has ${count} question${count === 1 ? "" : "s"} waiting for you: carja/1-workbench/questions/${roundKeyOf(task.id)}.md — answer each by number, then run the loop again.`, { title: "Questions" });
         }
         continue;
       }
@@ -681,20 +681,20 @@ export async function runSwarm(state, deps) {
         await writeInbox(state, `task ${task.id} passed but no merge capability`);
         continue;
       }
-      // I3: a conflict only in Conductor documents does not stop the project.
+      // I3: a conflict only in Carja documents does not stop the project.
       // The branch takes what it lands on, both sides are kept, verify runs again.
-      if (prediction?.conflicted && resolveDocConflict && onlyConductorDocs(prediction.files)) {
+      if (prediction?.conflicted && resolveDocConflict && onlyCarjaDocs(prediction.files)) {
         const fix = await resolveDocConflict({ task, prediction });
         if (fix?.merged) {
           const v = await runVerify({ task, cmd: task.verify ?? verifyCommand });
-          await audit(`task ${task.id}: Conductor documents merged from both sides (${fix.files.join(", ")}); verify exit=${v.exitCode}`);
+          await audit(`task ${task.id}: Carja documents merged from both sides (${fix.files.join(", ")}); verify exit=${v.exitCode}`);
           await emit("docs_merged", { task: task.id, files: fix.files });
           if (v.exitCode === 0) {
             task.docs_merged = [...new Set([...(task.docs_merged ?? []), ...fix.files])];
             prediction = null;
           }
         } else if (fix?.reason) {
-          await audit(`task ${task.id}: Conductor documents not merged: ${fix.reason}`);
+          await audit(`task ${task.id}: Carja documents not merged: ${fix.reason}`);
         }
       }
       if (prediction?.conflicted) {
@@ -738,7 +738,7 @@ export async function runSwarm(state, deps) {
   state.status = terminal;
   await persist(state);
   await emit("run_end", { status: terminal });
-  log(`[CONDUCTOR SWARM] terminal: ${terminal}`);
+  log(`[CARJA SWARM] terminal: ${terminal}`);
   await audit(`swarm terminal: ${terminal}`);
   return state;
 }

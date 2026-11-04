@@ -72,16 +72,16 @@ const NUMBERED_FOLDER_NAMES = [
 
 /**
  * Kebab-rename ONLY the known framework numbered folders at the top of
- * `conductor/`. Deliberately does not recurse — user knowledge files inside
+ * `carja/`. Deliberately does not recurse — user knowledge files inside
  * these folders keep whatever names the user gave them.
  */
-export async function renameNumberedFolders(conductorDir, stdout) {
-  if (!(await exists(conductorDir))) return;
+export async function renameNumberedFolders(carjaDir, stdout) {
+  if (!(await exists(carjaDir))) return;
   for (const name of NUMBERED_FOLDER_NAMES) {
     const kebab = toKebabCase(name);
     if (name === kebab) continue;
-    const src = join(conductorDir, name);
-    const dst = join(conductorDir, kebab);
+    const src = join(carjaDir, name);
+    const dst = join(carjaDir, kebab);
     if ((await exists(src)) && !(await exists(dst))) {
       await rename(src, dst);
       if (stdout) stdout.write(`  📝 ${name}/ → ${kebab}/\n`);
@@ -90,7 +90,7 @@ export async function renameNumberedFolders(conductorDir, stdout) {
 }
 
 // Names the workflows write inside a Project folder. They are not in the
-// scaffolded conductor/ tree, but the workflows read them by exact path.
+// scaffolded carja/ tree, but the workflows read them by exact path.
 const WORKFLOW_OUTPUT_NAMES = [
   "genesis", "storyboard", "blueprint", "implementations",
   "problem-solar-system.md", "world-transformation.md", "functional-animator.md",
@@ -99,8 +99,8 @@ const WORKFLOW_OUTPUT_NAMES = [
   "implementation-plan.md", "task-tracker.md", "project-documentation.md", "trace.md",
 ];
 
-// Names Conductor once scaffolded and no longer ships. An old install still has
-// them in Title-Case, and `conductor design migrate` reads them by exact path.
+// Names Carja once scaffolded and no longer ships. An old install still has
+// them in Title-Case, and `carja design migrate` reads them by exact path.
 const RETIRED_SCAFFOLD_NAMES = ["design", "design-system.md", "ui-components.md", "brand-assets.md"];
 
 // `[ProjectName]-documentation/` and `[area]-epics.md` etc.: only the
@@ -123,7 +123,7 @@ async function segmentsOf(dir, out = new Set()) {
 /** A case-only rename in two steps, so it also works on case-insensitive filesystems. */
 async function renameCaseSafe(src, dst) {
   if (src.toLowerCase() === dst.toLowerCase()) {
-    const tmp = `${src}.conductor-rename-${process.pid}`;
+    const tmp = `${src}.carja-rename-${process.pid}`;
     await rename(src, tmp);
     await rename(tmp, dst);
   } else {
@@ -136,20 +136,20 @@ async function entryExactlyExists(dir, name) {
 }
 
 /**
- * Kebab-rename the FRAMEWORK names at every level of `conductor/` — the ones the
+ * Kebab-rename the FRAMEWORK names at every level of `carja/` — the ones the
  * workflows and the CLI read by exact path (`2-backlog/project-backlog/`,
  * `1-workbench/inbox.md`, `<project>/blueprint/grand-prd.md`, …). A V4 install
  * has them in Title-Case, and on a case-sensitive filesystem nothing finds them.
  *
  * A name is renamed only when its kebab form is a framework name: a segment of
- * the shipped `templates/conductor/` tree, a name a workflow writes, or a
+ * the shipped `templates/carja/` tree, a name a workflow writes, or a
  * framework suffix. Every other name — `Nexus`, `01-Foundation-Auth`,
  * `API-Discovery.md` — is the user's and is left exactly as it is.
  * `5-templates/` is skipped: it is refreshed wholesale elsewhere.
  */
-export async function renameFrameworkNames(conductorDir, templateConductorDir, stdout) {
-  if (!(await exists(conductorDir))) return 0;
-  const known = await segmentsOf(templateConductorDir);
+export async function renameFrameworkNames(carjaDir, templateCarjaDir, stdout) {
+  if (!(await exists(carjaDir))) return 0;
+  const known = await segmentsOf(templateCarjaDir);
   for (const n of WORKFLOW_OUTPUT_NAMES) known.add(n);
   for (const n of RETIRED_SCAFFOLD_NAMES) known.add(n);
 
@@ -180,7 +180,7 @@ export async function renameFrameworkNames(conductorDir, templateConductorDir, s
       if ((await stat(path)).isDirectory()) await walk(path, depth + 1);
     }
   }
-  await walk(conductorDir, 0);
+  await walk(carjaDir, 0);
   return renamed;
 }
 

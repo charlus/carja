@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# Conductor Loop — REAL-agent end-to-end (opt-in, spawns `claude`)
+# Carja Loop — REAL-agent end-to-end (opt-in, spawns `claude`)
 # ============================================================
 # The smoke test (smoke-loop.sh) proves the plumbing with a FAKE agent. This one
 # drives a REAL `claude` maker + independent checker on a trivial-but-genuine task
@@ -9,19 +9,19 @@
 # plan-mode bug: a read-only checker can't write its verdict). It runs a single L1
 # beat in pair mode, so it needs NO git remote and never opens a PR.
 #
-# OPT-IN: skipped unless CONDUCTOR_E2E_REAL=1 (it costs tokens + needs `claude`
+# OPT-IN: skipped unless CARJA_E2E_REAL=1 (it costs tokens + needs `claude`
 # authed on PATH). Not wired into `npm test` / `test:unit` / `test:smoke`.
 #
-#   CONDUCTOR_E2E_REAL=1 npm run test:e2e
+#   CARJA_E2E_REAL=1 npm run test:e2e
 # ============================================================
 set -euo pipefail
 
-if [ "${CONDUCTOR_E2E_REAL:-0}" != "1" ]; then
-  echo "SKIP: real-agent e2e is opt-in. Set CONDUCTOR_E2E_REAL=1 to run it (spawns claude, costs tokens)."
+if [ "${CARJA_E2E_REAL:-0}" != "1" ]; then
+  echo "SKIP: real-agent e2e is opt-in. Set CARJA_E2E_REAL=1 to run it (spawns claude, costs tokens)."
   exit 0
 fi
 if ! command -v claude >/dev/null 2>&1; then
-  echo "FAIL: CONDUCTOR_E2E_REAL=1 but 'claude' is not on PATH."
+  echo "FAIL: CARJA_E2E_REAL=1 but 'claude' is not on PATH."
   exit 1
 fi
 
@@ -34,9 +34,9 @@ pass=0; fail=0
 ok() { echo "  [PASS] $1"; pass=$((pass+1)); }
 no() { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
-# ---- 1. A conductor project with one real, verifiable task ----
+# ---- 1. A carja project with one real, verifiable task ----
 mkdir -p "$PROJ"
-node "$REPO_ROOT/bin/conductor.js" init "$PROJ" --all >/dev/null 2>&1
+node "$REPO_ROOT/bin/carja.js" init "$PROJ" --all >/dev/null 2>&1
 mkdir -p "$PROJ/src" "$PROJ/test"
 cat > "$PROJ/package.json" <<'PKG'
 { "name": "e2e", "version": "0.0.0", "type": "module", "private": true, "scripts": { "test": "node --test" } }
@@ -53,7 +53,7 @@ cd "$PROJ"
 git init -q && git config user.email e2e@test.local && git config user.name "E2E"
 git add -A >/dev/null 2>&1 && git commit -q -m "seed"
 
-STATE="$PROJ/conductor/1-workbench/loop-state.json"
+STATE="$PROJ/carja/1-workbench/loop-state.json"
 node -e "
 const f='$STATE'; const s=require(f);
 s.goal_description='Implement the sum(a,b) ESM named export in src/sum.js so that npm test passes';
@@ -63,9 +63,9 @@ require('fs').writeFileSync(f, JSON.stringify(s,null,2));
 "
 
 # ---- 2. Run the loop with a real claude (L1, no sandbox, no remote) ----
-echo "Running: conductor loop with a REAL claude agent (this spawns the model)..."
+echo "Running: carja loop with a REAL claude agent (this spawns the model)..."
 set +e
-node "$REPO_ROOT/bin/conductor.js" loop "$PROJ" --platform claude --unsafe-no-sandbox > "$WORK/out.log" 2>&1
+node "$REPO_ROOT/bin/carja.js" loop "$PROJ" --platform claude --unsafe-no-sandbox > "$WORK/out.log" 2>&1
 code=$?
 set -e
 sed 's/^/    /' "$WORK/out.log"

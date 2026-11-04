@@ -2,7 +2,7 @@
 //
 // Live state: MR and deploy status fetched now, not remembered.
 //
-// WHY THIS EXISTS. `conductor/` holds history: a ship-log entry is true on the
+// WHY THIS EXISTS. `carja/` holds history: a ship-log entry is true on the
 // day it was written. MR status and what runs in production are live: the
 // human merges and deploys outside any conversation and does not always say
 // so. Measured 2026-10-20: an agent read "Not deployed yet" from the state it
@@ -12,7 +12,7 @@
 // reason.
 //
 // So the agent never states a live status from the files. It runs
-// `conductor status --live`, which asks the forge (`gh` / `glab`) and the
+// `carja status --live`, which asks the forge (`gh` / `glab`) and the
 // project's own `deployCheck` command, or it says it did not check and asks.
 // Where no deploy check is configured, the answer is "ask the human", never a
 // guess.
@@ -281,7 +281,7 @@ export async function collectLive(root, { shipLogMd, configRaw, run = runCommand
       return null;
     }
   };
-  const log = shipLogMd ?? (await read(statePath(root, "conductor/0-compass/ship-log.md"))) ?? "";
+  const log = shipLogMd ?? (await read(statePath(root, "carja/0-compass/ship-log.md"))) ?? "";
   const config = configRaw !== undefined ? configRaw : await read(configFileName(root));
 
   const refs = mrRefsFromShipLog(log, entries ? { entries } : {});

@@ -1,11 +1,11 @@
 // src/survey.js
 //
-// `conductor survey` — the facts about a codebase somebody else wrote (F15).
+// `carja survey` — the facts about a codebase somebody else wrote (F15).
 //
 // WHY THIS EXISTS. Genesis assumes a blank page. A product owner who has just
 // inherited a running product has the opposite problem: the code is the only
 // honest record of what the thing does, and the people who knew are gone.
-// Conductor had no path from an existing codebase into `conductor/`.
+// Carja had no path from an existing codebase into `carja/`.
 //
 // THE SPLIT IS THE POINT. A script collects facts exhaustively; an agent
 // judges them. This file is the script half — deterministic, testable, unable
@@ -24,7 +24,7 @@ import { extname, sep } from "node:path";
 const EXCLUDED = [
   // Always tooling, whatever the depth.
   /(^|\/)node_modules\//, /(^|\/)\.git\//, /(^|\/)__pycache__\//, /(^|\/)\.venv\//,
-  /(^|\/)venv\//, /(^|\/)\.next\//, /(^|\/)\.conductor-backup\//, /(^|\/)\.yarn\//,
+  /(^|\/)venv\//, /(^|\/)\.next\//, /(^|\/)\.carja-backup\//, /(^|\/)\.yarn\//,
   /(^|\/)\.nuxt\//, /(^|\/)\.svelte-kit\//, /(^|\/)\.turbo\//, /(^|\/)\.cache\//,
   // Build output only where tools put it: at the root, or at the root of a
   // workspace package. Matching these names at ANY depth dropped a real
@@ -92,7 +92,7 @@ function stem(path) {
 /**
  * Find the source area a test stem refers to.
  *
- * Exact first, then drop leading hyphen-segments: Conductor's own convention
+ * Exact first, then drop leading hyphen-segments: Carja's own convention
  * is `test/loop-driver.test.js` for `src/loop/driver.js`, and exact matching
  * missed every one of them — it reported src/loop, one of the most heavily
  * tested areas in this repo, as untested. Dropping from the LEFT keeps the
@@ -252,7 +252,7 @@ export function coverageByArea(paths, { importsByTest = {} } = {}) {
 
 /**
  * Configuration key NAMES from a .env.example.
- * Values are discarded deliberately: a survey is committed to `conductor/`,
+ * Values are discarded deliberately: a survey is committed to `carja/`,
  * and carrying values across would publish whatever someone left in the
  * example file.
  */
@@ -312,7 +312,7 @@ export function findEntryPoints(manifests = {}) {
       // `start` runs the product; `test`/`build` do not.
       const start = pkg.scripts?.start;
       // Values stay out: `STRIPE_KEY=sk_live_… node src/cli.js` is reported as
-      // `STRIPE_KEY=… node src/cli.js`. A survey is committed to conductor/
+      // `STRIPE_KEY=… node src/cli.js`. A survey is committed to carja/
       // (coverage review, I5), and the key names are already reported.
       if (typeof start === "string") {
         out.add(`(npm start) ${start.replace(/\b([A-Za-z_][A-Za-z0-9_]*)=\S+/g, "$1=…")}`);
@@ -343,7 +343,7 @@ export function renderSurvey(facts) {
   return [
     `# Survey — ${root}`,
     "",
-    "> Facts only, collected by `conductor survey`. Nothing here is an opinion,",
+    "> Facts only, collected by `carja survey`. Nothing here is an opinion,",
     "> and nothing here says what the product is **for** — the code cannot tell",
     "> you that. Use this as the agenda for the interview with the human, not as",
     "> a substitute for it.",

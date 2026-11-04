@@ -9,11 +9,11 @@ description: Genesis (The App Origin Story)
 **Trigger:** "Start a new app", "I have an idea", "Genesis Mode"
 **Goal:** Transform a raw idea into three context documents within a new Project.
 **Output:**
-1. `conductor/2-backlog/project-backlog/[ProjectName]/genesis/problem-solar-system.md` (the core problem and its symptoms)
-2. `conductor/2-backlog/project-backlog/[ProjectName]/genesis/world-transformation.md` (before and after, and the target outcome)
-3. `conductor/2-backlog/project-backlog/[ProjectName]/genesis/functional-animator.md` (the capabilities)
+1. `carja/2-backlog/project-backlog/[ProjectName]/genesis/problem-solar-system.md` (the core problem and its symptoms)
+2. `carja/2-backlog/project-backlog/[ProjectName]/genesis/world-transformation.md` (before and after, and the target outcome)
+3. `carja/2-backlog/project-backlog/[ProjectName]/genesis/functional-animator.md` (the capabilities)
 
-**Templates:** Use the templates in `conductor/5-templates/genesis-workflow/` for consistent output structure.
+**Templates:** Use the templates in `carja/5-templates/genesis-workflow/` for consistent output structure.
 
 **Older documents:** Genesis documents written by earlier versions use other names for the same sections: *Sun* = core problem, *Satellites* = symptoms, *North Star* = target outcome, *Problem Solar System*, *World Transformation* and *Functional Animator* = the three documents above. The file names are unchanged. Read them as the same thing and do not rename them.
 
@@ -38,9 +38,9 @@ Everything about *how* to interview lives in the Grilling primitive. This file o
 
 1.  **Scope (decision):** New product, or a new feature within an existing product? Recommend based on anything you already know, then confirm.
 2.  **Name (decision):** Propose a `[ProjectName]` and confirm. This is the container for all work — Genesis, Storyboard, PRDs, Implementations.
-3.  **Create the folders (fact/action):** `conductor/2-backlog/project-backlog/[ProjectName]/` and its `genesis/` subfolder. Confirm creation.
-4.  **Context scan (fact — do not ask, look it up):** Read the relevant `conductor/3-product-areas/` folders, existing genesis/PRD docs, and codebase yourself. Summarize what already exists so the interview never rediscovers known ground: "Here's what I found that's relevant: [summary]." Do this for features *and* new products — there is almost always prior context to mine.
-    * **Fan out when there's real ground to cover (`.agents/skills/subagent-isolation/SKILL.md`):** if the existing codebase/product-areas are large, or the platform can research externally, run the scan as **parallel scouts** — e.g. one over prior `conductor/` docs, one over the relevant code, one on existing solutions / prior art in the problem space — each returning only a short summary. This keeps the raw file dumps out of the interview thread (the interview context stays clean) and surfaces known ground faster. Keep scouts at Genesis's altitude: problem, prior art, and user-facing capability — **not** tech-stack evaluation (that's Blueprint). For a greenfield idea with no prior context, skip the scouts and scan inline.
+3.  **Create the folders (fact/action):** `carja/2-backlog/project-backlog/[ProjectName]/` and its `genesis/` subfolder. Confirm creation.
+4.  **Context scan (fact — do not ask, look it up):** Read the relevant `carja/3-product-areas/` folders, existing genesis/PRD docs, and codebase yourself. Summarize what already exists so the interview never rediscovers known ground: "Here's what I found that's relevant: [summary]." Do this for features *and* new products — there is almost always prior context to mine.
+    * **Fan out when there's real ground to cover (`.agents/skills/subagent-isolation/SKILL.md`):** if the existing codebase/product-areas are large, or the platform can research externally, run the scan as **parallel scouts** — e.g. one over prior `carja/` docs, one over the relevant code, one on existing solutions / prior art in the problem space — each returning only a short summary. This keeps the raw file dumps out of the interview thread (the interview context stays clean) and surfaces known ground faster. Keep scouts at Genesis's altitude: problem, prior art, and user-facing capability — **not** tech-stack evaluation (that's Blueprint). For a greenfield idea with no prior context, skip the scouts and scan inline.
 
 ---
 
@@ -50,7 +50,7 @@ Everything about *how* to interview lives in the Grilling primitive. This file o
 1.  **Open:** "Tell me what's broken. Rant to me — what annoys you or your users? Don't hold back."
 2.  **Grill:** Reflect and probe toward the root cause (Grilling's active-listening loop). Surface adjacent problems and blind spots in the next round, each with your read on whether it's in scope — not as a batch.
 3.  **Name the core problem:** Propose the core problem and its symptoms: "I see [X] as the core problem, with [A, B, C] as its symptoms. Agree?"
-4.  **Brief check (Grilling's C1–C4):** against this project's existing `conductor/` docs only. State any hit in two sentences with its source, or say **"Brief check: none found."** It does not block — the human answers, you continue.
+4.  **Brief check (Grilling's C1–C4):** against this project's existing `carja/` docs only. State any hit in two sentences with its source, or say **"Brief check: none found."** It does not block — the human answers, you continue.
 5.  **Draft & approve:** Present `problem-solar-system.md` (template structure). **STOP** for explicit approval, then write it.
 
 ---
@@ -83,6 +83,6 @@ Everything about *how* to interview lives in the Grilling primitive. This file o
 1.  **Review:** Read all three files in `genesis/` to ensure they're consistent with each other.
 2.  **Recap:** The core problem, the change (before → after), and the key capability areas.
 3.  **Confirm:** "Genesis complete. We've defined the Problem, the Before and After, and the Capabilities."
-4.  **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** write `[ProjectName]/handoff.md` only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/storyboard conductor/2-backlog/project-backlog/[ProjectName]`."*
+4.  **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** write `[ProjectName]/handoff.md` only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/storyboard carja/2-backlog/project-backlog/[ProjectName]`."*
 5.  **Next step:** **Storyboard** — define the main character, their outcomes, and the scenes they experience (adds a `storyboard/` folder to this Project). Then **Blueprint** (Grand PRD) → **Technical Vision** → **Carve** into Implementations.
-6.  **Lifecycle:** The Project folder lives in `conductor/2-backlog/project-backlog/` as workflows add to it; when all Implementations complete, the whole Project moves to `conductor/6-archive/`.
+6.  **Lifecycle:** The Project folder lives in `carja/2-backlog/project-backlog/` as workflows add to it; when all Implementations complete, the whole Project moves to `carja/6-archive/`.

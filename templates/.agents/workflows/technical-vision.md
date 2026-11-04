@@ -15,7 +15,7 @@ description: Technical Vision (Designing the Solution)
 
 ## Who You Are
 
-You are the Conductor wearing the **Architect hat**. You think in systems — boundaries, interfaces, data flow, and trade-offs. Your job is not to write code. Your job is to make the key decisions that will shape the code.
+You are the Carja wearing the **Architect hat**. You think in systems — boundaries, interfaces, data flow, and trade-offs. Your job is not to write code. Your job is to make the key decisions that will shape the code.
 
 **Principles:**
 - **Simple over Clever:** The best architecture is the one that's easy to change, not the one that anticipates everything.
@@ -35,14 +35,14 @@ You are the Conductor wearing the **Architect hat**. You think in systems — bo
 
 **Announce:** *"We're entering Phase 0: Setup. Let me load the Blueprint context."*
 
-1.  **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Project: read from it and do not ask. Otherwise list `conductor/2-backlog/project-backlog/` by last change and recommend the most recent unfinished Project. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open.
+1.  **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Project: read from it and do not ask. Otherwise list `carja/2-backlog/project-backlog/` by last change and recommend the most recent unfinished Project. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open.
 
 2.  **Load Context** (Read in this order, inside the Project folder):
     * `blueprint/grand-prd.md` — The epics and product vision
     * `blueprint/ux-ui-design-brief.md` — The screens, navigation, and interactions
     * `genesis/problem-solar-system.md` — The core problem and symptoms (for constraints and non-goals)
     * `genesis/world-transformation.md` — The vision (for guiding architectural decisions)
-    * Any relevant `conductor/4-context/technical/` files (existing tech stack, conventions)
+    * Any relevant `carja/4-context/technical/` files (existing tech stack, conventions)
 
 3.  **Analyze Existing System** (if not greenfield):
     * **Review Codebase:** Explore folder structure, patterns, current stack
@@ -90,7 +90,7 @@ You are the Conductor wearing the **Architect hat**. You think in systems — bo
 
 5.  **Confirm:** Lock in the stack before moving to Phase 2.
 
-6.  **Dynamic Skill Loading:** Once the stack is confirmed, you MUST autonomously run `conductor search <tech>` and `conductor add <skill-name>` for the chosen technologies. This ensures you have the exact domain skills loaded for the rest of the project.
+6.  **Dynamic Skill Loading:** Once the stack is confirmed, you MUST autonomously run `carja search <tech>` and `carja add <skill-name>` for the chosen technologies. This ensures you have the exact domain skills loaded for the rest of the project.
 
 ---
 
@@ -100,7 +100,7 @@ You are the Conductor wearing the **Architect hat**. You think in systems — bo
 
 **Announce:** *"We're in Phase 2: Data Model. First we'll agree on the language, then the entities."*
 
-0.  **Establish the ubiquitous language first.** Before naming a single entity, invoke the **`domain-modeling` skill** to agree on what the core concepts *are* and what they're *called*. Grill the Grand PRD and UX/UI Brief for nouns, resolve synonyms/homonyms, and capture the result in `conductor/4-context/meta/domain-model.md`. Every entity you propose below MUST use these canonical terms — the data model is the ubiquitous language expressed as tables, not a second, parallel vocabulary.
+0.  **Establish the ubiquitous language first.** Before naming a single entity, invoke the **`domain-modeling` skill** to agree on what the core concepts *are* and what they're *called*. Grill the Grand PRD and UX/UI Brief for nouns, resolve synonyms/homonyms, and capture the result in `carja/4-context/meta/domain-model.md`. Every entity you propose below MUST use these canonical terms — the data model is the ubiquitous language expressed as tables, not a second, parallel vocabulary.
 
 1.  **AI Proposes First** — Present entities derived from the Grand PRD and UX/UI Brief (named per the domain model):
 
@@ -234,7 +234,7 @@ You are the Conductor wearing the **Architect hat**. You think in systems — bo
     * This is a high-stakes artifact — every downstream Implementation builds on it — so route the reviewer to a strong tier (`.agents/skills/model-routing/SKILL.md`). Address every `CHANGES REQUESTED` finding before saving.
 
 5.  **Save:** Create/update `blueprint/technical-vision.md`
-    * **Distill the ship-contract:** for each architecture decision worth enforcing on *every* future change — a layer boundary, a type discipline, a security invariant, a seam rule — add a checkable item to `conductor/0-compass/architecture-checklist.md` (`.agents/skills/architecture-checklist/SKILL.md`). Prefer a `check:` shell command where the rule is grep-able; leave genuinely semantic rules for the Checker. This is what turns the vision's prose into something the loop Checker and `independent-review` can actually enforce — don't skip it for anything load-bearing.
+    * **Distill the ship-contract:** for each architecture decision worth enforcing on *every* future change — a layer boundary, a type discipline, a security invariant, a seam rule — add a checkable item to `carja/0-compass/architecture-checklist.md` (`.agents/skills/architecture-checklist/SKILL.md`). Prefer a `check:` shell command where the rule is grep-able; leave genuinely semantic rules for the Checker. This is what turns the vision's prose into something the loop Checker and `independent-review` can actually enforce — don't skip it for anything load-bearing.
     * **Ask:** *"Ready for me to save the Technical Vision?"*
 
 ---
@@ -245,7 +245,7 @@ You are the Conductor wearing the **Architect hat**. You think in systems — bo
 
 **Next Steps:**
 - *"The Blueprint is now complete (Grand PRD + UX/UI + Technical Vision)."*
-- **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/carve conductor/2-backlog/project-backlog/[ProjectName]`."*
+- **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/carve carja/2-backlog/project-backlog/[ProjectName]`."*
 
 ---
 

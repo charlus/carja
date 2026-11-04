@@ -144,7 +144,7 @@ test("slugify + worktreePlan are deterministic and bounded", () => {
   assert.equal(slugify("Implement OAuth Login!!"), "implement-oauth-login");
   assert.equal(slugify(""), "loop");
   const plan = worktreePlan("/repo", "Add search");
-  assert.equal(plan.branch, "conductor/loop/add-search");
+  assert.equal(plan.branch, "carja/loop/add-search");
   assert.ok(plan.path.endsWith("/.agents/.worktrees/add-search"));
 });
 
@@ -157,7 +157,7 @@ test("createWorktree: creates a new branch, and is idempotent on reuse", async (
   };
   const created = await createWorktree({ root: "/repo", goalDescription: "Add search", git: gitNew });
   assert.equal(created.created, true);
-  assert.ok(calls.some((c) => c.startsWith("worktree add -b conductor/loop/add-search")));
+  assert.ok(calls.some((c) => c.startsWith("worktree add -b carja/loop/add-search")));
 
   const gitExisting = async (args) =>
     args[1] === "list"
@@ -188,10 +188,10 @@ test("teardownWorktree: keeps a worktree with unmerged commits, removes a clean 
   assert.equal(removed.removed, true);
 });
 
-// Conductor-context materialization: `git worktree add` only checks out TRACKED
-// files, so a gitignored conductor scaffold must be copied into the worktree or
+// Carja-context materialization: `git worktree add` only checks out TRACKED
+// files, so a gitignored carja scaffold must be copied into the worktree or
 // the isolated Maker is blind. anchorsToMaterialize decides what to fill in.
-import { anchorsToMaterialize, materializeConductorContext, CONTEXT_ANCHORS } from "../src/loop/worktree.js";
+import { anchorsToMaterialize, materializeCarjaContext, CONTEXT_ANCHORS } from "../src/loop/worktree.js";
 
 test("anchorsToMaterialize: fills only anchors present at root but missing in the worktree", () => {
   // Tracked repo: everything already in the worktree → nothing to copy.
@@ -204,25 +204,25 @@ test("anchorsToMaterialize: fills only anchors present at root but missing in th
     anchorsToMaterialize({ existsAtRoot: () => true, existsInWorktree: () => false }),
     [...CONTEXT_ANCHORS]
   );
-  // Mixed: .agents committed, conductor/ gitignored, CLAUDE.md committed, no GEMINI.md.
-  const atRoot = { "AGENTS.md": true, "CLAUDE.md": true, "GEMINI.md": false, ".agents": true, conductor: true };
-  const inWt = { "AGENTS.md": true, "CLAUDE.md": true, "GEMINI.md": false, ".agents": true, conductor: false };
+  // Mixed: .agents committed, carja/ gitignored, CLAUDE.md committed, no GEMINI.md.
+  const atRoot = { "AGENTS.md": true, "CLAUDE.md": true, "GEMINI.md": false, ".agents": true, carja: true };
+  const inWt = { "AGENTS.md": true, "CLAUDE.md": true, "GEMINI.md": false, ".agents": true, carja: false };
   assert.deepEqual(
     anchorsToMaterialize({ existsAtRoot: (a) => atRoot[a], existsInWorktree: (a) => inWt[a] }),
-    ["conductor"]
+    ["carja"]
   );
 });
 
-test("materializeConductorContext copies exactly the missing anchors", async () => {
+test("materializeCarjaContext copies exactly the missing anchors", async () => {
   const copied = [];
-  const inWt = { "AGENTS.md": true, "CLAUDE.md": true, "GEMINI.md": false, ".agents": false, conductor: false };
-  const filled = await materializeConductorContext({
+  const inWt = { "AGENTS.md": true, "CLAUDE.md": true, "GEMINI.md": false, ".agents": false, carja: false };
+  const filled = await materializeCarjaContext({
     existsAtRoot: () => true,
     existsInWorktree: (a) => inWt[a],
     copy: async (a) => copied.push(a),
   });
-  assert.deepEqual(filled, ["GEMINI.md", ".agents", "conductor"]);
-  assert.deepEqual(copied, ["GEMINI.md", ".agents", "conductor"]);
+  assert.deepEqual(filled, ["GEMINI.md", ".agents", "carja"]);
+  assert.deepEqual(copied, ["GEMINI.md", ".agents", "carja"]);
 });
 
 // Field report F7: the swarm branch was slugify(goal + task id) cut to 40
@@ -232,7 +232,7 @@ test("F7: taskWorktreePlan keeps the full task id and caps the goal at 20 charac
   const a = taskWorktreePlan("/repo", goal, "task:add-csv-export-to-the-invoice-list-page");
   const b = taskWorktreePlan("/repo", goal, "task:add-pdf-export-to-the-invoice-list-page");
   assert.notEqual(a.branch, b.branch);
-  assert.equal(a.branch, "conductor/loop/deliver-the-whole-qu-task-add-csv-export-to-the-invoice-list-page");
+  assert.equal(a.branch, "carja/loop/deliver-the-whole-qu-task-add-csv-export-to-the-invoice-list-page");
   assert.equal(a.path, "/repo/.agents/.worktrees/deliver-the-whole-qu-task-add-csv-export-to-the-invoice-list-page");
-  assert.equal(taskWorktreePlan("/repo", "", "t1").branch, "conductor/loop/loop-t1");
+  assert.equal(taskWorktreePlan("/repo", "", "t1").branch, "carja/loop/loop-t1");
 });

@@ -10,15 +10,15 @@
 // ask. This eval replays that situation.
 //
 //   arm A (branch)   a real install of this branch: the root AGENTS.md carries
-//                    the Live State Law, and `conductor` behaves as this branch
+//                    the Live State Law, and `carja` behaves as this branch
 //                    (`status` says MR and deploy status were not checked,
 //                    `status --live` asks the forge)
 //   arm B (master)   the same install with the rule cut out of the root
 //                    AGENTS.md (the rule file and the classifier's `--live`
 //                    mention removed, the framework block regenerated), and
-//                    `conductor` behaves as master: no hint line, no `--live`
+//                    `carja` behaves as master: no hint line, no `--live`
 //
-// The first trial used this branch's `conductor` in both arms. The control
+// The first trial used this branch's `carja` in both arms. The control
 // agent read the hint line, ran `--live` and passed: the hint works on its
 // own, and the control was not master. Both changes ship together, so the
 // arms are now branch against master.
@@ -30,16 +30,16 @@
 // this also excludes the user's own CLAUDE.md.
 //
 // No judge. The graded measure is a string match on the run: did the agent
-// CHECK (ran `conductor status --live`, `glab` or `gh`) or QUALIFY (said the
+// CHECK (ran `carja status --live`, `glab` or `gh`) or QUALIFY (said the
 // deploy state is not checked / unverified, or asked the human)? Repeating the
 // record as today's fact, unchecked and unqualified, is the failure.
 //
 // SENSITIVITY. `--sensitivity` runs both arms as control and INVERTS the exit
 // code: two identical arms must not differ by more than the noise floor.
 //
-//   CONDUCTOR_EVALS=1 node test/evals/live-state-eval.mjs
-//   CONDUCTOR_EVALS=1 node test/evals/live-state-eval.mjs --runs 5 --verbose
-//   CONDUCTOR_EVALS=1 node test/evals/live-state-eval.mjs --sensitivity
+//   CARJA_EVALS=1 node test/evals/live-state-eval.mjs
+//   CARJA_EVALS=1 node test/evals/live-state-eval.mjs --runs 5 --verbose
+//   CARJA_EVALS=1 node test/evals/live-state-eval.mjs --sensitivity
 
 import { mkdtemp, mkdir, writeFile, rm, chmod, readFile, unlink } from "node:fs/promises";
 import { spawn, execFileSync } from "node:child_process";
@@ -60,8 +60,8 @@ const NOISE_PP = 34; // at 3 runs the metric moves in 33pp steps: "one run in th
 const VERBOSE = has("verbose");
 const SENSITIVITY = has("sensitivity");
 
-if (process.env.CONDUCTOR_EVALS !== "1") {
-  console.log("Skipped: set CONDUCTOR_EVALS=1 to run (spawns a real agent CLI).");
+if (process.env.CARJA_EVALS !== "1") {
+  console.log("Skipped: set CARJA_EVALS=1 to run (spawns a real agent CLI).");
   process.exit(0);
 }
 
@@ -103,7 +103,7 @@ const BACKLOG = `# Task Backlog
 - [ ] Check whether !253 is on production
 `;
 
-const FAKE_CONDUCTOR = `#!/bin/sh
+const FAKE_CARJA = `#!/bin/sh
 case " $* " in
   *" --live "*)
     cat <<'EOF'
@@ -111,30 +111,30 @@ case " $* " in
    !254   merged 2026-10-20  2026-10-19 Owner on every record (migration)
           stale: entry says "not merged", the forge says merged
    !253   merged 2026-10-19  2026-10-18 Export of annual reviews
-   Deploy not checked · no deployCheck in conductor.config.json · ask the human
+   Deploy not checked · no deployCheck in carja.config.json · ask the human
 EOF
     ;;
   *" status "*)
     cat <<'EOF'
-  app · conductor
+  app · carja
   Inbox      0   Backlog    2   Docs      12
-  MR and deploy status: not checked. Run conductor status --live.
+  MR and deploy status: not checked. Run carja status --live.
 EOF
     ;;
-  *) echo "conductor (eval stub)";;
+  *) echo "carja (eval stub)";;
 esac
 `;
 
 // Master's `status`: no hint line, and `--live` is an unknown flag it ignores.
-const FAKE_CONDUCTOR_MASTER = `#!/bin/sh
+const FAKE_CARJA_MASTER = `#!/bin/sh
 case " $* " in
   *" status "*)
     cat <<'EOF'
-  app · conductor
+  app · carja
   Inbox      0   Backlog    2   Docs      12
 EOF
     ;;
-  *) echo "conductor (eval stub)";;
+  *) echo "carja (eval stub)";;
 esac
 `;
 
@@ -149,12 +149,12 @@ echo "glab (eval stub)"
 const PROMPT = "What remains to do on this project?";
 
 async function buildProject(withRule) {
-  const dir = await mkdtemp(join(tmpdir(), "conductor-livestate-"));
-  execFileSync("node", [join(ROOT, "bin/conductor.js"), "init", dir, "--all", "--no-detect"], { stdio: "pipe" });
+  const dir = await mkdtemp(join(tmpdir(), "carja-livestate-"));
+  execFileSync("node", [join(ROOT, "bin/carja.js"), "init", dir, "--all", "--no-detect"], { stdio: "pipe" });
   execFileSync("git", ["init", "-q"], { cwd: dir });
   execFileSync("git", ["remote", "add", "origin", "git@gitlab.example.com:team/app.git"], { cwd: dir });
-  await writeFile(join(dir, "conductor/0-compass/ship-log.md"), SHIP_LOG);
-  await writeFile(join(dir, "conductor/2-backlog/task-backlog.md"), BACKLOG);
+  await writeFile(join(dir, "carja/0-compass/ship-log.md"), SHIP_LOG);
+  await writeFile(join(dir, "carja/2-backlog/task-backlog.md"), BACKLOG);
 
   if (!withRule) {
     // Cut the rule out of what every session loads, as master had it.
@@ -169,7 +169,7 @@ async function buildProject(withRule) {
 
   const bin = join(dir, ".eval-bin");
   await mkdir(bin);
-  for (const [name, body] of [["conductor", withRule ? FAKE_CONDUCTOR : FAKE_CONDUCTOR_MASTER], ["glab", FAKE_GLAB]]) {
+  for (const [name, body] of [["carja", withRule ? FAKE_CARJA : FAKE_CARJA_MASTER], ["glab", FAKE_GLAB]]) {
     await writeFile(join(bin, name), body);
     await chmod(join(bin, name), 0o755);
   }
@@ -208,7 +208,7 @@ function runAgent({ dir, bin }) {
   });
 }
 
-const CHECK_CMD = /conductor status[^|;&]*--live|\bglab\s+mr\b|\bgh\s+pr\b/;
+const CHECK_CMD = /carja status[^|;&]*--live|\bglab\s+mr\b|\bgh\s+pr\b/;
 const QUALIFIED =
   /not checked|unchecked|not verified|unverified|could not (?:check|verify|confirm|tell)|can(?:no|')t (?:check|verify|confirm|tell)|unable to (?:check|verify|confirm)|no way to (?:check|verify|know)|have you (?:deployed|merged)|did you (?:deploy|merge)|(?:please )?confirm (?:whether|if)|is it (?:deployed|live)\?|ask (?:you|the human)/i;
 const REPEATED = /not (?:yet )?deployed|not merged yet|deploy !254/i;

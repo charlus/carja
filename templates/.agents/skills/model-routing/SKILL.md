@@ -17,7 +17,7 @@ category: core
 
 ## Claude model tiers (as of 2026)
 
-Conductor targets **Claude Code first**. Current lineup, strongest → cheapest:
+Carja targets **Claude Code first**. Current lineup, strongest → cheapest:
 
 | Tier | Model (exact ID) | Best at | Rough cost (in/out per M) |
 |---|---|---|---|

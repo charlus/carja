@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Conductor — the fact gate (F1). A Claude Code `PreToolUse` hook. OPT-IN.
+# Carja — the fact gate (F1). A Claude Code `PreToolUse` hook. OPT-IN.
 #
-# WHY THIS EXISTS. Every gate Conductor had fired AFTER the work: the
+# WHY THIS EXISTS. Every gate Carja had fired AFTER the work: the
 # Test-Driven Law and the Goodhart boundary at commit, the Verification Iron
 # Law at push, the Checker after the beat. All of them catch a bad change once
 # it exists. None of them stop the model writing it from a guess.
@@ -38,22 +38,24 @@
 #   "PreToolUse": [ { "matcher": "Edit|Write|Bash", "hooks": [ { "type": "command",
 #     "command": "$CLAUDE_PROJECT_DIR/.agents/hooks/pretooluse-fact-gate.sh" } ] } ]
 #
-# Off switches: CONDUCTOR_FACT_GATE=off (this gate) or CONDUCTOR_HOOKS=off (all).
+# Off switches: CARJA_FACT_GATE=off (this gate) or CARJA_HOOKS=off (all).
 set -uo pipefail
 
-[ "${CONDUCTOR_HOOKS:-on}" = "off" ] && exit 0
-[ "${CONDUCTOR_FACT_GATE:-on}" = "off" ] && exit 0
+# 6.x names still work through 7.x: each CONDUCTOR_X sets CARJA_X when unset.
+for _k in $(compgen -e); do case "$_k" in CONDUCTOR_*) _n="CARJA_${_k#CONDUCTOR_}"; [ -n "${!_n:-}" ] || export "$_n=${!_k}" ;; esac; done
+[ "${CARJA_HOOKS:-on}" = "off" ] && exit 0
+[ "${CARJA_FACT_GATE:-on}" = "off" ] && exit 0
 command -v node >/dev/null 2>&1 || exit 0
 
 # A PreToolUse hook sits in front of every tool call, so it must be bounded.
 # Anything slow here is a bug whatever the cause — and at least one real one
 # is not ours: on some kernels `mkdirSync(..., {recursive:true})` against a
-# pathological path (a CONDUCTOR_HOME under /proc, say) never returns. The
+# pathological path (a CARJA_HOME under /proc, say) never returns. The
 # harness has its own timeout, but relying on it means the failure mode is
 # "the session stalls" rather than "the gate stepped aside". Bound it here and
 # fail OPEN on expiry.
 run_bounded() {
-  local rc t="${CONDUCTOR_HOOK_TIMEOUT:-5}" pt
+  local rc t="${CARJA_HOOK_TIMEOUT:-5}" pt
   # A value that is not a positive number means "no bound" to both tools —
   # coreutils treats 0 as disabled, perl's `alarm 0` cancels the alarm — so
   # anything else falls back to 5. perl takes whole seconds: round UP, never 0.
@@ -87,13 +89,14 @@ run_bounded() {
   exit "$rc"
 }
 
-read -r -d '' CONDUCTOR_FACT_GATE_JS <<'NODE'
+read -r -d '' CARJA_FACT_GATE_JS <<'NODE'
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
 
-const STATE_DIR = path.join(process.env.CONDUCTOR_HOME || path.join(os.homedir(), ".conductor"), "fact-gate");
+const HOME_DIR = process.env.CARJA_HOME || process.env.CONDUCTOR_HOME || (fs.existsSync(path.join(os.homedir(), ".carja")) || !fs.existsSync(path.join(os.homedir(), ".conductor")) ? path.join(os.homedir(), ".carja") : path.join(os.homedir(), ".conductor"));
+const STATE_DIR = path.join(HOME_DIR, "fact-gate");
 // A session that has been idle this long is treated as new: its clearances
 // describe a context the model no longer has.
 const TTL_MS = 30 * 60 * 1000;
@@ -101,7 +104,7 @@ const TTL_MS = 30 * 60 * 1000;
 // repeated denials are what push a model into a degenerate repetition loop, so
 // after the budget every denial carries its ordinal and differs from the last.
 const FULL_DENIALS = (() => {
-  const n = Number.parseInt(process.env.CONDUCTOR_FACT_GATE_FULL_DENIALS ?? "", 10);
+  const n = Number.parseInt(process.env.CARJA_FACT_GATE_FULL_DENIALS ?? "", 10);
   return Number.isInteger(n) && n >= 0 ? n : 3;
 })();
 
@@ -238,14 +241,14 @@ const CONDENSED = {
 };
 
 function deny(lines, ordinal, condensed, kind) {
-  const escape = `  Turn this gate off with CONDUCTOR_FACT_GATE=off if it is not earning its keep.`;
+  const escape = `  Turn this gate off with CARJA_FACT_GATE=off if it is not earning its keep.`;
   if (condensed) {
     process.stderr.write(
-      `\n🔍 Conductor fact gate (denial ${ordinal}): state ${CONDENSED[kind] || CONDENSED.edit}, ` +
+      `\n🔍 Carja fact gate (denial ${ordinal}): state ${CONDENSED[kind] || CONDENSED.edit}, ` +
         `then make the same call again. ${escape.trim()}\n\n`
     );
   } else {
-    process.stderr.write(`\n🔍 Conductor fact gate\n\n${lines.join("\n")}\n\n` +
+    process.stderr.write(`\n🔍 Carja fact gate\n\n${lines.join("\n")}\n\n` +
       `  Present them, then make the same call again — the retry is allowed.\n` +
       `  This buys the investigation, not permission: the facts are not checked.\n\n${escape}\n\n`);
   }
@@ -298,4 +301,4 @@ gate(`${tool === "Write" ? "write" : "edit"}:${target}`,
      tool === "Write" ? "write" : "edit");
 NODE
 
-run_bounded "$CONDUCTOR_FACT_GATE_JS"
+run_bounded "$CARJA_FACT_GATE_JS"

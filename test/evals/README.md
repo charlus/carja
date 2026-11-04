@@ -5,19 +5,19 @@ real agent CLI and measure what it actually does. That distinction is the whole
 point — a green `test:unit` says nothing about whether routing works
 (CLAUDE.md Operating Truth 1).
 
-Gated behind `CONDUCTOR_EVALS=1` because they cost real money and need a live
+Gated behind `CARJA_EVALS=1` because they cost real money and need a live
 CLI on PATH. They are never part of `npm run test:unit`.
 
 ## routing-eval
 
-Does a fresh model, given Conductor's always-on context, route a request to the
+Does a fresh model, given Carja's always-on context, route a request to the
 right place?
 
 ```bash
-CONDUCTOR_EVALS=1 npm run eval:routing                          # classifier suite
-CONDUCTOR_EVALS=1 npm run eval:routing -- --suite descriptions  # descriptions suite
-CONDUCTOR_EVALS=1 npm run eval:routing -- --case ship --verbose  # one case
-CONDUCTOR_EVALS=1 npm run eval:routing:sensitivity               # can it fail?
+CARJA_EVALS=1 npm run eval:routing                          # classifier suite
+CARJA_EVALS=1 npm run eval:routing -- --suite descriptions  # descriptions suite
+CARJA_EVALS=1 npm run eval:routing -- --case ship --verbose  # one case
+CARJA_EVALS=1 npm run eval:routing:sensitivity               # can it fail?
 ```
 
 **Two suites, two different artifacts under test.**
@@ -71,13 +71,13 @@ Does the fact gate (`hooks/pretooluse-fact-gate.sh`, F1) change what the agent
 actually does?
 
 ```bash
-CONDUCTOR_EVALS=1 npm run eval:factgate                    # 3 runs per arm
-CONDUCTOR_EVALS=1 npm run eval:factgate -- --runs 5 --verbose
-CONDUCTOR_EVALS=1 npm run eval:factgate:sensitivity        # can it fail?
+CARJA_EVALS=1 npm run eval:factgate                    # 3 runs per arm
+CARJA_EVALS=1 npm run eval:factgate -- --runs 5 --verbose
+CARJA_EVALS=1 npm run eval:factgate:sensitivity        # can it fail?
 ```
 
 Two arms on the same fixture: gated, and the identical repo with
-`CONDUCTOR_FACT_GATE=off`. The fixture's `src/config.js` is imported by three
+`CARJA_FACT_GATE=off`. The fixture's `src/config.js` is imported by three
 files that each transform its value, so doubling the timeout silently doubles a
 budget and a probe interval. The measure is whether the agent **names the files
 its change affects** — no judge, a string match on the final answer.
@@ -115,12 +115,12 @@ Does an agent running Build load the Designer and the design rules before it
 writes UI code, and does it change the code?
 
 ```bash
-CONDUCTOR_EVALS=1 node test/evals/persona-eval.mjs                     # rules scenario, 3 runs per arm
-CONDUCTOR_EVALS=1 node test/evals/persona-eval.mjs --sensitivity       # can it fail?
-CONDUCTOR_EVALS=1 node test/evals/persona-eval.mjs --scenario drift    # no written rules, drifted CSS
+CARJA_EVALS=1 node test/evals/persona-eval.mjs                     # rules scenario, 3 runs per arm
+CARJA_EVALS=1 node test/evals/persona-eval.mjs --sensitivity       # can it fail?
+CARJA_EVALS=1 node test/evals/persona-eval.mjs --scenario drift    # no written rules, drifted CSS
 ```
 
-Arm A is `master`'s framework (rules in `conductor/4-context/design/`), arm B is
+Arm A is `master`'s framework (rules in `carja/4-context/design/`), arm B is
 the branch (rules in `DESIGN.md`). Same app, same spec, a real Build run of a
 small UI slice. The spec names neither the tokens nor an empty state.
 
@@ -155,18 +155,18 @@ human.
 Does an agent check live state before it states it, or repeat the ship-log?
 
 ```bash
-CONDUCTOR_EVALS=1 npm run eval:livestate                    # 3 runs per arm
-CONDUCTOR_EVALS=1 npm run eval:livestate -- --runs 4 --verbose
-CONDUCTOR_EVALS=1 npm run eval:livestate:sensitivity        # can it fail?
+CARJA_EVALS=1 npm run eval:livestate                    # 3 runs per arm
+CARJA_EVALS=1 npm run eval:livestate -- --runs 4 --verbose
+CARJA_EVALS=1 npm run eval:livestate:sensitivity        # can it fail?
 ```
 
 Replays the incident behind the Live State Law: the ship-log and backlog say
 "!254 not deployed yet", a fake `glab` says !253 and !254 are merged, no
 `deployCheck` exists, and the prompt is "What remains to do on this project?".
-Arm A is this branch (the rule in the root `AGENTS.md`, a `conductor` that
+Arm A is this branch (the rule in the root `AGENTS.md`, a `carja` that
 prints the "not checked" hint and answers `--live`). Arm B is master (rule cut,
-framework block regenerated, a `conductor` with neither). The graded measure is
-a string match: the agent ran `conductor status --live`, `glab` or `gh`, or its
+framework block regenerated, a `carja` with neither). The graded measure is
+a string match: the agent ran `carja status --live`, `glab` or `gh`, or its
 answer says the state is not checked or asks.
 
 **Measured 2026-10-20 against `claude` 2.1.303, n=4 per arm:**
@@ -177,7 +177,7 @@ master    checked or qualified 1/4 (25%)    checked 0, repeated the record 3
 sensitivity (two master arms)    1/4 vs 0/4, delta 25pp   -> noise floor
 ```
 
-The first trial gave the control arm this branch's `conductor`: the control
+The first trial gave the control arm this branch's `carja`: the control
 read the hint line, ran `--live` and passed. The hint works on its own, and
 that control was not master, so the arms are now branch against master. The
 measure does not separate the rule from the hint. User-level settings are

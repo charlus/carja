@@ -5,7 +5,7 @@
 // questions, each with options, a recommendation and the cost of a wrong
 // choice; a fresh Checker confirms each is a real one-way door answerable cold;
 // the item pauses while other work goes on; the owner answers by number; the
-// next run resumes the item. `conductor status` measures how often the owner
+// next run resumes the item. `carja status` measures how often the owner
 // takes the recommendation and overrules a ruling.
 
 import { test } from "node:test";
@@ -85,7 +85,7 @@ test("roundKey is a safe file name from the task id", () => {
 });
 
 test("the assignment tells a resumed Maker where its answers are", () => {
-  const t = renderAssignment({ id: "slice:p/02-x", type: "slice", title: "02-x", answered_round: "conductor/1-workbench/questions/answered/slice-p-02-x.md" });
+  const t = renderAssignment({ id: "slice:p/02-x", type: "slice", title: "02-x", answered_round: "carja/1-workbench/questions/answered/slice-p-02-x.md" });
   assert.match(t, /answered/i);
   assert.match(t, /questions\/answered\/slice-p-02-x\.md/);
 });
@@ -151,11 +151,11 @@ test("an unanswered round keeps the item paused without a beat", async () => {
 test("an answered round resumes the item, and the beat is told where the answers are", async () => {
   const seen = [];
   const { state, deps } = swarm({
-    roundFor: async () => ({ state: "answered", path: "conductor/1-workbench/questions/answered/task-a.md" }),
+    roundFor: async () => ({ state: "answered", path: "carja/1-workbench/questions/answered/task-a.md" }),
     runBeat: async ({ task }) => (seen.push(task.answered_round), { exitCode: 0, signal: { done: true } }),
   });
   const s = await runSwarm(state, deps);
-  assert.equal(seen[0], "conductor/1-workbench/questions/answered/task-a.md");
+  assert.equal(seen[0], "carja/1-workbench/questions/answered/task-a.md");
   assert.equal(s.tasks[0].status, "merged");
 });
 
@@ -170,7 +170,7 @@ test("a new run puts a paused item back in the queue, so the round is read again
   assert.equal(state.tasks[1].status, "merged");
 });
 
-test("conductor status names waiting rounds and measures the owner's decisions", async () => {
+test("carja status names waiting rounds and measures the owner's decisions", async () => {
   const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
@@ -180,11 +180,11 @@ test("conductor status names waiting rounds and measures the owner's decisions",
   const sink = () => ({ text: "", write(s) { this.text += s; } });
   try {
     await initCommand([dir, "--all", "--no-detect"], { cwd: tmpdir(), stdout: sink(), stderr: sink() });
-    const q = join(dir, "conductor/1-workbench/questions");
+    const q = join(dir, "carja/1-workbench/questions");
     mkdirSync(join(q, "answered"), { recursive: true });
     writeFileSync(join(q, "slice-notes-app-02-sync.md"), ROUND);
     writeFileSync(join(q, "answered/task-old.md"), ROUND.replace("Answer:\n\n## Q2", "Answer: 1\n\n## Q2"));
-    writeFileSync(join(dir, "conductor/1-workbench/rulings.md"), "- [2026-10-20 10:00] t · A · why: x · if wrong: low · y · overruled: no\n");
+    writeFileSync(join(dir, "carja/1-workbench/rulings.md"), "- [2026-10-20 10:00] t · A · why: x · if wrong: low · y · overruled: no\n");
     const out = sink();
     await statusCommand([dir, "--no-color"], { cwd: dir, stdout: out, stderr: sink() });
     assert.match(out.text, /1 question round waiting for you.*slice-notes-app-02-sync\.md/);

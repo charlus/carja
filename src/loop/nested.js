@@ -1,7 +1,7 @@
 // src/loop/nested.js
 //
 // Unattended Lifecycle step 7 (docs/roadmap/Unattended-Lifecycle.md): the outer
-// layout. `conductor/` and `.agents/` live in a private outer repository; the
+// layout. `carja/` and `.agents/` live in a private outer repository; the
 // team's code is a nested, gitignored repository (`loop.code_dir`, e.g. "repo").
 // Each beat gets the same layout an interactive session has: an outer worktree,
 // and inside it, at `<code_dir>/`, a worktree of the code repository on the same
@@ -99,14 +99,14 @@ export async function mergeNested({ hasCode, openCode, openState }) {
 /** The state MR's body: what it carries, and the code MR to merge first. */
 export function stateMrBody({ codeUrl, body }) {
   const head = codeUrl
-    ? `> **Merge the code MR first:** ${codeUrl}\n> This MR carries the Conductor state for it: spec, tracker, ship-log, archive.\n\n`
-    : "> No code change: this MR carries Conductor documents only.\n\n";
+    ? `> **Merge the code MR first:** ${codeUrl}\n> This MR carries the Carja state for it: spec, tracker, ship-log, archive.\n\n`
+    : "> No code change: this MR carries Carja documents only.\n\n";
   return `${head}${body ?? ""}`;
 }
 
 /** The code MR's body: the change, and the state MR that follows it. */
 export function codeMrBody({ body }) {
-  return `${body ?? ""}\n\n> A second MR in the Conductor repository records this work (spec, tracker, ship-log). Merge this one first.\n`;
+  return `${body ?? ""}\n\n> A second MR in the Carja repository records this work (spec, tracker, ship-log). Merge this one first.\n`;
 }
 
 /**
@@ -137,7 +137,7 @@ export function refusedNestedRepos(found, codeDir) {
 export function checkerNestedNote(codeDir) {
   return (
     `\n\n---\n\n# This layout: the code is a separate repository\n\n` +
-    `\`${codeDir}/\` is its own git repository, on the same branch name as this one. \`git diff\` here shows only the Conductor documents. ` +
+    `\`${codeDir}/\` is its own git repository, on the same branch name as this one. \`git diff\` here shows only the Carja documents. ` +
     `Review the code change with \`git -C ${codeDir} log --oneline origin/HEAD..HEAD\` and \`git -C ${codeDir} diff origin/HEAD...HEAD\`, and run verification inside \`${codeDir}/\`.\n`
   );
 }

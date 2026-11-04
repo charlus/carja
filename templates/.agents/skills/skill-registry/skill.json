@@ -1,10 +1,10 @@
 {
   "name": "skill-registry",
   "version": "1.0.0",
-  "description": "Manages Conductor skills from the remote registry using the conductor CLI. Install, remove, search, and list skills.",
+  "description": "Manages Carja skills from the remote registry using the carja CLI. Install, remove, search, and list skills.",
   "tier": "core",
   "tags": [
-    "conductor",
+    "carja",
     "registry",
     "skills",
     "cli",

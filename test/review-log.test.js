@@ -187,7 +187,7 @@ describe("F7 — the ledger keeps one vocabulary", () => {
 describe("F7 — the ledger lives in the project, paths from the project root", () => {
   function outer() {
     const root = mkdtempSync(join(tmpdir(), "cond-rl-"));
-    mkdirSync(join(root, "conductor", "1-workbench"), { recursive: true });
+    mkdirSync(join(root, "carja", "1-workbench"), { recursive: true });
     mkdirSync(join(root, ".agents"), { recursive: true });
     mkdirSync(join(root, "cms", "backend"), { recursive: true });
     writeFileSync(join(root, "cms", "backend", "x.py"), "x = 1\n");
@@ -197,14 +197,14 @@ describe("F7 — the ledger lives in the project, paths from the project root", 
     return root;
   }
   const sink = () => { let t = ""; return { write: (s) => { t += s; }, get text() { return t; } }; };
-  const rows = (root) => readFileSync(join(root, "conductor", "1-workbench", "review-log.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  const rows = (root) => readFileSync(join(root, "carja", "1-workbench", "review-log.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
 
   test("run from a nested code repository, it writes the project's ledger with a project-relative path", async () => {
     const root = outer();
     const out = sink(), err = sink();
     const code = await reviewLogCommand(["append", JSON.stringify({ severity: "NIT", action: "fixed", category: "correctness", file: "backend/x.py", line: 1 })], { cwd: join(root, "cms"), stdout: out, stderr: err });
     assert.equal(code, 0, err.text);
-    assert.ok(!existsSync(join(root, "cms", "conductor")), "a stray ledger was created in the code repository");
+    assert.ok(!existsSync(join(root, "cms", "carja")), "a stray ledger was created in the code repository");
     assert.equal(rows(root)[0].file, "cms/backend/x.py");
   });
 

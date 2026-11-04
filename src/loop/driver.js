@@ -1,6 +1,6 @@
 // src/loop/driver.js
 //
-// The deterministic DRIVER for the Conductor autonomous loop (ADR-0001, V6).
+// The deterministic DRIVER for the Carja autonomous loop (ADR-0001, V6).
 //
 // Design principle: "the host runner is the authority; the agent is a fallible
 // worker." Everything that must ALWAYS happen — the iteration ceiling, stall
@@ -182,7 +182,7 @@ export function deadBeatMessage(verdict, where = "") {
 }
 
 /**
- * Resolve the verification command, mirroring hooks/lib.sh `conductor_verify_cmd`
+ * Resolve the verification command, mirroring hooks/lib.sh `carja_verify_cmd`
  * byte-for-byte so interactive (pre-push) and headless (driver) enforcement agree.
  * Pure: the command layer gathers the three inputs and passes them in.
  *   state.verification.command → config "verify" → `npm test` iff declared → null
@@ -288,7 +288,7 @@ export function describeHalt(state, status) {
     case "halted_scoping":
       return "phase is 'discovery' — the Scoping Barrier forbids headless discovery. Define requirements with a human first.";
     case "halted_no_verification":
-      return "no verification command could be resolved (state.verification.command, conductor.config.json 'verify', or an npm test script). Refusing to run without a real success signal.";
+      return "no verification command could be resolved (state.verification.command, carja.config.json 'verify', or an npm test script). Refusing to run without a real success signal.";
     case "halted_sandbox_required":
       return "autonomy_level L3 requires an isolating sandbox — set sandbox='cli-native' (the agent CLI's own vendor sandbox, e.g. Anthropic's bubblewrap; no Docker) or 'container' (BYO). See .agents/sandbox/. Refusing unattended execution without isolation.";
     case "halted_autonomy": {
@@ -380,7 +380,7 @@ export async function runLoop(state, deps) {
     state.status = halt;
     await persist(state);
     const reason = describeHalt(state, halt);
-    log(`[CONDUCTOR LOOP] Pre-flight halt: ${halt} — ${reason}`);
+    log(`[CARJA LOOP] Pre-flight halt: ${halt} — ${reason}`);
     await audit(`pre-flight halt: ${halt} — ${reason}`);
     return state;
   }
@@ -444,7 +444,7 @@ export async function runLoop(state, deps) {
         // its own terminal state — surface it for diagnosis; repeated no-progress
         // beats are now bounded by the (fixed) stall detector.
         if (result?.exitCode) {
-          log(`[CONDUCTOR LOOP] beat ${state.iterations.current}: agent CLI exited ${result.exitCode}`);
+          log(`[CARJA LOOP] beat ${state.iterations.current}: agent CLI exited ${result.exitCode}`);
           await audit(`beat ${state.iterations.current}: agent CLI exited ${result.exitCode}`);
         }
 
@@ -566,7 +566,7 @@ export async function runLoop(state, deps) {
           state.status = "awaiting_review";
         }
         log(
-          `[CONDUCTOR LOOP] verify exit=${exitCode}` +
+          `[CARJA LOOP] verify exit=${exitCode}` +
             (checkerExit !== null ? `, checker exit=${checkerExit}` : "") +
             ` → ${state.status}`
         );
@@ -665,7 +665,7 @@ export async function runLoop(state, deps) {
 
       default:
         // Unknown non-terminal status — fail safe rather than spin.
-        log(`[CONDUCTOR LOOP] Unknown status '${state.status}' — halting.`);
+        log(`[CARJA LOOP] Unknown status '${state.status}' — halting.`);
         state.status = "stalled";
         await writeInbox(state, `unknown status '${state.status}'`);
         await persist(state);
@@ -673,7 +673,7 @@ export async function runLoop(state, deps) {
     }
   }
 
-  log(`[CONDUCTOR LOOP] Terminal status: ${state.status}`);
+  log(`[CARJA LOOP] Terminal status: ${state.status}`);
   await audit(`terminal: ${state.status}`);
   return state;
 }

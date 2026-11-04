@@ -22,7 +22,7 @@ test("Build's prerequisites treat a blank carved template as missing, and route 
 });
 
 test("the placeholder the text names is really in the carved templates, so the rule is checkable", () => {
-  const tpl = readFileSync(new URL("../templates/conductor/5-templates/carve-workflow/feature-spec.md", import.meta.url), "utf8");
+  const tpl = readFileSync(new URL("../templates/carja/5-templates/carve-workflow/feature-spec.md", import.meta.url), "utf8");
   assert.ok(/\[Implementation Name\]/.test(tpl) || isBlankDoc(tpl, tpl));
   assert.equal(isBlankDoc(tpl, tpl), true, "the loop's own check agrees: an untouched template is blank");
 });

@@ -2,9 +2,9 @@
 trigger: always_on
 ---
 
-# Conductor Framework — Development Context
+# Carja Framework — Development Context
 
-> You are working on **the Conductor Framework itself** — the npm package that scaffolds this methodology into other projects. This is NOT a project using Conductor. This IS Conductor.
+> You are working on **the Carja Framework itself** — the npm package that scaffolds this methodology into other projects. This is NOT a project using Carja. This IS Carja.
 
 The full, maintained development context lives in **[`CLAUDE.md`](CLAUDE.md)** — read and follow it before any action.
 

@@ -3,14 +3,14 @@
 // Interactive work is branch-safe (owner, 2026-10-22): the owner's folder, and
 // its nested code repository, stay on the default branch. Interactive Spec-It,
 // Build and Ship work in one hidden worktree per item, made here:
-//   - outer: `.agents/.worktrees/work-<slug>` on `conductor/work/<slug>`, from
+//   - outer: `.agents/.worktrees/work-<slug>` on `carja/work/<slug>`, from
 //     the default branch (never from the branch the owner has checked out);
 //   - each nested code repository (`loop.code_dir`, or a gitignored top-level
 //     repository) gets a worktree inside it, at the same relative path, on the
 //     same branch name, from its own default branch; loop.setup runs there once.
 // The same item again reuses what exists. Merged items are removed by the
-// loop's prune (src/loop/reconcile.js, prefix `conductor/work/`): on `git pull`
-// (post-merge hook), at a loop run, or by `conductor work clean`.
+// loop's prune (src/loop/reconcile.js, prefix `carja/work/`): on `git pull`
+// (post-merge hook), at a loop run, or by `carja work clean`.
 // `git(cwd)(args)` and `sh(cmd, cwd)` are injected.
 
 import { join, resolve, basename } from "node:path";
@@ -32,7 +32,7 @@ export function workPlan(root, item) {
 }
 
 /**
- * Where we are: the project root (the folder that holds conductor/ and .agents/),
+ * Where we are: the project root (the folder that holds carja/ and .agents/),
  * or, when `cwd` is already an item's or a loop beat's worktree, that worktree.
  */
 export async function locate(cwd, git) {
@@ -43,7 +43,7 @@ export async function locate(cwd, git) {
   if (linked && (branch.startsWith(WORK_PREFIX) || branch.startsWith(LOOP_PREFIX))) return { inside: top.stdout, branch };
   // A nested code repository of the outer layout: the project is its parent.
   let root = top.stdout;
-  if (!(await exists(join(root, "conductor"))) && (await exists(join(root, "..", "conductor"))) && (await exists(join(root, "..", ".agents")))) root = resolve(root, "..");
+  if (!(await exists(join(root, "carja"))) && (await exists(join(root, "..", "carja"))) && (await exists(join(root, "..", ".agents")))) root = resolve(root, "..");
   return { root };
 }
 
@@ -99,11 +99,11 @@ export async function ensureWorkWorktree({ root, item, git, sh }) {
 /** loop.setup, once per worktree; what it makes is hidden from git, as the loop does. */
 async function runSetupOnce({ dir, setup, root, codeRoot, git, sh }) {
   const g = git(dir);
-  const markerRel = await g(["rev-parse", "--git-path", "conductor-setup.done"]);
+  const markerRel = await g(["rev-parse", "--git-path", "carja-setup.done"]);
   const marker = markerRel.ok ? resolve(dir, markerRel.stdout) : null;
   if (marker && (await exists(marker))) return { ok: true, skipped: true };
   const before = await untrackedPaths({ git: g });
-  const env = `export CONDUCTOR_ROOT=${JSON.stringify(root)}${codeRoot ? ` CONDUCTOR_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; `;
+  const env = `export CARJA_ROOT=${JSON.stringify(root)}${codeRoot ? ` CARJA_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; `;
   const res = await sh(`${env}${setup}`, dir);
   await hideSetupArtifacts({ before, cwd: dir, git: g });
   if (res.exitCode !== 0) return { ok: false, reason: `exit ${res.exitCode}: ${res.output.trim().split("\n").slice(-3).join(" | ") || "(no output)"}` };
@@ -139,7 +139,7 @@ export async function cleanMerged({ root, git, forgeMerged = () => async () => n
 }
 
 /**
- * What `conductor status` warns about: a checkout off its default branch, and
+ * What `carja status` warns about: a checkout off its default branch, and
  * merged worktrees still on disk. Never throws, never deletes.
  */
 export async function branchSafety({ root, git }) {

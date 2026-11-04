@@ -1,7 +1,7 @@
 // test/loop-monitor.test.js
 //
 // Loop Monitor M1 + M2 (docs/roadmap/Loop-Monitor.md): the driver writes an
-// event log, and `conductor watch` shows what each item is doing. R2: the view
+// event log, and `carja watch` shows what each item is doing. R2: the view
 // shows what was recorded, never a guess.
 
 import { test } from "node:test";
@@ -67,7 +67,7 @@ test("watch: an ended run says how it ended; no run says how to start one", () =
   assert.match(renderWatch(watchModel([]), T0), /No loop run recorded/);
 });
 
-test("through the real CLI: a loop run writes its events and `conductor watch --once` shows them", async () => {
+test("through the real CLI: a loop run writes its events and `carja watch --once` shows them", async () => {
   const { execFileSync, spawnSync } = await import("node:child_process");
   const { mkdirSync } = await import("node:fs");
   const REPO = new URL("..", import.meta.url).pathname;
@@ -78,34 +78,34 @@ test("through the real CLI: a loop run writes its events and `conductor watch --
     mkdirSync(bin);
     writeFileSync(join(bin, "claude"), readFileSync(join(REPO, "test/fixtures/stub-engine/claude")), { mode: 0o755 });
     writeFileSync(join(bin, "gh"), '#!/bin/sh\n[ "$1" = auth ] && exit 0\n[ "$1" = pr ] && [ "$2" = list ] && exit 0\necho https://example.invalid/pr/1\n', { mode: 0o755 });
-    execFileSync("node", [join(REPO, "bin/conductor.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
+    execFileSync("node", [join(REPO, "bin/carja.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
     const G = (...a) => execFileSync("git", a, { cwd: root, stdio: "pipe" }).toString().trim();
     G("init", "-q", "-b", "master");
     G("config", "user.email", "t@t");
     G("config", "user.name", "t");
     writeFileSync(join(root, ".gitignore"), ".agents/.worktrees/\n", { flag: "a" });
-    writeFileSync(join(root, "conductor/2-backlog/task-backlog.md"), "# Task Backlog\n\n- [ ] Add a flag (loop-ready)\n", { flag: "a" });
-    const cfg = JSON.parse(readFileSync(join(root, "conductor.config.json"), "utf8"));
+    writeFileSync(join(root, "carja/2-backlog/task-backlog.md"), "# Task Backlog\n\n- [ ] Add a flag (loop-ready)\n", { flag: "a" });
+    const cfg = JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8"));
     Object.assign(cfg, { verify: "true", loop: { forge: "gh", require_ready: true, inbox: false } });
-    writeFileSync(join(root, "conductor.config.json"), JSON.stringify(cfg));
-    const st = JSON.parse(readFileSync(join(root, "conductor/1-workbench/loop-state.json"), "utf8"));
+    writeFileSync(join(root, "carja.config.json"), JSON.stringify(cfg));
+    const st = JSON.parse(readFileSync(join(root, "carja/1-workbench/loop-state.json"), "utf8"));
     Object.assign(st, { phase: "execution", autonomy_level: "L3", sandbox: "cli-native", platform: "claude", concurrency: 1 });
-    writeFileSync(join(root, "conductor/1-workbench/loop-state.json"), JSON.stringify(st));
+    writeFileSync(join(root, "carja/1-workbench/loop-state.json"), JSON.stringify(st));
     G("add", "-A");
     G("commit", "-qm", "init");
     execFileSync("git", ["init", "-q", "--bare", "-b", "master", join(base, "o.git")]);
     G("remote", "add", "origin", join(base, "o.git"));
     G("push", "-q", "origin", "master");
     const env = { ...process.env, PATH: `${bin}:${process.env.PATH}` };
-    const r = spawnSync("node", [join(REPO, "bin/conductor.js"), "loop", root, "--from-conductor"], { cwd: root, encoding: "utf8", env, timeout: 120000 });
+    const r = spawnSync("node", [join(REPO, "bin/carja.js"), "loop", root, "--from-carja"], { cwd: root, encoding: "utf8", env, timeout: 120000 });
     assert.equal(r.status, 0, r.stdout + r.stderr);
-    const events = readEvents(readFileSync(join(root, ".git/conductor-loop-logs", EVENTS_FILE), "utf8"));
+    const events = readEvents(readFileSync(join(root, ".git/carja-loop-logs", EVENTS_FILE), "utf8"));
     const types = events.map((e) => `${e.type}${e.kind ? `:${e.kind}` : ""}`);
     assert.deepEqual(types.slice(0, 2), ["run_start", "beat_start:maker"]);
     assert.ok(types.includes("verify") && types.includes("beat_start:checker") && types.includes("merged"));
     assert.equal(types.at(-1), "run_end");
     assert.ok(events.filter((e) => e.task).every((e) => e.task === "task:add-a-flag-loop-ready" || e.task.startsWith("task:")), "every beat names its item");
-    const w = spawnSync("node", [join(REPO, "bin/conductor.js"), "watch", root, "--once"], { encoding: "utf8" });
+    const w = spawnSync("node", [join(REPO, "bin/carja.js"), "watch", root, "--once"], { encoding: "utf8" });
     assert.match(w.stdout, /Loop run started/);
     assert.match(w.stdout, /MR opened: https:\/\/example\.invalid\/pr\/1/);
     assert.match(w.stdout, /Run ended \d\d:\d\d: completed/);

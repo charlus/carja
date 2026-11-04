@@ -111,7 +111,7 @@ describe("E5.2 — every workflow is reachable", () => {
   // looked up or verified. Neither is a ROUTE, so neither counts as
   // reachability — being in a stock list is not the same as a request being
   // able to arrive at you.
-  const INVENTORIES = [join(AGENTS, "registry.json"), join(AGENTS, "tests", "check-conductor.sh")];
+  const INVENTORIES = [join(AGENTS, "registry.json"), join(AGENTS, "tests", "check-carja.sh")];
 
   for (const wf of workflowsOnDisk) {
     test(`${wf}.md is reachable from something other than an inventory`, () => {
@@ -177,7 +177,7 @@ describe("E5.4 — every skill is routable by its own frontmatter", () => {
 });
 
 describe("E5.5 — host integration points are the only host-specific references", () => {
-  // Conductor installs `.agents/`, the cross-tool convention, so the
+  // Carja installs `.agents/`, the cross-tool convention, so the
   // methodology is host-neutral by construction and needs no per-host
   // compilation. This test PINS that: a `.claude/` reference is allowed only in
   // the few files that legitimately wire up Claude Code (settings.json, slash
@@ -193,7 +193,7 @@ describe("E5.5 — host integration points are the only host-specific references
     "hooks/pretooluse-fact-gate.sh",
     "sandbox/README.md",
     "how-it-works.md",
-    "tests/check-conductor.sh",
+    "tests/check-carja.sh",
   ]);
 
   test("no workflow, skill, rule or persona hardcodes a host path", () => {
@@ -213,7 +213,7 @@ describe("E5.5 — host integration points are the only host-specific references
       offenders,
       [],
       `host-specific paths leaked into the methodology: ${offenders.join(", ")}. ` +
-        `Conductor is host-neutral by installing .agents/ — keep host wiring in the integration files.`,
+        `Carja is host-neutral by installing .agents/ — keep host wiring in the integration files.`,
     );
   });
 
@@ -242,15 +242,15 @@ describe("E5.5 — host integration points are the only host-specific references
 });
 
 describe("the state files stay readable raw", () => {
-  // `conductor view` renders documents, so a pipe table in a DOCUMENT is an
+  // `carja view` renders documents, so a pipe table in a DOCUMENT is an
   // asset there — dense and scannable. These three are different: they are the
   // high-churn state files, read and edited straight in a terminal and diffed
   // line-by-line in git. A table in one of them is unreadable with `cat` and
   // noisy in a diff, so it stays out.
   const STATE_FILES = [
-    "conductor/1-workbench/inbox.md",
-    "conductor/1-workbench/scratchpad.md",
-    "conductor/2-backlog/task-backlog.md",
+    "carja/1-workbench/inbox.md",
+    "carja/1-workbench/scratchpad.md",
+    "carja/2-backlog/task-backlog.md",
   ];
 
   for (const rel of STATE_FILES) {

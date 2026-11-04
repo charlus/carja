@@ -1,9 +1,9 @@
 // test/hooks-heartbeat.test.js
 //
-// `conductor status` names the commits and pushes that skipped the hooks.
+// `carja status` names the commits and pushes that skipped the hooks.
 //
 // "Gates on" says git is configured to run the hooks. It cannot see a commit
-// made with --no-verify or CONDUCTOR_HOOKS=off, or by a git client that ignores
+// made with --no-verify or CARJA_HOOKS=off, or by a git client that ignores
 // hooks. Taken from AI-DLC (awslabs/aidlc-workflows), which refuses to advance
 // when its hooks' heartbeat files show they stopped firing.
 //
@@ -19,7 +19,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { collectState } from "../src/conductor-state.js";
+import { collectState } from "../src/carja-state.js";
 import { renderStatus } from "../src/view/status.js";
 import { installHooksCommand } from "../src/commands/install-hooks.js";
 
@@ -32,21 +32,21 @@ const git = (dir, args, env = {}) =>
     .trim();
 
 async function project({ install = true } = {}) {
-  const d = await mkdtemp(join(tmpdir(), "conductor-heartbeat-"));
+  const d = await mkdtemp(join(tmpdir(), "carja-heartbeat-"));
   await mkdir(join(d, ".agents/hooks"), { recursive: true });
   for (const f of await readdir(HOOKS_SRC)) await copyFile(join(HOOKS_SRC, f), join(d, ".agents/hooks", f));
   await chmod(join(d, ".agents/hooks/pre-commit"), 0o755);
   await chmod(join(d, ".agents/hooks/pre-push"), 0o755);
-  await mkdir(join(d, "conductor/1-workbench"), { recursive: true });
-  await mkdir(join(d, "conductor/0-compass"), { recursive: true });
-  await writeFile(join(d, "conductor/1-workbench/inbox.md"), "# Inbox\n");
-  await writeFile(join(d, "conductor/0-compass/ship-log.md"), "# Ship Log\n");
-  await writeFile(join(d, "conductor.config.json"), '{ "verify": "true", "eval": "none" }\n');
-  git(d, ["init", "-q"]);
+  await mkdir(join(d, "carja/1-workbench"), { recursive: true });
+  await mkdir(join(d, "carja/0-compass"), { recursive: true });
+  await writeFile(join(d, "carja/1-workbench/inbox.md"), "# Inbox\n");
+  await writeFile(join(d, "carja/0-compass/ship-log.md"), "# Ship Log\n");
+  await writeFile(join(d, "carja.config.json"), '{ "verify": "true", "eval": "none" }\n');
+  git(d, ["init", "-q", "-b", "work"]); // never the remote's main: the default-branch rule would judge these commits
   git(d, ["config", "user.email", "t@t.local"]);
   git(d, ["config", "user.name", "t"]);
   git(d, ["add", "-A"]);
-  git(d, ["commit", "-qm", "base"], { CONDUCTOR_HOOKS: "off" });
+  git(d, ["commit", "-qm", "base"], { CARJA_HOOKS: "off" });
   if (install) await installHooksCommand([], { cwd: d, stdout: sink, stderr: sink });
   return d;
 }
@@ -85,9 +85,9 @@ describe("AIDLC-A3 — status names what skipped the hooks", () => {
     assert.match(await status(d), new RegExp(`1 commit skipped the hooks.*${sha}`));
   });
 
-  test("a commit made with CONDUCTOR_HOOKS=off is reported", async () => {
+  test("a commit made with CARJA_HOOKS=off is reported", async () => {
     const d = await project();
-    const sha = await commitNote(d, "off", { env: { CONDUCTOR_HOOKS: "off" } });
+    const sha = await commitNote(d, "off", { env: { CARJA_HOOKS: "off" } });
     assert.deepEqual((await skipped(d)).commits, [sha]);
   });
 
@@ -107,7 +107,7 @@ describe("AIDLC-A3 — status names what skipped the hooks", () => {
 
   test("commits made before install-hooks are never judged", async () => {
     const d = await project({ install: false });
-    await commitNote(d, "before install", { env: { CONDUCTOR_HOOKS: "off" } });
+    await commitNote(d, "before install", { env: { CARJA_HOOKS: "off" } });
     assert.equal(await skipped(d), null, "no heartbeat yet: status must say nothing");
     await new Promise((r) => setTimeout(r, 1100)); // git records times to the second
     await installHooksCommand([], { cwd: d, stdout: sink, stderr: sink });

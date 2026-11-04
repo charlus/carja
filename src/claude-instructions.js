@@ -1,6 +1,6 @@
 // src/claude-instructions.js
 //
-// D9: Conductor's instructions live in the root AGENTS.md. Claude Code reads it
+// D9: Carja's instructions live in the root AGENTS.md. Claude Code reads it
 // natively only from v2.1.277, and only when no CLAUDE.md, .claude/CLAUDE.md or
 // CLAUDE.local.md sits in the working folder or any folder above it: any of them
 // makes Claude read CLAUDE files instead, and the framework is silently skipped.
@@ -36,7 +36,7 @@ export function instructionWarnings({ claudeVersion, files }) {
   const v = parseClaudeVersion(claudeVersion);
   if (v && below(v, parseClaudeVersion(MIN_CLAUDE_VERSION))) {
     out.push(
-      `Claude Code ${v.join(".")} does not read AGENTS.md, so it will not see Conductor. Update to ${MIN_CLAUDE_VERSION} or later (claude update).`
+      `Claude Code ${v.join(".")} does not read AGENTS.md, so it will not see Carja. Update to ${MIN_CLAUDE_VERSION} or later (claude update).`
     );
   }
   if (files.includes("CLAUDE.md")) {

@@ -8,6 +8,28 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.0.0] — 2026-11-04 — Conductor is now Carja
+
+Compatibility: upgrade plus a step
+
+### Changed
+
+- **The framework is called Carja.** Google's Conductor writes into the same `conductor/` folder, and the npm name `conductor` is taken. *Carja* is *jacquard* in verlan: the Jacquard loom was the first machine that ran a program unattended. The command is `carja`, the state folder `carja/`, the config `carja.config.json`, the variables `CARJA_*`, the loop's branches `carja/loop/<item>`, the repository `github:charlus/carja` (GitHub redirects the old URL once the repository is renamed).
+- **`carja upgrade` moves a 6.x project in two commits of its own**, before the normal upgrade, on the upgrade's branch: `chore: rename conductor to carja` (the numbered folders, the config, the version stamp, the framework's lines in `.gitattributes` and `.gitignore`), then `chore: point carja/ knowledge at the renamed folder`, which rewrites the exact pattern `conductor/<n>-<folder>/` in your files under `carja/`. Anything else in `conductor/` (Google Conductor's files) stays and is listed. It refuses, and changes nothing, while the tree has uncommitted changes or a loop or work worktree exists. `--dry-run` lists the moves. The loop's queue and logs in `.git/` follow the new names. Ignore rules that name `conductor/` get the same rule for `carja/`, so an ignored folder stays out of git. If a commit is refused, the whole rename is undone. The push of the upgrade branch is judged by the 6.x hooks already on your remote, so it uses their verify command once.
+
+### Kept through 7.x, removed in 8.0
+
+- The `conductor` command (one notice per run), `CONDUCTOR_*` variables (read as `CARJA_*`, an explicit `CARJA_*` wins), `--from-conductor`, a `conductor.config.json`, the old version stamp and `conductor:` markers in `AGENTS.md` and the Claude Code shims.
+- On a project not upgraded yet, `status`, `inbox`, `view`, `review-log` and `agents-md` read `conductor/`. `loop`, `loop doctor` and `work` refuse it and say to run `carja upgrade` first.
+- A machine set up under 6.x keeps `~/.conductor` (trust consents, the evidence ledger, the review store) and `~/.config/conductor` until a `~/.carja` exists.
+
+### Note — upgrading
+
+1. In each project, on its default branch with a clean tree and no loop running: `npx -y github:charlus/carja upgrade`. It commits the rename and the upgrade on their own branch. Push it and merge it.
+2. Change your own scripts and instruction files that call `conductor` or name `conductor/`. Until 8.0 the old names still work, with a notice.
+
+---
+
 ## [6.54.0] — 2026-11-04 — Ready for the new name: every reader accepts Carja
 
 Compatibility: upgrade only

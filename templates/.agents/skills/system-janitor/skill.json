@@ -1,7 +1,7 @@
 {
   "name": "system-janitor",
   "version": "1.0.0",
-  "description": "Scans the Conductor Framework for misplaced files and recommends reorganization.",
+  "description": "Scans the Carja Framework for misplaced files and recommends reorganization.",
   "tier": "core",
   "tags": [
     "maintenance",

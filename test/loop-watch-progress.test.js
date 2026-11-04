@@ -1,7 +1,7 @@
 // test/loop-watch-progress.test.js
 //
 // I7 (owner, 2026-10-23): the KM relief loop "seems either stuck or still
-// running". `conductor watch` now says, per project: item N of M, the step in
+// running". `carja watch` now says, per project: item N of M, the step in
 // progress and since when, the average time per item in this run, when the run
 // should end, a wait for the usage limit, and why it last stopped, in words.
 

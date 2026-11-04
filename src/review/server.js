@@ -1,6 +1,6 @@
 // src/review/server.js
 //
-// The loopback server behind `conductor review` (F4, slice 1).
+// The loopback server behind `carja review` (F4, slice 1).
 //
 // The agent blocks on one call; the human opens a page, reads, and decides;
 // the call returns their verdict as JSON. That is the whole contract.

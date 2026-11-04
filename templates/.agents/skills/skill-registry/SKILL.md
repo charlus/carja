@@ -1,16 +1,16 @@
 ---
 name: skill-registry
-description: Manages Conductor skills from the remote registry — install, remove, search, and list skills using the conductor CLI. Use during Technical Vision workflow or whenever the tech stack changes.
+description: Manages Carja skills from the remote registry — install, remove, search, and list skills using the carja CLI. Use during Technical Vision workflow or whenever the tech stack changes.
 ---
 
 # Skill Registry Management
 
-> This skill teaches you how to manage dynamic skills using the `conductor` CLI. Use it during **Technical Vision** (to install skills matching the chosen tech stack) or anytime the project's needs change.
+> This skill teaches you how to manage dynamic skills using the `carja` CLI. Use it during **Technical Vision** (to install skills matching the chosen tech stack) or anytime the project's needs change.
 
 ## Prerequisites
 
 - `glab` CLI installed and authenticated (`glab auth login --hostname <your-gitlab>`)
-- `conductor.config.json` in the project root with the registry URL:
+- `carja.config.json` in the project root with the registry URL:
 
 ```json
 {
@@ -26,21 +26,21 @@ After the tech stack is decided — whether from user input during genesis or fr
 
 ```bash
 # 1. Search for skills matching the chosen technologies
-conductor search react
-conductor search python
-conductor search --tag data-engineering
+carja search react
+carja search python
+carja search --tag data-engineering
 
 # 2. Install relevant skills
-conductor add react-best-practices
-conductor add django-patterns
+carja add react-best-practices
+carja add django-patterns
 
 # 3. Verify installation
-conductor list
+carja list
 ```
 
 ### On Existing Projects
 
-If `conductor init` detected a tech stack, it will have printed recommendations. Follow up by installing the suggested skills.
+If `carja init` detected a tech stack, it will have printed recommendations. Follow up by installing the suggested skills.
 
 ### When Tech Stack Changes
 
@@ -48,13 +48,13 @@ When the project adopts a new technology (e.g., adding Docker, switching to Next
 
 ## Commands
 
-### `conductor add <skill-name>`
+### `carja add <skill-name>`
 
 Downloads a skill from the registry into `.agents/skills/`.
 
 ```bash
-conductor add <skill-name>
-conductor add <skill-name> --registry <url>   # Override registry URL
+carja add <skill-name>
+carja add <skill-name> --registry <url>   # Override registry URL
 ```
 
 **What it does:**
@@ -64,37 +64,37 @@ conductor add <skill-name> --registry <url>   # Override registry URL
 4. Extracts to `.agents/skills/<Skill-Name>/`
 5. Validates `skill.json` + `SKILL.md` exist
 
-### `conductor remove <skill-name>`
+### `carja remove <skill-name>`
 
 Removes an installed skill.
 
 ```bash
-conductor remove <skill-name>
-conductor remove <skill-name> --force   # Required for core skills
+carja remove <skill-name>
+carja remove <skill-name> --force   # Required for core skills
 ```
 
-Core skills (bundled with the framework) are protected — they require `--force` and will be restored on `conductor upgrade`.
+Core skills (bundled with the framework) are protected — they require `--force` and will be restored on `carja upgrade`.
 
-### `conductor list`
+### `carja list`
 
 Lists installed skills or browse the full registry.
 
 ```bash
-conductor list                        # Local skills
-conductor list --remote               # Registry skills (✓ = installed)
-conductor list --tier tech-vision     # Filter by tier
-conductor list --tier domain
+carja list                        # Local skills
+carja list --remote               # Registry skills (✓ = installed)
+carja list --tier tech-vision     # Filter by tier
+carja list --tier domain
 ```
 
-### `conductor search <query>`
+### `carja search <query>`
 
 Searches the registry by name, description, tags, and tech stack.
 
 ```bash
-conductor search react              # Find React-related skills
-conductor search --tag debugging    # Filter by tag
-conductor search --tier domain      # Filter by tier
-conductor search python django      # Multi-word query
+carja search react              # Find React-related skills
+carja search --tag debugging    # Filter by tag
+carja search --tier domain      # Filter by tier
+carja search python django      # Multi-word query
 ```
 
 ## Skill Tiers
@@ -111,8 +111,8 @@ After installing skills, they are immediately available in `.agents/skills/` and
 
 ### Recommended flow during Technical Vision:
 
-1. **List what's available**: `conductor list --remote`
-2. **Search by tech stack**: `conductor search <technology>`
-3. **Install matches**: `conductor add <skill-name>`
-4. **Verify**: `conductor list` — confirm skills are installed
+1. **List what's available**: `carja list --remote`
+2. **Search by tech stack**: `carja search <technology>`
+3. **Install matches**: `carja add <skill-name>`
+4. **Verify**: `carja list` — confirm skills are installed
 5. **Continue** with the Technical Vision workflow — new skills are now active

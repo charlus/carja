@@ -1,9 +1,9 @@
 // src/commands/review-log.js
 //
-// `conductor review-log` — the review findings ledger (E2).
+// `carja review-log` — the review findings ledger (E2).
 //
-//   conductor review-log append '<json>'
-//   conductor review-log summary [--since <ISO date>]
+//   carja review-log append '<json>'
+//   carja review-log summary [--since <ISO date>]
 //
 // WHY. E1 changed the review gate on the argument that the reviewer's question
 // was unbounded, not that the Maker writes bad code. That is a claim, and it
@@ -18,8 +18,8 @@
 //   reviewer brief bytes         tests agentctl's finding that loop count tracks
 //                                the size of the instruction corpus.
 //
-// Lives in the repo (`conductor/1-workbench/review-log.jsonl`), not under
-// CONDUCTOR_HOME: unlike evidence, these findings are about the project and are
+// Lives in the repo (`carja/1-workbench/review-log.jsonl`), not under
+// CARJA_HOME: unlike evidence, these findings are about the project and are
 // useful to the whole team and to the Retrospective workflow.
 
 import { appendFile, mkdir, readFile } from "node:fs/promises";
@@ -29,7 +29,7 @@ import { PRECEDENCE, outranks } from "../personas.js";
 import { ignoredNestedRepos } from "../nested-repos.js";
 import { statePath } from "../names.js";
 
-export const REVIEW_LOG_REL = "conductor/1-workbench/review-log.jsonl";
+export const REVIEW_LOG_REL = "carja/1-workbench/review-log.jsonl";
 
 const SEVERITIES = new Set(["BLOCKER", "IMPORTANT", "NIT", "SCOPE"]);
 
@@ -225,7 +225,7 @@ export function summarise(records) {
 }
 
 /**
- * The project root: the nearest folder up from `cwd` that holds `conductor/`
+ * The project root: the nearest folder up from `cwd` that holds `carja/`
  * and `.agents/`. Run from a nested code repository, the ledger is still the
  * project's, never a stray copy in the code repository.
  */
@@ -260,7 +260,7 @@ export async function reviewLogCommand(args, { cwd, stdout, stderr }) {
   if (sub === "append") {
     const json = args[args.indexOf("append") + 1];
     if (!json) {
-      stderr.write("usage: conductor review-log append '<json finding>'\n");
+      stderr.write("usage: carja review-log append '<json finding>'\n");
       return 1;
     }
     let parsed;
@@ -340,7 +340,7 @@ export async function reviewLogCommand(args, { cwd, stdout, stderr }) {
   }
 
   stderr.write(
-    "usage: conductor review-log <append|summary>\n\n" +
+    "usage: carja review-log <append|summary>\n\n" +
       "  append '<json>'   record one finding + its disposition\n" +
       "  summary [--since <ISO date>]\n\n" +
       "Fields: severity (BLOCKER|IMPORTANT|NIT|SCOPE), action (fixed|dismissed|known-gap|deferred),\n" +

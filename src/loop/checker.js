@@ -10,7 +10,7 @@
 // ⇒ not approved. This keeps a crashed/confused/silent Checker from waving work
 // through.
 
-export const VERDICT_REL = "conductor/1-workbench/checker-verdict.json";
+export const VERDICT_REL = "carja/1-workbench/checker-verdict.json";
 
 /**
  * The rubric-v2 evidence bar, in code (E3).

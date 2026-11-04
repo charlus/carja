@@ -9,10 +9,10 @@ description: Storyboard (Shaping the Experience)
 **Trigger:** "Storyboard", "Shape the experience", "Who's the main character?"
 **Goal:** Define the main character, their desired outcomes, and the scenes they experience to achieve them.
 **Output:**
-1. `conductor/2-backlog/project-backlog/[ProjectName]/storyboard/main-character.md` (Who they are, what they want)
-2. `conductor/2-backlog/project-backlog/[ProjectName]/storyboard/storyboard.md` (The scenes they go through)
+1. `carja/2-backlog/project-backlog/[ProjectName]/storyboard/main-character.md` (Who they are, what they want)
+2. `carja/2-backlog/project-backlog/[ProjectName]/storyboard/storyboard.md` (The scenes they go through)
 
-**Templates:** Use the templates in `conductor/5-templates/storyboard-workflow/` for consistent output structure.
+**Templates:** Use the templates in `carja/5-templates/storyboard-workflow/` for consistent output structure.
 
 **Interview technique:** Load `.agents/skills/grilling/SKILL.md` (to draw out the character) and `.agents/skills/collaborative-drafting/SKILL.md` (to propose scenes and documents). One question at a time, recommend an answer to each, look facts up instead of asking, gate only at convergence — one approval per saved document.
 
@@ -29,8 +29,8 @@ Everything about *how* to interview and draft lives in the two primitives. This 
 
 ## Phase 0: Setup (Orient and Connect)
 
-1.  **Check for existing Project (fact — look it up):** **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Project: read from it and do not ask. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open. Otherwise scan `conductor/2-backlog/project-backlog/` for a related Project. If found with Genesis, say so and use it as context. If none, recommend running Genesis first; if the user prefers to proceed, create a new Project (ask only for the name).
-2.  **Create the folder (action):** `conductor/2-backlog/project-backlog/[ProjectName]/storyboard/`. Confirm.
+1.  **Check for existing Project (fact — look it up):** **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Project: read from it and do not ask. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open. Otherwise scan `carja/2-backlog/project-backlog/` for a related Project. If found with Genesis, say so and use it as context. If none, recommend running Genesis first; if the user prefers to proceed, create a new Project (ask only for the name).
+2.  **Create the folder (action):** `carja/2-backlog/project-backlog/[ProjectName]/storyboard/`. Confirm.
 3.  **Load context (fact — look it up):** Read the three Genesis docs in `genesis/` yourself and summarize the core problem, the before and after, and the main capabilities so the session builds on them.
 
 ---
@@ -59,6 +59,6 @@ Everything about *how* to interview and draft lives in the two primitives. This 
 1.  **Review:** Read both documents to ensure Main Character and Scenes are consistent, and that the scenes deliver the Genesis transformation (before → after).
 2.  **Recap:** Who the main character is, their key outcomes, and the major scenes they experience.
 3.  **Confirm:** "Storyboard complete. We've defined the Main Character, their Outcomes, and the Scenes."
-4.  **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/grand-prd conductor/2-backlog/project-backlog/[ProjectName]`."*
+4.  **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/grand-prd carja/2-backlog/project-backlog/[ProjectName]`."*
 5.  **Next step:** **Blueprint** — the Grand PRD that synthesizes everything (adds `grand-prd.md` to this Project), then **Technical Vision** → **Carve**.
-6.  **Lifecycle:** The Project folder lives in `conductor/2-backlog/project-backlog/`; when all Implementations complete, the whole Project moves to `conductor/6-archive/`.
+6.  **Lifecycle:** The Project folder lives in `carja/2-backlog/project-backlog/`; when all Implementations complete, the whole Project moves to `carja/6-archive/`.
