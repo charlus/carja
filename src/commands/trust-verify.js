@@ -26,6 +26,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
+import { configPath as configPathOf } from "../names.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -49,7 +50,7 @@ export function commandHash(cmd) {
  */
 export async function resolveDeclaredVerify(root) {
   try {
-    const raw = JSON.parse(await readFile(join(root, "conductor.config.json"), "utf8"));
+    const raw = JSON.parse(await readFile(configPathOf(root), "utf8"));
     if (typeof raw.verify === "string" && raw.verify.trim()) {
       return { cmd: raw.verify.trim(), from: "conductor.config.json (verify)" };
     }

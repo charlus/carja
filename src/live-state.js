@@ -24,6 +24,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { ignoredNestedRepos } from "./nested-repos.js";
+import { statePath, configFileName } from "./names.js";
 
 /** How many of the newest ship-log entries are checked. Older MRs are history. */
 export const DEFAULT_ENTRIES = 5;
@@ -280,8 +281,8 @@ export async function collectLive(root, { shipLogMd, configRaw, run = runCommand
       return null;
     }
   };
-  const log = shipLogMd ?? (await read("conductor/0-compass/ship-log.md")) ?? "";
-  const config = configRaw !== undefined ? configRaw : await read("conductor.config.json");
+  const log = shipLogMd ?? (await read(statePath(root, "conductor/0-compass/ship-log.md"))) ?? "";
+  const config = configRaw !== undefined ? configRaw : await read(configFileName(root));
 
   const refs = mrRefsFromShipLog(log, entries ? { entries } : {});
   const repos = refs.some((r) => !r.project) ? await reposByForge(root, run) : { gitlab: [], github: [] };

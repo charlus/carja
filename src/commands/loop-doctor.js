@@ -30,6 +30,7 @@ import { readOnlyEnv } from "../loop/team-facing.js";
 import { defaultBranchRef } from "../loop/reconcile.js";
 import { harvestBlueprints } from "../loop/blueprint.js";
 import { nextAfterDoctor } from "../next-step.js";
+import { configPath as configPathOf } from "../names.js";
 
 const STATE_REL = "conductor/1-workbench/loop-state.json";
 const PROBE_REL = ".agents/.worktrees/conductor-doctor-probe";
@@ -111,7 +112,7 @@ export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd
   const facts = {};
   let rawConfig = {};
   try {
-    rawConfig = (await exists(join(root, "conductor.config.json"))) ? await readJson(join(root, "conductor.config.json")) : {};
+    rawConfig = (await exists(configPathOf(root))) ? await readJson(configPathOf(root)) : {};
   } catch (e) {
     facts.configErrors = [`conductor.config.json is not valid JSON: ${e.message}`];
   }

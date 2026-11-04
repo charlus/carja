@@ -14,9 +14,11 @@
 import { createHash } from "node:crypto";
 
 export const CARD_LIMIT_BYTES = 3072;
-const BEGIN_RE = /<!-- conductor:project-card:begin[^>]*-->/;
+// Readers accept both marker prefixes (rename to Carja, PR 1); writers emit `conductor:`.
+const BEGIN_RE = /<!-- (?:carja|conductor):project-card:begin[^>]*-->/;
 const END = "<!-- conductor:project-card:end -->";
-const SOURCES_RE = /<!-- conductor:project-card:sources (\{.*\}) -->\n?/;
+const END_RE = /<!-- (?:carja|conductor):project-card:end -->/;
+const SOURCES_RE = /<!-- (?:carja|conductor):project-card:sources (\{.*\}) -->\n?/;
 
 const HEADINGS = ["Purpose", "Stack", "Commands", "Layout", "Conventions", "Product areas", "Read more"];
 const CODE_SECTIONS = ["Stack", "Commands", "Layout", "Read more"];
@@ -63,8 +65,8 @@ export function renderFacts(facts) {
 function cardBlock(text) {
   const m = BEGIN_RE.exec(text);
   if (!m) return null;
-  const end = text.indexOf(END, m.index);
-  return end === -1 ? null : text.slice(m.index, end + END.length);
+  const e = END_RE.exec(text.slice(m.index));
+  return e ? text.slice(m.index, m.index + e.index + e[0].length) : null;
 }
 
 /** Sections of a card: { begin, sections: {heading: body}, order: [headings], areaText: {path: text} }. */
@@ -79,7 +81,7 @@ export function parseCard(text) {
     const nl = p.indexOf("\n");
     const heading = p.slice(0, nl).trim();
     order.push(heading);
-    sections[heading] = p.slice(nl + 1).replace(END, "").trim();
+    sections[heading] = p.slice(nl + 1).replace(END_RE, "").trim();
   }
   const areaText = {};
   for (const line of (sections["Product areas"] ?? "").split("\n")) {
@@ -116,7 +118,7 @@ export function buildCard({ facts, previous }) {
 
 /** Card bytes as an agent reads them: without the marker and stamp comments. */
 function contentBytes(block) {
-  return Buffer.byteLength(block.replace(BEGIN_RE, "").replace(SOURCES_RE, "").replace(END, "").trim());
+  return Buffer.byteLength(block.replace(BEGIN_RE, "").replace(SOURCES_RE, "").replace(END_RE, "").trim());
 }
 
 /** Shape, size, no TODO, facts untouched. @returns {{ok:boolean, problems:string[]}} */
@@ -160,7 +162,7 @@ export function stampCard(text, sources) {
   const stamped = block
     .replace(BEGIN_RE, "<!-- conductor:project-card:begin status=ok -->")
     .replace(SOURCES_RE, "")
-    .replace(END, `<!-- conductor:project-card:sources ${JSON.stringify(hashes)} -->\n${END}`);
+    .replace(END_RE, `<!-- conductor:project-card:sources ${JSON.stringify(hashes)} -->\n${END}`);
   return text.replace(block, stamped);
 }
 

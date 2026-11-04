@@ -14,6 +14,7 @@ import { discoveryDone, harvestBlueprints, BLUEPRINT_STAGES } from "../loop/blue
 import { ignoredNestedRepos } from "../nested-repos.js";
 import { PROJECTS_REL } from "../loop/slices.js";
 import { STATE_REL } from "../loop/state-sync.js";
+import { configPath as configPathOf } from "../names.js";
 
 const CONFIG = "conductor.config.json";
 const readJsonOr = async (p, fallback) => ((await exists(p)) ? JSON.parse(await readFile(p, "utf8")) : fallback);
@@ -33,7 +34,7 @@ export async function loopOnCommand(root, project, { args, stdout, stderr, confi
   // D2: without a name, the projects and which ones it can turn on.
   if (!project && !backlog) {
     const { readProjects, renderProjects } = await import("../projects.js");
-    const config = await readJsonOr(join(root, CONFIG), {});
+    const config = await readJsonOr(configPathOf(root), {});
     const list = await readProjects(root, { config, readBlueprints, exists });
     if (!list.length) {
       stdout.write("  No project in conductor/2-backlog/project-backlog/ yet. Start one in your agent with /genesis.\n");
@@ -48,7 +49,7 @@ export async function loopOnCommand(root, project, { args, stdout, stderr, confi
     stderr.write(`No ${STATE_REL} found. Run 'conductor init' or 'conductor upgrade' first.\n`);
     return 1;
   }
-  const config = await readJsonOr(join(root, CONFIG), {});
+  const config = await readJsonOr(configPathOf(root), {});
   const state = await readJsonOr(join(root, STATE_REL), {});
   const bp = await readBlueprints(root, [project]);
   const p = bp.projects.find((x) => x.name === project);
@@ -109,7 +110,7 @@ export async function loopOnCommand(root, project, { args, stdout, stderr, confi
     stdout.write("  Nothing written.\n");
     return 1;
   }
-  await writeJson(join(root, CONFIG), plan.config);
+  await writeJson(configPathOf(root), plan.config);
   await writeJson(join(root, STATE_REL), plan.state);
   stdout.write(`\n  Written: ${CONFIG}, ${STATE_REL}. Commit them with your next change.\n`);
   const { loopDoctor } = await import("./loop-doctor.js");
@@ -122,9 +123,9 @@ export async function loopOffCommand(root, project, { stdout, stderr }) {
     stderr.write("usage: conductor loop off <project> [dir]\n");
     return 1;
   }
-  const config = await readJsonOr(join(root, CONFIG), {});
+  const config = await readJsonOr(configPathOf(root), {});
   const plan = planLoopOff({ project, config });
   for (const c of plan.changes) stdout.write(`  • ${c}\n`);
-  await writeJson(join(root, CONFIG), plan.config);
+  await writeJson(configPathOf(root), plan.config);
   return 0;
 }

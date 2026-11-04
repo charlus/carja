@@ -27,6 +27,7 @@ import { existsSync } from "node:fs";
 import { join, dirname, resolve, relative, isAbsolute } from "node:path";
 import { PRECEDENCE, outranks } from "../personas.js";
 import { ignoredNestedRepos } from "../nested-repos.js";
+import { statePath } from "../names.js";
 
 export const REVIEW_LOG_REL = "conductor/1-workbench/review-log.jsonl";
 
@@ -231,7 +232,7 @@ export function summarise(records) {
 export function findProjectRoot(cwd) {
   let dir = resolve(cwd);
   for (;;) {
-    if (existsSync(join(dir, "conductor")) && existsSync(join(dir, ".agents"))) return dir;
+    if ((existsSync(join(dir, "carja")) || existsSync(join(dir, "conductor"))) && existsSync(join(dir, ".agents"))) return dir;
     const up = dirname(dir);
     if (up === dir) return resolve(cwd);
     dir = up;
@@ -254,7 +255,7 @@ async function projectPath(file, cwd, root) {
 export async function reviewLogCommand(args, { cwd, stdout, stderr }) {
   const sub = args.find((a) => !a.startsWith("-")) ?? "";
   const root = findProjectRoot(cwd);
-  const path = join(root, REVIEW_LOG_REL);
+  const path = join(root, statePath(root, REVIEW_LOG_REL));
 
   if (sub === "append") {
     const json = args[args.indexOf("append") + 1];

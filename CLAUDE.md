@@ -33,6 +33,7 @@ conductor-framework/          ← You are here (package source)
 │   ├── cli.js                 # Argument parser and command dispatch (one `case` per command)
 │   ├── detect.js               # Tech stack detection (used by init for skill recommendations)
 │   ├── registry.js             # Remote skill registry client (fetch index, download, glab/gh auth)
+│   ├── names.js                # The two names during the rename to Carja: readers accept both, writers use CURRENT
 │   ├── selective-copy.js       # Interactive/selective template copy for init
 │   ├── kebab.js                 # kebab-case rename + checksum-key migration (used by upgrade)
 │   ├── update.js                # Diffs installed vs. latest templates for upgrade

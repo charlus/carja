@@ -16,7 +16,7 @@ import { walk } from "./survey.js";
 import { classifyFile } from "../survey.js";
 import { ignoredNestedRepos } from "../nested-repos.js";
 import { buildCard, parseCard, checkCard, stampCard, staleSources, renderFacts } from "../project-card.js";
-import { FRAMEWORK_END } from "../agents-md.js";
+import { configPath as configPathOf, stateDirName } from "../names.js";
 
 const MANIFESTS = ["package.json", "pyproject.toml", "requirements.txt", "go.mod", "Cargo.toml", "pom.xml", "build.gradle", "Gemfile", "composer.json", "Makefile"];
 const SCRIPTS = ["dev", "start", "build", "test", "lint", "typecheck"];
@@ -24,7 +24,7 @@ const KNOWN = [
   "react", "next", "vue", "nuxt", "svelte", "@sveltejs/kit", "angular", "@angular/core", "vite", "express", "fastify", "@nestjs/core", "hono", "electron", "typescript", "prisma", "drizzle-orm", "vitest", "jest", "playwright",
   "fastapi", "django", "flask", "sqlalchemy", "pydantic", "celery", "pytest", "alembic", "streamlit",
 ];
-const SKIP_DIRS = new Set(["conductor", "node_modules", "dist", "build", "coverage", "venv"]);
+const SKIP_DIRS = new Set(["carja", "conductor", "node_modules", "dist", "build", "coverage", "venv"]);
 
 async function readOr(path, fallback = null) {
   try {
@@ -53,7 +53,7 @@ export async function gatherFacts(root) {
   const commands = [];
   const layout = [];
 
-  const config = JSON.parse((await readOr(join(root, "conductor.config.json"))) ?? "{}");
+  const config = JSON.parse((await readOr(configPathOf(root))) ?? "{}");
   if (config.verify) commands.push({ what: "verify", cmd: config.verify });
   if (config.eval) commands.push({ what: "eval", cmd: config.eval });
   if (config.loop?.setup) commands.push({ what: "setup", cmd: config.loop.setup });
@@ -98,19 +98,20 @@ export async function gatherFacts(root) {
     }
   }
 
-  const areasDir = join(root, "conductor", "3-product-areas");
+  const sd = stateDirName(root);
+  const areasDir = join(root, sd, "3-product-areas");
   const areas = [];
   for (const name of (await dirsOf(areasDir)).sort()) {
     if (name.startsWith("example-")) continue; // the template's examples, not the project's
-    areas.push(`conductor/3-product-areas/${name}/`);
+    areas.push(`${sd}/3-product-areas/${name}/`);
     for (const f of (await readdir(join(areasDir, name)).catch(() => [])).filter((n) => n.endsWith(".md")).sort()) {
-      sources[`conductor/3-product-areas/${name}/${f}`] = (await readOr(join(areasDir, name, f))) ?? "";
+      sources[`${sd}/3-product-areas/${name}/${f}`] = (await readOr(join(areasDir, name, f))) ?? "";
     }
   }
-  for (const rel of ["conductor/0-compass/north-star.md"]) sources[rel] = (await readOr(join(root, rel))) ?? "";
-  const tech = join(root, "conductor", "4-context", "technical");
+  for (const rel of [`${sd}/0-compass/north-star.md`]) sources[rel] = (await readOr(join(root, rel))) ?? "";
+  const tech = join(root, sd, "4-context", "technical");
   for (const f of (await readdir(tech).catch(() => [])).filter((n) => n.endsWith(".md")).sort()) {
-    sources[`conductor/4-context/technical/${f}`] = (await readOr(join(tech, f))) ?? "";
+    sources[`${sd}/4-context/technical/${f}`] = (await readOr(join(tech, f))) ?? "";
   }
 
   const facts = {
@@ -158,10 +159,10 @@ export async function agentsMdCommand(args, { cwd, stdout, stderr }) {
 
   if (sub === "write") {
     const card = buildCard({ facts, previous: parseCard(text) });
-    const m = /<!-- conductor:project-card:begin[^>]*-->[\s\S]*?<!-- conductor:project-card:end -->/.exec(text);
+    const m = /<!-- (?:carja|conductor):project-card:begin[^>]*-->[\s\S]*?<!-- (?:carja|conductor):project-card:end -->/.exec(text);
     let out;
     if (m) out = text.replace(m[0], card);
-    else if (text.includes(FRAMEWORK_END)) out = text.replace(FRAMEWORK_END, `${FRAMEWORK_END}\n\n${card}`);
+    else if (/<!-- (?:carja|conductor):framework:end -->/.test(text)) out = text.replace(/<!-- (?:carja|conductor):framework:end -->/, (end) => `${end}\n\n${card}`);
     else out = `${card}\n\n${text}`;
     await writeFile(agentsPath, out, "utf8");
     const todos = (card.match(/TODO/g) ?? []).length;

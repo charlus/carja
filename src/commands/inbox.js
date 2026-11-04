@@ -35,11 +35,11 @@ export async function inboxCommand(args, context) {
       ? `\n  ${messages.length} loop message${messages.length === 1 ? "" : "s"} — ${MESSAGES_REL}\n\n${messages.slice(-5).map((m) => `   · ${m.title}${m.text ? `: ${m.text.slice(0, 140)}` : ""}`).join("\n")}\n\n`
       : "";
     if (!state.inbox.items.length) {
-      context.stdout.write(`  Inbox is empty (${INBOX_REL})\n${loopLines}`);
+      context.stdout.write(`  Inbox is empty (${state.inbox.relPath})\n${loopLines}`);
       return 0;
     }
     context.stdout.write(
-      `\n  ${state.inbox.items.length} in the inbox — ${INBOX_REL}\n\n` +
+      `\n  ${state.inbox.items.length} in the inbox — ${state.inbox.relPath}\n\n` +
         state.inbox.items.map((it) => `   · ${it.title}`).join("\n") +
         "\n\n" +
         loopLines

@@ -8,6 +8,16 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [6.54.0] — 2026-11-04 — Ready for the new name: every reader accepts Carja
+
+Compatibility: upgrade only
+
+### Added
+
+- **The CLI reads the framework's next name, Carja, beside the current one** (step 1 of `docs/roadmap/Rename-To-Carja.md`). Nothing changes for an install: nothing is written under the new name yet. `carja.config.json`, `.agents/.carja-version.json` and `carja:` markers in `AGENTS.md` and the Claude Code shims are read when present. `CARJA_*` environment variables work as their `CONDUCTOR_*` twins (an explicit `CONDUCTOR_*` value wins). `status`, `inbox`, `view`, `review-log` and `agents-md` also read a `carja/` state folder. The loop and the hooks do not: `upgrade` will move them together with the folder.
+
+---
+
 ## [6.53.0] — 2026-11-04 — After a merge, the same command takes the next item
 
 Compatibility: upgrade only

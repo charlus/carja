@@ -18,6 +18,7 @@ import { nextAfterStatus } from "../next-step.js";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { configPath as configPathOf, statePath } from "../names.js";
 
 function parseArgs(args) {
   const opts = { color: null, json: false, live: false, staleDays: 30, dir: null };
@@ -47,7 +48,7 @@ export async function loopItems(root) {
     const { readSlices, readBlueprints } = await import("./loop.js");
     const { harvestSlices } = await import("../loop/slices.js");
     const { harvestBlueprints } = await import("../loop/blueprint.js");
-    const raw = JSON.parse(await readFile(join(root, "conductor.config.json"), "utf8"));
+    const raw = JSON.parse(await readFile(configPathOf(root), "utf8"));
     const cfg = parseLoopConfig(raw);
     const items = [];
     if (cfg.slices === true || cfg.slices.length) items.push(...harvestSlices(await readSlices(root, cfg.slices)));
@@ -61,10 +62,10 @@ export async function loopItems(root) {
 /** Projects in the backlog the loop is not on for. Never throws. */
 export async function loopOffProjects(root) {
   try {
-    const raw = JSON.parse(await readFile(join(root, "conductor.config.json"), "utf8")).loop ?? {};
+    const raw = JSON.parse(await readFile(configPathOf(root), "utf8")).loop ?? {};
     const on = (k) => raw[k] === true || (Array.isArray(raw[k]) ? raw[k] : []);
     if (on("blueprint") === true || on("slices") === true) return [];
-    const names = (await readdir(join(root, "conductor/2-backlog/project-backlog"), { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
+    const names = (await readdir(join(root, statePath(root, "conductor/2-backlog/project-backlog")), { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
     return names.filter((n) => !on("blueprint").includes(n) && !on("slices").includes(n));
   } catch {
     return [];
@@ -111,7 +112,7 @@ export async function statusCommand(args, context) {
   {
     const { readProjects, renderProjects } = await import("../projects.js");
     const { readBlueprints, exists } = await import("./loop.js");
-    const config = JSON.parse(await readFile(join(root, "conductor.config.json"), "utf8").catch(() => "{}"));
+    const config = JSON.parse(await readFile(configPathOf(root), "utf8").catch(() => "{}"));
     const block = renderProjects(await readProjects(root, { config, readBlueprints, exists }));
     if (block) context.stdout.write(`${block}\n\n`);
   }
@@ -164,10 +165,10 @@ export async function statusCommand(args, context) {
     const last = messages.at(-1);
     context.stdout.write(`  📬 ${messages.length} loop message${messages.length === 1 ? "" : "s"} in ${MESSAGES_REL}. Newest: ${last.title}${last.text ? `: ${last.text.slice(0, 160)}${last.text.length > 160 ? "…" : ""}` : ""}\n`);
   }
-  const reports = (await readdir(join(root, "conductor/1-workbench")).catch(() => [])).filter((f) => /^loop-report-.+\.md$/.test(f));
-  if (reports.length) context.stdout.write(`  📋 Loop report${reports.length === 1 ? "" : "s"}: ${reports.map((f) => `conductor/1-workbench/${f}`).join(", ")}. Merge with /merge-stack <project>.\n`);
+  const reports = (await readdir(join(root, statePath(root, "conductor/1-workbench"))).catch(() => [])).filter((f) => /^loop-report-.+\.md$/.test(f));
+  if (reports.length) context.stdout.write(`  📋 Loop report${reports.length === 1 ? "" : "s"}: ${reports.map((f) => `${statePath(root, "conductor/1-workbench")}/${f}`).join(", ")}. Merge with /merge-stack <project>.\n`);
   const answeredRounds = await Promise.all((await md(`${QUESTIONS_REL}/answered`)).map((f) => readFile(join(root, QUESTIONS_REL, "answered", f), "utf8")));
-  const rulingsText = await readFile(join(root, "conductor/1-workbench/rulings.md"), "utf8").catch(() => "");
+  const rulingsText = await readFile(join(root, statePath(root, "conductor/1-workbench/rulings.md")), "utf8").catch(() => "");
   const st = decisionStats({ rulingsText, answeredRounds });
   if (st.answered || st.rulings) {
     context.stdout.write(`  ℹ️  Loop decisions: you took the recommendation ${st.tookRecommendation} of ${st.answered} times, and overruled ${st.overruled} of ${st.rulings} ruling${st.rulings === 1 ? "" : "s"}.\n`);

@@ -21,6 +21,7 @@ import { ensureCodeWorktree } from "./loop/nested.js";
 import { untrackedPaths, hideSetupArtifacts } from "./loop/state-sync.js";
 import { ignoredNestedRepos } from "./nested-repos.js";
 import { parseLoopConfig } from "./loop/config.js";
+import { configPath as configPathOf } from "./names.js";
 
 const exists = (p) => access(p).then(() => true, () => false);
 
@@ -50,7 +51,7 @@ export async function locate(cwd, git) {
 export async function codeDirs(root) {
   let cfg = { codeDir: null, setup: null };
   try {
-    cfg = parseLoopConfig(JSON.parse(await readFile(join(root, "conductor.config.json"), "utf8")));
+    cfg = parseLoopConfig(JSON.parse(await readFile(configPathOf(root), "utf8")));
   } catch {
     /* no config: no loop.code_dir, no setup */
   }

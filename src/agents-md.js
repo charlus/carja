@@ -21,7 +21,6 @@ export const FRAMEWORK_BEGIN =
   "<!-- conductor:framework:begin — generated from .agents/ by `conductor upgrade`. Do not edit here: edit .agents/ and re-run upgrade. -->";
 export const FRAMEWORK_END = "<!-- conductor:framework:end -->";
 export const CARD_BEGIN = "<!-- conductor:project-card:begin status=draft -->";
-const CARD_BEGIN_PREFIX = "<!-- conductor:project-card:begin";
 export const CARD_END = "<!-- conductor:project-card:end -->";
 
 const DRAFT_CARD = [
@@ -73,14 +72,21 @@ export async function buildFrameworkBlock(agentsDir) {
   return `${FRAMEWORK_BEGIN}\n${parts.join("\n\n")}\n${FRAMEWORK_END}`;
 }
 
-/** Split `text` around one begin/end marker pair, or null if absent. */
-function splitBlock(text, beginPrefix, end) {
-  const b = text.indexOf(beginPrefix);
-  if (b === -1) return null;
-  const e = text.indexOf(end, b);
-  if (e === -1) return null;
-  const stop = e + end.length;
-  return { before: text.slice(0, b), block: text.slice(b, stop), after: text.slice(stop) };
+// Readers accept both marker prefixes (rename to Carja, PR 1); writers emit the constants above.
+const marker = (rest) => new RegExp(`<!-- (?:carja|conductor):${rest}`);
+const FW_BEGIN_RE = marker("framework:begin");
+const FW_END_RE = marker("framework:end -->");
+const CARD_BEGIN_RE = marker("project-card:begin");
+const CARD_END_RE = marker("project-card:end -->");
+
+/** Split `text` around one begin/end marker pair (regexes), or null if absent. */
+function splitBlock(text, beginRe, endRe) {
+  const b = beginRe.exec(text);
+  if (!b) return null;
+  const e = endRe.exec(text.slice(b.index));
+  if (!e) return null;
+  const stop = b.index + e.index + e[0].length;
+  return { before: text.slice(0, b.index), block: text.slice(b.index, stop), after: text.slice(stop) };
 }
 
 /**
@@ -93,10 +99,10 @@ function splitBlock(text, beginPrefix, end) {
  */
 export function renderRootAgentsMd(existing, framework) {
   if (existing == null) return `${framework}\n\n${DRAFT_CARD}\n`;
-  const fw = splitBlock(existing, FRAMEWORK_BEGIN.slice(0, 32), FRAMEWORK_END);
+  const fw = splitBlock(existing, FW_BEGIN_RE, FW_END_RE);
   if (!fw) return `${framework}\n\n${DRAFT_CARD}\n\n${existing}`;
   let out = fw.before + framework + fw.after;
-  if (!splitBlock(out, CARD_BEGIN_PREFIX, CARD_END)) {
+  if (!splitBlock(out, CARD_BEGIN_RE, CARD_END_RE)) {
     const at = out.indexOf(FRAMEWORK_END) + FRAMEWORK_END.length;
     out = `${out.slice(0, at)}\n\n${DRAFT_CARD}${out.slice(at)}`;
   }
@@ -109,7 +115,7 @@ export function renderRootAgentsMd(existing, framework) {
  * without the markers is entirely the user's.
  */
 export function extractStubNotes(stub) {
-  const managed = splitBlock(stub, "<!-- conductor:managed:begin", "<!-- conductor:managed:end -->");
+  const managed = splitBlock(stub, marker("managed:begin"), marker("managed:end -->"));
   const text = (managed ? managed.before + managed.after : stub)
     .replace(FRONTMATTER_RE, "")
     .replace(/<!-- (Add your project-specific instructions|⬆ Conductor manages)[^\n]*-->/g, "")

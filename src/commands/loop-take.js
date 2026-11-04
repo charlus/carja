@@ -8,6 +8,7 @@ import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { readReady, writeReady, resolveTake, openOnly } from "../loop/ready-queue.js";
 import { parseLoopConfig } from "../loop/config.js";
+import { configPath as configPathOf } from "../names.js";
 
 const BACKLOG_REL = "conductor/2-backlog/task-backlog.md";
 
@@ -58,7 +59,7 @@ export async function loopTakeCommand(root, text, { drop = false, stdout, stderr
   stdout.write(list.length ? `\n  The loop's queue (${list.length}):\n${list.map((e) => `    - ${e.title}`).join("\n")}\n` : "\n  The loop's queue is empty.\n");
   let requireReady = false;
   try {
-    requireReady = parseLoopConfig(JSON.parse(await readFile(join(root, "conductor.config.json"), "utf8"))).requireReady;
+    requireReady = parseLoopConfig(JSON.parse(await readFile(configPathOf(root), "utf8"))).requireReady;
   } catch {
     /* no config: the loop takes every open item */
   }
