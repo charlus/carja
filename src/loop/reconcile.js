@@ -74,6 +74,29 @@ export async function defaultBranchRef(git) {
   return null;
 }
 
+/**
+ * After the owner merges a loop MR, bring the checkout the loop reads its
+ * backlog from up to the default branch. A fast-forward only, and only when the
+ * checked-out branch tracks the default branch: never a rebase, never a stash.
+ * Git keeps uncommitted changes to files the merge does not touch, and refuses
+ * the rest. Call after a fetch.
+ * @returns {Promise<{status:"updated"|"current"|"skipped"|"failed", ref?:string, count?:number, reason?:string}>}
+ */
+export async function catchUpCheckout({ git }) {
+  const upstream = await git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const ref = await defaultBranchRef(git);
+  if (!upstream.ok || !ref || upstream.stdout !== ref) return { status: "skipped" };
+  const behind = await git(["rev-list", "--count", `HEAD..${ref}`]);
+  const count = Number.parseInt(behind.stdout, 10) || 0;
+  if (!behind.ok || count === 0) return { status: "current", ref, count: 0 };
+  const merge = await git(["merge", "--ff-only", "-q", ref]);
+  if (!merge.ok) {
+    const reason = (merge.stderr || "").split("\n").find((l) => /fatal|error/i.test(l)) || "the fast-forward was refused";
+    return { status: "failed", ref, reason: reason.replace(/^(fatal|error):\s*/i, "").trim() };
+  }
+  return { status: "updated", ref, count };
+}
+
 /** The loop's worktrees (or those of `prefixes`): path and branch, from `git worktree list --porcelain`. */
 export async function loopWorktrees(git, prefixes = [LOOP_PREFIX]) {
   const list = await git(["worktree", "list", "--porcelain"]);

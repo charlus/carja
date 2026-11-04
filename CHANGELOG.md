@@ -8,6 +8,16 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [6.53.0] — 2026-11-04 — After a merge, the same command takes the next item
+
+Compatibility: upgrade only
+
+### Added
+
+- **After you merge, the same command takes the next item.** A `conductor loop <project>` run (once, before the stack starts) or a `--from-conductor` run first fetches and fast-forwards the folder it runs in to the default branch, so it sees the merged backlog, slices and Blueprint without a `git pull` (autopportunity, 2026-10-22: after the Blueprint MR, the up arrow alone would not have seen the 17 new slices). It prints `updated to origin/main (n new commits)`. Only a branch that tracks the default branch is moved, and only by a fast-forward: no rebase, no stash. Uncommitted changes to other files stay. A branch that diverged, or a local edit the merge would overwrite, leaves the folder as it is, with one warning line. A dry run changes nothing.
+
+---
+
 ## [6.52.0] — 2026-10-23 — The lessons of two overnight runs: a guide to merge, a wait for the quota, a gate for dependencies
 
 Compatibility: upgrade plus a step
