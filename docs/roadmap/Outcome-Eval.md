@@ -104,3 +104,26 @@ Recorded before the first pilot session. The specifics are in the private record
 The noise floor caught a fault in deviation 2. On one task, all six bare runs scored exactly the same fraction of the hidden tests. Cause: the tests call a function whose name the plan gives, but with a signature the real build chose. The interface check compared names only. The interface lines now give the full signature (decorators, enum members, dataclass fields, the new fields of an existing class) of every name the hidden tests reference that is new or changed since the base, including the private helpers the tests call. Still names and signatures, never behaviour.
 
 The 10 noise-floor sessions run under the old prompts are discarded and the noise floor is run again. No carja-arm session had run, so no comparison between the arms had been seen. Quota on those 10 sessions: $5.27 at list price, 24 minutes of session time.
+
+## 2026-11-05 — Pilot results
+
+66 sessions (12 noise floor, 54 pilot), no session cut by the usage limit or an outage, none capped by the time limit. Total: $25.64 at list price. Analysis: `test/evals/outcome/analyze.mjs`, committed before the first pilot result (`dca9a43`).
+
+**Primary metric: no difference.** Bare 3/27, carja 3/27. All six passes are on one task, in both arms. Not one pair is discordant, so McNemar's test has nothing to work with (p = 1). The noise-floor stop rule is triggered, so by the pre-registration there is no confirmatory run.
+
+**Cost: Carja costs more** (carja/bare, bootstrap 95% interval):
+
+| | Ratio | Interval |
+|---|---|---|
+| Turns | 1.20× | 1.11–1.31 |
+| Tokens | 1.39× | 1.27–1.54 |
+| Wall time | 1.37× | 1.19–1.57 |
+| List price | 1.29× | 1.22–1.36 |
+
+**Secondary: hidden tests passed.** Bare 76%, carja 71%, a paired difference of −4.7 points (95% interval −9.8 to −0.5). It comes from two tasks. On the larger gap, the spec does not say how the service decides that it runs in production; the arms chose differently, and the hidden tests encode the real build's choice. That is a guess about an ambiguous spec, not a defect.
+
+**What the pilot measured, and what it did not.** The carja arm had the root `AGENTS.md` in context (checked by a probe session) and Carja's 31 skills, and it kept the task tracker up to date. It never entered a Carja workflow: given "implement this, commit when done" headless, it built and committed directly, as the bare arm did, in about 12 turns. So the pilot measured **Carja installed**, not **Carja's Build workflow used**. For a direct prompt, the install adds about 30% cost and no measured benefit.
+
+**The tasks sit near the floor.** Eight of nine tasks failed in all 54 sessions. On the tasks built with later fixes, both arms reproduce the defects the real build shipped. The binary metric cannot separate arms when almost every trial fails; the fraction of hidden tests passed is the more sensitive measure.
+
+**Not concluded:** whether Carja's Build workflow, invoked as the owner uses it, changes outcomes. That needs a new pre-registration.
