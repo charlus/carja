@@ -136,3 +136,46 @@ test("F5: the first commit after a pull keeps the old heartbeat history", () => 
     rmSync(base, { recursive: true, force: true });
   }
 });
+
+// 7.0.2, F7 (autopportunity, 2026-11-05): the loop's run lock was not adopted,
+// and a git dir that already had the new heartbeat kept the old history apart.
+test("F7: the 6.x run lock is adopted, so a 7.x loop sees it", () => {
+  const { base, p, gitDir } = v7project();
+  try {
+    writeFileSync(join(gitDir, `${OLD}-holder`), '{"pid":1,"at":"2026-10-22T14:46:57.740Z"}');
+    const r = carja(p, "status");
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.ok(existsSync(join(gitDir, "carja-holder")));
+    assert.ok(!existsSync(join(gitDir, `${OLD}-holder`)));
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("F7: when both heartbeats exist, the old history goes first into the new file (CLI)", () => {
+  const { base, p, gitDir } = v7project();
+  try {
+    writeFileSync(join(gitDir, "carja-heartbeat"), "300 installed\n");
+    writeFileSync(join(gitDir, `${OLD}-heartbeat`), "100 installed\n200 pre-commit\n");
+    carja(p, "status");
+    assert.ok(readFileSync(join(gitDir, "carja-heartbeat"), "utf8").startsWith("100 installed\n200 pre-commit\n300 installed\n"));
+    assert.ok(!existsSync(join(gitDir, `${OLD}-heartbeat`)));
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("F7: when both heartbeats exist, the hook merges them (a nested code repo, which no carja command visits)", () => {
+  const { base, p, gitDir } = v7project();
+  try {
+    writeFileSync(join(gitDir, "carja-heartbeat"), "300 installed\n");
+    writeFileSync(join(gitDir, `${OLD}-heartbeat`), "100 installed\n");
+    G(p, "switch", "-q", "-c", "feat/y");
+    writeFileSync(join(p, "carja/1-workbench/inbox.md"), "- another thought\n");
+    G(p, "commit", "-qam", "note");
+    assert.match(readFileSync(join(gitDir, "carja-heartbeat"), "utf8"), /^100 installed\n300 installed\n\d+ pre-commit\n$/);
+    assert.ok(!existsSync(join(gitDir, `${OLD}-heartbeat`)));
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
