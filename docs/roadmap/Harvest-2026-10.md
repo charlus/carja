@@ -1,6 +1,6 @@
 # Harvest 2026-10 — peers, harness changes and research
 
-> **Status:** first batch shipped in 6.14.0 (2026-10-16, branch `fix/harvest-gates-2026-10`): R1 sandbox credentials, R3 skill names, A8 AGENTS.md shadow warning, Q5 interview rounds, Q4 `loop.models`. Q3 (one outcome eval) approved, not designed yet. Everything else below is open or parked.
+> **Status:** first batch shipped in 6.14.0 (2026-10-16, branch `fix/harvest-gates-2026-10`): R1 sandbox credentials, R3 skill names, A8 AGENTS.md shadow warning, Q5 interview rounds, Q4 `loop.models`. Q3 (one outcome eval) approved, not designed yet. Gate batch A3, A4, A5, A9 shipped in 7.1.0 (2026-11-05, branch `feat/gate-batch-a3-a9`); limits measured on 9,662 commits of eurassistant, evalapp-v2, website and autopportunity (D1: A4 counts a changed assertion; D2: line-level lint suppressions with a rule code stay allowed). Everything else below is open or parked.
 >
 > **Sources:** eight research passes on 2026-10-16 — Superpowers, Pocock skills and gstack, AG Kit / Antigravity Superpowers / Test in Prod / Ralph, ECC / AI-DLC / AGENTS.md / Stitch, 16 unaudited peers (Spec Kit, OpenSpec, Kiro, BMAD, Compound Engineering, GSD, Google Conductor and others), harness-engineering practice June–October 2026, research papers April–October 2026, and the Claude Code / Codex / agy changelogs. Third-party code was read, never run. Most peer measurements are author-run on small samples.
 
@@ -28,12 +28,12 @@ It subtracts. Superpowers, Pocock, gstack, AG Kit and Agent OS cut skills and pr
 
 ## Open, ranked
 
-- **A3** fail a green verify that ran zero tests (gstack `5b9b837`).
-- **A4** TDD presence gate passes a test change with no assertion. Require a net assertion gain (Banik et al., 80% weak oracles in 86k agent patches).
-- **A5** block gate-weakening edits: suppression pragmas, `continue-on-error`, `[skip ci]`, `--no-verify`, new TODO without an issue (gstack `review/gate-integrity.md`, GSD).
+- **A3** fail a green verify that ran zero tests (gstack `5b9b837`). **Shipped in 7.1.0**: `pre-push`, `CARJA_NO_TESTS_RAN`. 0 false positives on the five real verify suites.
+- **A4** TDD presence gate passes a test change with no assertion. Require a net assertion gain (Banik et al., 80% weak oracles in 86k agent patches). **Shipped in 7.1.0** as "touch an assertion" (D1): a strict net gain would have blocked 97 past commits, including fixes that change an expected value; the chosen rule blocks 81 of 1,353.
+- **A5** block gate-weakening edits: suppression pragmas, `continue-on-error`, `[skip ci]`, `--no-verify`, new TODO without an issue (gstack `review/gate-integrity.md`, GSD). **Shipped in 7.1.0** (D2): every pragma would have blocked 363 past commits, almost all `# noqa: E402/F401`; the narrow set blocks 24 of 9,662. `CARJA_NO_INTEGRITY`.
 - **A6** Maker `escalate` signal. Strongest measured result: an abort option cut test-cheating 54% → 9% (ImpossibleBench, arXiv 2510.20270; Gomez, arXiv 2608.29460). **Shipped in 6.15.0** as the `escalate` signal, confirmed by the first real crossing (nine wasted beats) and verified live.
 - **A7** Checker verdict as schema-checked stdout (`--json-schema`), read-only Checker. Deletes the verdict file and its retry.
-- **A9** Correct the fact-gate docs to what was measured: ECC's pre-registered 336-trial study found no benefit and +35–45% cost.
+- **A9** Correct the fact-gate docs to what was measured: ECC's pre-registered 336-trial study found no benefit and +35–45% cost. **Done in 7.1.0**: README, hooks README, how-it-works, evals README, Peer-Framework-Harvest.
 - Antigravity loads `.agents/AGENTS.md` itself, so the framework block loads twice there. Low while Q1 stands.
 - `claude -p` will default to `--bare` in a future release (no date). The adapter depends on CLAUDE.md, skills and hooks: watch the changelog.
 

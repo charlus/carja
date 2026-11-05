@@ -162,7 +162,7 @@ carja_has_eval_files() {
 CARJA_SKIP_MARKER_RE='\.(skip|only|todo|failing)\(|\bx(it|test|describe)\(|@pytest\.mark\.skip|@unittest\.skip|\bpytest\.skip\(|#\[ignore\]|\bt\.Skip(Now)?\(|@Ignore\b|@Disabled\b'
 
 # What counts as an assertion — the thing a test actually proves.
-CARJA_ASSERT_RE='expect\(|\bassert|\.should\b|\bEXPECT_|\bASSERT_|XCTAssert|\bt\.(is|deepEqual|truthy|throws)\(|\.to\.(be|equal|deep)'
+CARJA_ASSERT_RE='expect\(|\bassert|\.should\b|\bEXPECT_|\bASSERT_|XCTAssert|\bt\.(is|deepEqual|truthy|throws)\(|\.to\.(be|equal|deep)|pytest\.raises\(|\bt\.(Errorf?|Fatalf?)\(|\brequire\.[A-Z]'
 
 # True (0) for a test file that is CODE. carja_is_test_file counts any path
 # under test/, which is right for the TDD gate (a fixture change is a test
@@ -247,6 +247,98 @@ carja_assertion_delta() {
   a="$(printf '%s\n' "$d" | grep -E '^\+' | grep -Ev '^\+\+\+' | grep -Ec "$CARJA_ASSERT_RE")"
   r="$(printf '%s\n' "$d" | grep -E '^-' | grep -Ev '^---' | grep -Ec "$CARJA_ASSERT_RE")"
   printf '%s' "$((a - r))"
+}
+
+# Echo how many ADDED lines across the given staged test paths are assertions
+# (A4). A changed assertion counts: a fix that moves an expected value is
+# +1 −1 and is honest red→green. A test edit that touches no assertion at all
+# (a comment, an import, a renamed test) proves nothing about the code change
+# beside it. Measured on 9,662 real commits before choosing this over a strict
+# net gain, which also blocked the changed-expectation fixes (owner decision D1).
+carja_assertion_lines_added() {
+  local root="$1"
+  shift
+  if [ "$#" -eq 0 ]; then printf '0'; return 0; fi
+  git -C "$root" diff --cached -M -U0 -- "$@" 2>/dev/null |
+    grep -E '^\+' | grep -Ev '^\+\+\+' | grep -Ec "$CARJA_ASSERT_RE"
+}
+
+# ---------------------------------------------------------------------------
+# Gate integrity (A5).
+#
+# The Goodhart boundary stops a change removing proof from the TESTS. The
+# same move is open on every other gate: silence the type checker, hide a
+# line from coverage, let a CI job fail green, script --no-verify, leave a
+# TODO nobody will find. Each is one line, and an agent under pressure to go
+# green reaches for it first (gstack review/gate-integrity.md RH-13/RH-14).
+#
+# Scope is the owner's decision D2, set on 9,662 real commits: line-level lint
+# suppressions WITH a rule code (`# noqa: E402`, `eslint-disable-next-line x`)
+# are ordinary work there and stay allowed. Counted per file as NET new
+# occurrences, so editing a line that already carried a pragma is not a new one.
+
+# True (0) for the files the integrity scan reads as code: product code that is
+# not a test, not project state, not the framework.
+carja_integrity_code_file() {
+  case "$1" in .agents/*|carja/*) return 1 ;; esac
+  carja_is_impl_file "$1"
+}
+
+# True (0) for a CI pipeline definition.
+carja_is_ci_file() {
+  printf '%s\n' "$1" | grep -Eq '^\.github/workflows/|(^|/)\.gitlab-ci[^/]*\.ya?ml$|^\.gitlab-ci/|^\.gitlab/'
+}
+
+# True (0) for a file a --no-verify line would run from: anything that is not
+# documentation, a test, project state or the framework.
+carja_integrity_script_file() {
+  case "$1" in .agents/*|carja/*|AGENTS.md|*.md|*.mdx|*.rst|*.txt) return 1 ;; esac
+  carja_is_test_file "$1" && return 1
+  return 0
+}
+
+# Echo "file<TAB>finding" for each staged file that gains a gate-weakening line.
+carja_integrity_findings() {
+  local root="$1" f kind token net
+  git -C "$root" diff --cached -M -U0 --no-color --src-prefix=a/ --dst-prefix=b/ 2>/dev/null | awk '
+    function scan(line, sign,   k, t) {
+      k = ""
+      if (match(line, /@ts-(ignore|nocheck|expect-error)/)) k = "ts"
+      else if (match(line, /#[[:space:]]*type:[[:space:]]*ignore/)) k = "typeignore"
+      else if (match(line, /#[[:space:]]*noqa[[:space:]]*([^:[:space:]]|$)/)) k = "noqa"
+      else if (match(line, /eslint-disable([^-]|$)/)) k = "eslint"
+      else if (match(line, /pragma:[[:space:]]*no[[:space:]]*cover|(istanbul|c8|v8)[[:space:]]+ignore/)) k = "cover"
+      if (k != "") bump(k, line, sign)
+      if (match(line, /continue-on-error:[[:space:]]*true|allow_failure:[[:space:]]*true/)) bump("ci", line, sign)
+      if (match(line, /--no-verify([^A-Za-z0-9_-]|$)/)) bump("noverify", line, sign)
+      if (match(line, /(^|[^A-Za-z0-9_])(TODO|FIXME)([^A-Za-z0-9_]|$)/) &&
+          line !~ /#[0-9]+|[A-Z][A-Z0-9]+-[0-9]+|https?:\/\/|![0-9]+|issues?\/[0-9]+/) bump("todo", line, sign)
+    }
+    function bump(k, line, sign,   key, t) {
+      key = file SUBSEP k
+      net[key] += sign
+      if (sign > 0 && !(key in tok)) {
+        t = substr(line, RSTART, RLENGTH); gsub(/^[^A-Za-z@#*\/-]+|[^A-Za-z0-9:)-]+$/, "", t)
+        tok[key] = t
+      }
+    }
+    /^\+\+\+ / { file = substr($0, 5); if (file == "/dev/null") file = ""; else sub(/^b\//, "", file); next }
+    /^--- / { next }
+    /^\+/ { if (file != "") scan(substr($0, 2), 1); next }
+    /^-/ { if (file != "") scan(substr($0, 2), -1); next }
+    END { for (key in net) if (net[key] > 0) { split(key, p, SUBSEP); printf "%s\t%s\t%s\n", p[1], p[2], tok[key] } }
+  ' | sort | while IFS=$'\t' read -r f kind token; do
+    [ -z "$f" ] && continue
+    case "$kind" in
+      ts|typeignore) carja_integrity_code_file "$f" && printf '%s\t%s (silences the type checker)\n' "$f" "$token" ;;
+      noqa)          carja_integrity_code_file "$f" && printf '%s\t%s with no rule code (silences every lint rule)\n' "$f" "$token" ;;
+      eslint)        carja_integrity_code_file "$f" && printf '%s\t%s with no -next-line (silences a whole block or file)\n' "$f" "$token" ;;
+      cover)         carja_integrity_code_file "$f" && printf '%s\t%s (hides code from coverage)\n' "$f" "$token" ;;
+      ci)            carja_is_ci_file "$f" && printf '%s\t%s (a failing job no longer fails the pipeline)\n' "$f" "$token" ;;
+      noverify)      carja_integrity_script_file "$f" && printf '%s\t--no-verify (skips the git hooks)\n' "$f" ;;
+      todo)          carja_integrity_code_file "$f" && printf '%s\t%s with no issue reference (#12, PROJ-12 or a link)\n' "$f" "$token" ;;
+    esac
+  done
 }
 
 # ---------------------------------------------------------------------------

@@ -112,6 +112,13 @@ s_pushlib()   { : > "$1/.agents/hooks/lib.sh"; git -C "$1" add -A
                 printf 'export const e = 5;\n' > "$1/src/e.js"
                 printf 'test("e", () => { expect(5).toBe(5); });\n' > "$1/test/e.test.js"
                 git -C "$1" add -A; CARJA_HOOKS=off git -C "$1" commit -q -m "work" >/dev/null 2>&1; }
+s_integrity() { printf 'export const i = 1; // @ts-ignore\n' > "$1/src/i.js"
+                printf 'test("i", () => { expect(1).toBe(1); });\n' > "$1/test/i.test.js"; git -C "$1" add -A; }
+s_noassert()  { printf 'export const a = 2;\n' > "$1/src/a.js"; printf '// note\n' >> "$1/test/a.test.js"; git -C "$1" add -A; }
+s_zerorun()   { printf '{ "verify": "echo no tests ran" }\n' > "$1/carja.config.json"; git -C "$1" add -A
+                CARJA_HOOKS=off git -C "$1" commit -q -m cfg >/dev/null 2>&1; }
+s_skipci()    { printf '{ "verify": "echo 3 passed" }\n' > "$1/carja.config.json"; git -C "$1" add -A
+                CARJA_HOOKS=off git -C "$1" commit -q -m "cfg [skip ci]" >/dev/null 2>&1; }
 s_rmhook()    { git -C "$1" rm -q .agents/hooks/pre-commit
                 CARJA_HOOKS=off git -C "$1" commit -q -m "rm hook" >/dev/null 2>&1; }
 
@@ -124,11 +131,15 @@ check "W4 report shape"             CARJA_NO_REPORT    s_report    commit
 check "W5 Goodhart boundary"        CARJA_NO_BOUNDARY  s_boundary  commit
 check "W6 protected paths"          CARJA_NO_PROTECTED s_protected commit
 check "W7 library unavailable"      CARJA_NO_PROTECTED s_libgone   commit
+check "W12 no assertion touched"     CARJA_NO_TEST      s_noassert  commit
+check "W13 gate integrity"           CARJA_NO_INTEGRITY s_integrity commit
 echo "  pre-push"
 check "W8 Verification Iron Law"    CARJA_SKIP_VERIFY  s_verify    push
 check "W9 Eval-Driven Law (run)"    CARJA_SKIP_EVAL    s_evalrun   push
 check "W10 hook removal"            CARJA_NO_PROTECTED s_rmhook    push
 check "W11 remote library unusable" CARJA_NO_PROTECTED s_pushlib   push
+check "W14 verify ran no test"       CARJA_NO_TESTS_RAN s_zerorun   push
+check "W15 [skip ci] in a commit"    CARJA_NO_INTEGRITY s_skipci    push
 
 echo ""
 echo "  Passed: $pass"

@@ -6,12 +6,14 @@
 
 | Hook | Law | When it fires | Blocks when… |
 |---|---|---|---|
-| `pre-commit` | **Test-Driven Law** | `git commit` | implementation code is staged with no test change |
+| `pre-commit` | **Test-Driven Law** | `git commit` | implementation code is staged with no test change, or with a test change that adds or changes no assertion (waiver: `CARJA_NO_TEST="reason"`) |
 | `pre-commit` | **Eval-Driven Law** | `git commit` | code that calls an LLM provider is staged with no eval alongside (waiver: `CARJA_NO_EVAL="reason"`). See `skills/writing-evals/`. The two gates are independent — waiving one never skips the other. |
 | `pre-commit` | **Goodhart boundary** | `git commit` | a test file is deleted, a test is disabled (`.skip`/`.only`/`@pytest.mark.skip`/`#[ignore]`/`t.Skip`/`@Disabled`…), or the staged tests net-lose assertions (waiver: `CARJA_NO_BOUNDARY="reason"`) |
 | `pre-commit` | **Default branch** | `git commit` | code is committed on the default branch of a repository that has a remote (`origin`), in the project or a nested code repository. Carja's own files (`carja/`, `.agents/`, `AGENTS.md`, `carja.config.json`, `.gitattributes`) may be. Work in the item's worktree (`carja work <item>`) instead (waiver: `CARJA_ON_DEFAULT="reason"`) |
+| `pre-commit` | **Gate integrity** | `git commit` | the change gains a line that switches part of a check off: `@ts-ignore`/`@ts-nocheck`/`@ts-expect-error`, `# type: ignore`, a bare `# noqa`, a file-wide `eslint-disable`, `# pragma: no cover` or `istanbul ignore` in product code; `continue-on-error: true` or `allow_failure: true` in a CI file; `--no-verify` in a script; a `TODO`/`FIXME` with no issue reference (waiver: `CARJA_NO_INTEGRITY="reason"`) |
 | `pre-commit` | **Protected paths** | `git commit` | the change edits `.agents/hooks/`, `.agents/rules/`, `.agents/sandbox/` or the reviewer brief (waiver: `CARJA_NO_PROTECTED="reason"`) |
-| `pre-push` | **Verification Iron Law** | `git push` | the configured verification command exits non-zero |
+| `pre-push` | **Verification Iron Law** | `git push` | the configured verification command exits non-zero, or exits 0 with output that says no test ran (waiver: `CARJA_NO_TESTS_RAN="reason"`) |
+| `pre-push` | **Gate integrity** | `git push` | a pushed commit's message says `[skip ci]`, `[ci skip]`, `[no ci]` or `[skip actions]` (waiver: `CARJA_NO_INTEGRITY="reason"`) |
 | `post-merge` | cleanup, not a gate | `git pull` (a merge) | never: it removes `carja loop` and `carja work` worktrees and local branches already merged into the default branch, and keeps any worktree with uncommitted changes |
 | `verification-stop-hook.sh` | Verification Iron Law (interactive) | Claude Code `Stop` | **opt-in** — code changed since HEAD and verify is red |
 | `pretooluse-no-bypass.sh` | every gate above | Claude Code `PreToolUse` | **opt-in** — a Bash call tries to skip the git hooks (`--no-verify`, `-n`, `-c core.hooksPath=`) |
@@ -133,6 +135,33 @@ If the repo has evalsets (an `evals/` file or `*.eval.*`), `pre-push` also runs 
 
 Non-LLM projects (no eval files) never see this gate.
 
+### Why the integrity gates exist (7.1.0)
+
+The boundary gate protects the tests. The same cheap move is open on every
+other check: silence the type checker, hide a branch from coverage, let a CI
+job fail green, script `--no-verify`, or touch a test file without asserting
+anything so the Test-Driven Law counts it. A verify command can also exit 0
+having run nothing: a renamed test folder, a filter that matches no file,
+`--passWithNoTests`.
+
+The limits were set on the real history of four projects (9,662 commits) so
+that ordinary work passes:
+
+- **Assertions.** A changed assertion counts, so a fix that moves an expected
+  value is not blocked. Blocked: a test change beside code that touches no
+  assertion line (81 of 1,353 past commits that changed code and tests together).
+- **Integrity.** Line-level lint suppressions with a rule code (`# noqa: E402`,
+  `eslint-disable-next-line <rule>`, `svelte-ignore`) stay allowed: they were
+  most of the 363 past commits with a pragma. Lines are counted per file as net
+  new, so editing a line that already had a pragma is not new. Test files,
+  `carja/` and `.agents/` are not scanned for pragmas or TODOs. Blocked: 24 of
+  9,662 past commits. `--no-verify` in a script and `[skip ci]` never appeared.
+- **Zero tests.** The verify output is read for the runner's summary (pytest,
+  jest, vitest, `node --test`, mocha, bun, `go test`, unittest, cargo, rspec).
+  Any positive count passes, also when another suite in the same command ran
+  none. An output with no summary the hook knows passes, as before. The five
+  real verify suites of those projects all read as "tests ran".
+
 ## Escape hatches (never silent)
 
 Determinism can over-block legitimate config/doc work, so every gate has a logged bypass:
@@ -144,9 +173,11 @@ CARJA_NO_BRIEF="pre-A5 spec" git commit …            # brief check (pre-commit
 CARJA_NO_REPORT="editing an old entry" git commit …  # report shape (pre-commit)
 CARJA_NO_BOUNDARY="feature removed" git commit …     # Goodhart boundary (pre-commit)
 CARJA_NO_PROTECTED="carja upgrade" git commit …  # protected paths (pre-commit)
+CARJA_NO_INTEGRITY="generated code" git commit …     # gate integrity (pre-commit and pre-push)
 CARJA_ON_DEFAULT="hotfix agreed" git commit …        # code on the default branch (pre-commit)
 CARJA_SKIP_VERIFY="hotfix, tests offline" git push … # verify gate (pre-push)
 CARJA_SKIP_EVAL="eval infra down" git push …         # Eval run-gate (pre-push)
+CARJA_NO_TESTS_RAN="tests run in CI only" git push … # verify ran no test (pre-push)
 CARJA_HOOKS=off git commit …                         # disable all Carja hooks
 ```
 
@@ -187,6 +218,15 @@ destroys something different. Three questions per gate:
 | Edit | every file that imports this one (searched, not recalled); the failing test this makes pass; the instruction verbatim |
 | Write | what will call the new file; what you searched to confirm nothing already does this; the instruction verbatim |
 | Destructive Bash | exactly what it destroys; a one-line rollback; the instruction verbatim |
+
+**What was measured, and what was not.** Our eval
+(`test/evals/fact-gate-eval.mjs`) measured a process: gated runs named the
+files their change affects 4/4, ungated 0/4 (n=4). It did not measure whether
+the work came out better, or what the gate costs. ECC measured both for the
+same mechanism (GateGuard), in a pre-registered study of 336 billed trials:
+the benefit on task outcomes was not established (the confirmatory run, 25/48
+against 18/48, p = 0.21), and the cost was a consistent 35–45% more turns and
+spend. It stays opt-in for that reason.
 
 **What it does not do:** verify any of it. A `PreToolUse` hook sees the tool
 call, not the reasoning. It buys a pause and a prompt at the moment of action —

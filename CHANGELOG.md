@@ -8,6 +8,25 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.1.0] — 2026-11-05 — Gates that cannot be switched off from inside
+
+Compatibility: upgrade only
+
+The four gate items of the October harvest (A3, A4, A5, A9). Each limit was set on the real history of four projects (9,662 commits) so that ordinary work passes; the counts below are the past commits each gate would have blocked.
+
+### Added
+- **A green verify that ran no test is red (A3).** `pre-push` reads the verify output for the runner's summary (pytest, jest, vitest, `node --test`, mocha, bun, `go test`, unittest, cargo, rspec). Exit 0 with "no tests ran", "No test files found", `ℹ tests 0` or only `[no test files]` blocks the push, and is not kept as green evidence. Any positive count passes; an output with no known summary passes as before. The five real verify suites of the four projects all pass. Waiver: `CARJA_NO_TESTS_RAN="why"`.
+- **Gate integrity (A5).** `pre-commit` blocks a change that gains a line switching part of a check off: `@ts-ignore`, `@ts-nocheck`, `@ts-expect-error`, `# type: ignore`, a bare `# noqa`, a file-wide `eslint-disable`, `# pragma: no cover` or `istanbul ignore` in product code; `continue-on-error: true` or `allow_failure: true` in a CI file; `--no-verify` in a script; a `TODO` or `FIXME` with no issue reference (`#12`, `PROJ-12` or a link). `pre-push` blocks a commit whose message says `[skip ci]`. Line-level lint suppressions with a rule code stay allowed (owner decision D2). Would have blocked 24 past commits. Waiver: `CARJA_NO_INTEGRITY="why"`.
+
+### Changed
+- **The Test-Driven Law needs a touched assertion (A4).** A test change beside code must add or change at least one assertion line. A changed assertion counts, so a fix that moves an expected value passes (owner decision D1, over a strict net gain that also blocked those fixes). `pytest.raises`, Go `t.Errorf`/`t.Fatalf` and testify `require.*` now count as assertions, for the boundary gate too. Would have blocked 81 of 1,353 past commits that changed code and tests together, mostly refactors and mock-only test edits. Waiver: `CARJA_NO_TEST="why"`, as before.
+
+### Fixed
+- **An upgrade that adds a hook helper leaves a clean tree.** The upgrade commit runs with the older committed library, takes the waived path, and wrote its waiver line to the ship-log without staging it. The line now rides the commit, as on the normal path. Found by the rename test on this release.
+- **The fact gate's docs say what was measured (A9).** Our eval measured a process (the agent names the affected files, n=4), not an outcome. ECC's pre-registered study of the same mechanism, 336 billed trials, found no established benefit and 35–45% more turns and spend. The gate stays opt-in.
+
+---
+
 ## [7.0.2] — 2026-11-05 — The loop's run lock and the heartbeat history follow the rename
 
 Compatibility: upgrade only

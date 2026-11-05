@@ -93,6 +93,14 @@ sensitivity (two identical ungated arms)    delta  +25pp   → noise floor
 The effect is four times the measured noise. n=4 is small; treat the direction
 as established and the magnitude as approximate.
 
+**This is a process measure, not an outcome.** It shows that the gate changes
+what the agent reports. It does not show that the work comes out better, and it
+does not measure cost. ECC's pre-registered study of the same mechanism, 336
+billed trials, found no established benefit on task outcomes (confirmatory run
+25/48 against 18/48, p = 0.21) and a consistent 35–45% cost in turns and spend
+([question-effectiveness.md](https://github.com/affaan-m/ECC/blob/76aaa77df6adc5b889e689007bf99b9a4f74af34/docs/gateguard/question-effectiveness.md)).
+If this eval is run again, measure pass rate and turns.
+
 ### Two ways the first version of this eval was worthless
 
 Recorded because both are easy to repeat.

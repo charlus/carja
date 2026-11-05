@@ -268,8 +268,9 @@ Before claiming any work is done, the agent must run a check, read the output, c
 
 Carja backs its laws with **code, not just prose** — deterministic git hooks (`.agents/hooks/`, wired by `carja install-hooks`), because prose rules are advisory and only code enforces:
 
-- **Test-Driven Law** — a `pre-commit` gate blocks implementation code staged with no test.
+- **Test-Driven Law** — a `pre-commit` gate blocks implementation code staged with no test, or with a test change that adds or changes no assertion.
 - **Goodhart boundary** — the cheapest way to make tests pass is to remove them. `pre-commit` blocks a commit that deletes a test file, adds a skip marker (`.skip`, `.only`, `@pytest.mark.skip`, `#[ignore]`…) or net-loses assertions.
+- **Gate integrity** — the other cheap way to green is to switch a check off. `pre-commit` blocks a new `@ts-ignore`, `# type: ignore`, bare `# noqa`, file-wide `eslint-disable` or coverage ignore in product code, `continue-on-error`/`allow_failure` in CI, `--no-verify` in a script, and a `TODO` with no issue reference. `pre-push` blocks a `[skip ci]` commit, and a verify that exits 0 but says it ran no test. The limits were set on 9,662 real commits so that ordinary work passes (`hooks/README.md`).
 - **Protected paths** — the change being built does not edit what judges it. Edits to `.agents/hooks/`, `.agents/rules/`, `.agents/sandbox/` and the reviewer brief are blocked, and the hooks judge each change with the library already committed, so deleting or rewriting it switches nothing off. `carja upgrade` commits its own framework changes, so an upgrade needs no extra step. With a remote, it commits on its own `chore/carja-<version>` branch for a merge request, never on the default branch or a feature branch.
 - **Eval-Driven Law** — tests verify the deterministic surface; **evals** verify the non-deterministic LLM-output surface of the apps you build. If a feature calls an LLM provider, a `pre-commit` gate requires an evalset alongside it and a `pre-push` gate runs it — see the `writing-evals` skill (three grading modes). The **ship-contract** extends this: `architecture-checklist` turns "follow the architecture" into checkable items the Checker verifies. Every escape hatch is logged, never silent.
 
@@ -280,7 +281,7 @@ Every escape hatch is an environment variable with a reason (`CARJA_NO_BOUNDARY=
 Two **opt-in** Claude Code `PreToolUse` hooks act before the action rather than at the commit (setup in [`hooks/README.md`](templates/.agents/hooks/README.md)):
 
 - **`pretooluse-no-bypass.sh`** denies Bash calls that skip the git hooks (`--no-verify`, `commit -n`, `-c core.hooksPath=`, including through `env`, `sh -c` and shell quoting). It stops the ordinary bypass, not a determined one: the server-side PR gate stays the backstop.
-- **`pretooluse-fact-gate.sh`** makes the agent state the facts before its first edit of a file (the failing test), its first new file (what already does this), and each destructive command. Measured: gated runs named the files their change affects 4/4, ungated 0/4 (n=4, see `test/evals/`).
+- **`pretooluse-fact-gate.sh`** makes the agent state the facts before its first edit of a file (the failing test), its first new file (what already does this), and each destructive command. It changes what the agent reports: gated runs named the files their change affects 4/4, ungated 0/4 (n=4, see `test/evals/`). It has not been shown to change the result. ECC's pre-registered study of the same mechanism (336 billed trials) found no established benefit on outcomes and 35–45% more turns and spend.
 
 **And the law now has a memory.** "Fresh evidence" used to mean *fresh at the moment of the check* — after that the result was trusted indefinitely, which is why a review round would re-run the whole suite to prove something it had already proven. `carja evidence` binds a verification run to a **content fingerprint of the working tree**:
 
