@@ -124,6 +124,6 @@ The 10 noise-floor sessions run under the old prompts are discarded and the nois
 
 **What the pilot measured, and what it did not.** The carja arm had the root `AGENTS.md` in context (checked by a probe session) and Carja's 31 skills, and it kept the task tracker up to date. It never entered a Carja workflow: given "implement this, commit when done" headless, it built and committed directly, as the bare arm did, in about 12 turns. So the pilot measured **Carja installed**, not **Carja's Build workflow used**. For a direct prompt, the install adds about 30% cost and no measured benefit.
 
-**The tasks sit near the floor.** Eight of nine tasks failed in all 54 sessions. On the tasks built with later fixes, both arms reproduce the defects the real build shipped. The binary metric cannot separate arms when almost every trial fails; the fraction of hidden tests passed is the more sensitive measure.
+**The tasks sit near the floor.** Eight of nine tasks failed in all 54 sessions. On the five tasks that have later fix commits, no run in either arm passed all the tests of a fix: each arm avoided some of the defects the real build shipped, never all of them. The binary metric cannot separate arms when almost every trial fails; the fraction of hidden tests passed is the more sensitive measure.
 
 **Not concluded:** whether Carja's Build workflow, invoked as the owner uses it, changes outcomes. That needs a new pre-registration.
