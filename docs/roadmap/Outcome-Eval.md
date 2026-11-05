@@ -98,3 +98,9 @@ Recorded before the first pilot session. The specifics are in the private record
 **Noise floor.** Two tasks drawn with seed 20261105 (`mulberry32`), 3 runs × two identical bare arms = 12 sessions, run before the pilot. The pilot order is drawn with the same generator, and which arm of a pair starts first is random.
 
 **Smoke trial.** One bare session on the smallest task passed in 44 s, 6 turns, about $0.14 at list price. It is not part of the results.
+
+## 2026-11-05 — Deviation 4, after 10 noise-floor sessions, before any carja-arm session
+
+The noise floor caught a fault in deviation 2. On one task, all six bare runs scored exactly the same fraction of the hidden tests. Cause: the tests call a function whose name the plan gives, but with a signature the real build chose. The interface check compared names only. The interface lines now give the full signature (decorators, enum members, dataclass fields, the new fields of an existing class) of every name the hidden tests reference that is new or changed since the base, including the private helpers the tests call. Still names and signatures, never behaviour.
+
+The 10 noise-floor sessions run under the old prompts are discarded and the noise floor is run again. No carja-arm session had run, so no comparison between the arms had been seen. Quota on those 10 sessions: $5.27 at list price, 24 minutes of session time.
