@@ -147,6 +147,13 @@ imported by three files that each transform its value:
 The effect is four times the noise. **n=4 is small**: the direction is
 established, the magnitude is approximate. Re-run before quoting a number.
 
+**Correction (7.1.0, harvest A9).** This measures a process, not an outcome.
+ECC later measured the outcome of the same mechanism in a pre-registered study
+of 336 billed trials: the benefit was not established (confirmatory run 25/48
+against 18/48, p = 0.21) and the cost was 35–45% more turns and spend
+(`docs/research/2026-10-16/ecc-aidlc-agentsmd-stitch.md`, I1). The gate stays
+opt-in.
+
 Three adaptations away from GateGuard, each deliberate: the edit gate asks for
 the **failing test**, which puts red-before-green at the moment of action
 instead of only at commit; the write gate asks **what already does this**,

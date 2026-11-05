@@ -3,7 +3,10 @@
 # push boundary (ADR-0001 D1). Verify: the project's verification command must pass.
 # Eval: if the repo has evalsets and an eval command, they must pass too — presence
 # was gated at commit; passing is gated here. No "should work" — proof or no push.
-# Escapes (logged): CARJA_SKIP_VERIFY / CARJA_SKIP_EVAL. Disable: CARJA_HOOKS=off.
+# Zero-run: a green verify whose output says no test ran is not green (A3).
+# Integrity: a pushed commit whose message says [skip ci] is refused (A5).
+# Escapes (logged): CARJA_SKIP_VERIFY / CARJA_SKIP_EVAL / CARJA_NO_TESTS_RAN /
+# CARJA_NO_INTEGRITY. Disable: CARJA_HOOKS=off.
 set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
@@ -61,7 +64,7 @@ carja_find_project_root
 # pre-commit that lands on exactly this content is an upgrade, not a neutering,
 # and needs no waiver at push. Forging a match means editing pre-push as well —
 # both entry scripts, the stated limit. Pinned by test/hooks-registry-drift.test.js.
-CARJA_OFFICIAL_PRECOMMIT_SHA256="3dd682650bb30f6905c6e644b0955b914d132df76bd01bb4cd48969ec012bdd1"
+CARJA_OFFICIAL_PRECOMMIT_SHA256="d95d6884f4fca16dcd85f6a12d624f4424bb09dd3e7a81b417bb686b3ba4bbbc"
 
 # git feeds one line per pushed ref: <local ref> <local sha> <remote ref> <remote sha>.
 PUSH_LINES="$(cat)"
@@ -278,6 +281,62 @@ if [ "$code_in_push" = "0" ]; then
   exit 0
 fi
 
+# ---- Gate integrity: a commit that switches CI off ------------------------
+# `[skip ci]` in a pushed commit's message means the pipeline never judges it
+# (A5, gstack RH-14). It never appeared in four real projects' history. These
+# checks live here, not in lib.sh: the push of an upgrade loads the REMOTE's
+# older library, and a helper missing there must not block every upgrade.
+skip_ci=""
+while read -r _lref lsha _rref rsha; do
+  [ -z "${lsha:-}" ] || [ "$lsha" = "$ZERO" ] && continue
+  from="$rsha"
+  [ -z "${from:-}" ] || [ "$from" = "$ZERO" ] && from="$TRUSTED_REF"
+  [ -z "$from" ] && continue
+  while IFS=$'\t' read -r sha subj; do
+    [ -n "$sha" ] && skip_ci="$skip_ci\n    - ${sha:0:9} $subj"
+  done <<< "$(git -C "$ROOT" log --format='%H%x09%s%x09%b%x1e' "$from..$lsha" 2>/dev/null |
+    tr '\n' ' ' | tr '\036' '\n' | sed 's/^ *//' |
+    grep -Ei '\[(skip ci|ci skip|no ci|skip actions|actions skip)\]|\*\*\*NO_CI\*\*\*' | cut -f1,2)"
+done <<< "$PUSH_LINES"
+if [ -n "$skip_ci" ]; then
+  if [ -n "${CARJA_NO_INTEGRITY:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Integrity" "$CARJA_NO_INTEGRITY"
+    echo "⚠️  Carja gate integrity ([skip ci]) WAIVED: $CARJA_NO_INTEGRITY"
+    echo "    (logged to carja/0-compass/ship-log.md)"
+  else
+    echo ""
+    echo "🛑 Carja gate integrity — push blocked."
+    echo ""
+    echo "  These commits tell CI not to run:"
+    echo -e "$skip_ci"
+    echo ""
+    echo "  Reword them (git rebase, then reword), or if skipping CI is deliberate:"
+    echo "    CARJA_NO_INTEGRITY=\"why\" git push …"
+    echo ""
+    exit 1
+  fi
+fi
+
+# ---- Zero-run detection (A3) ----------------------------------------------
+# Echo what a verify run's output says about how many tests ran: "some", "0",
+# or "unknown". A positive count anywhere wins (a verify of two suites where
+# one is empty still ran tests). An unrecognised output is "unknown" and
+# passes, as before: only a runner that SAYS it ran nothing is refused.
+# Summary lines matched: pytest, jest, vitest, node --test, mocha, bun, go
+# test, unittest, cargo, rspec. Colour codes are stripped first.
+carja_tests_ran() {
+  local esc; esc="$(printf '\033')"
+  if LC_ALL=C sed "s/${esc}\[[0-9;]*[A-Za-z]//g" "$1" 2>/dev/null | LC_ALL=C grep -Eq \
+    '(^|[^0-9])[1-9][0-9]* (passed|passing|pass)([^A-Za-z]|$)|(#|ℹ) (tests|pass) [1-9]|^ok[[:space:]]|Ran [1-9][0-9]* tests?|test result: ok\. [1-9]|(^|[^0-9])[1-9][0-9]* examples?, '; then
+    echo some; return 0
+  fi
+  if LC_ALL=C sed "s/${esc}\[[0-9;]*[A-Za-z]//g" "$1" 2>/dev/null | LC_ALL=C grep -Eq \
+    'collected 0 items|no tests ran|No tests found|No test files found|No test suites found|(#|ℹ) tests 0([^0-9]|$)|Ran 0 tests|\[no test files\]|(^|[^0-9])0 passing|running 0 tests|(^|[^0-9])0 examples?([^A-Za-z]|$)|(^|[^0-9])0 selected|Tests:[[:space:]]+0 total'; then
+    echo 0; return 0
+  fi
+  echo unknown
+}
+
 cmd="$(carja_verify_cmd "$ROOT" "$PROJECT_ROOT" "$NESTED_REPO")"
 if [ "$cmd" = "none" ]; then
   # A DECLARED off (`carja verify --none`). Silent on purpose: a docs or
@@ -333,7 +392,37 @@ else
     else
       runner() { ( cd "$ROOT" && eval "$cmd" ); }
     fi
-    if runner; then
+    out_file="$(mktemp 2>/dev/null || true)"
+    if [ -n "$out_file" ]; then
+      runner 2>&1 | tee "$out_file"
+      rc="${PIPESTATUS[0]}"
+    else
+      runner; rc=$?
+    fi
+    ran="unknown"
+    [ "$rc" = "0" ] && [ -n "$out_file" ] && ran="$(carja_tests_ran "$out_file")"
+    rm -f "$out_file" 2>/dev/null
+    if [ "$rc" = "0" ] && [ "$ran" = "0" ]; then
+      if [ -n "${CARJA_NO_TESTS_RAN:-}" ]; then
+        carja_log_waiver "$PROJECT_ROOT" "Tests ran" "$CARJA_NO_TESTS_RAN"
+        echo "⚠️  Carja zero-run check WAIVED: $CARJA_NO_TESTS_RAN"
+        echo "    (logged to carja/0-compass/ship-log.md)"
+      else
+        # The wrapper recorded this run as green evidence: overwrite it, or the
+        # next push finds it FRESH and skips the run.
+        if [ "${CARJA_EVIDENCE:-on}" != "off" ] && command -v carja >/dev/null 2>&1; then
+          ( cd "$ROOT" && carja evidence run --label verify -- "echo 'Carja: the verify ran no test' >&2; exit 1" ) >/dev/null 2>&1 || true
+        fi
+        echo ""
+        echo "🛑 Verification ran no test — push blocked."
+        echo "   It exited 0, but its output says no test ran: a renamed test folder, a"
+        echo "   filter that matches nothing, or --passWithNoTests. Green with zero tests"
+        echo "   proves nothing. Fix the command (carja verify --set \"…\"), or say why:"
+        echo "     CARJA_NO_TESTS_RAN=\"why\" git push …"
+        exit 1
+      fi
+    fi
+    if [ "$rc" = "0" ]; then
       echo "✅ Verification passed."
     else
       echo ""

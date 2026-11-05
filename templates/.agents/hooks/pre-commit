@@ -5,10 +5,13 @@
 #   Brief: a feature-spec with no "Brief check" section is rejected (A5 / D1).
 #   Report: a ship-log whose newest entry has no "For you" block is rejected (A4).
 #   Default branch: code committed on the default branch is rejected (2026-10-22).
+#   Assertion: a test change beside code must touch an assertion (A4, 7.1.0).
+#   Integrity: an edit that weakens a gate is rejected (A5, 7.1.0).
 # The two gates are INDEPENDENT — waiving one never skips the other. LLM-feature
 # code needs BOTH a test (deterministic glue) and an eval (non-deterministic output).
 # Escape hatches (logged, never silent): CARJA_NO_TEST / CARJA_NO_EVAL /
-# CARJA_NO_BRIEF / CARJA_NO_REPORT / CARJA_ON_DEFAULT, each ="reason".
+# CARJA_NO_BRIEF / CARJA_NO_REPORT / CARJA_ON_DEFAULT / CARJA_NO_INTEGRITY,
+# each ="reason".
 # Disable everything: CARJA_HOOKS=off.
 set -uo pipefail
 
@@ -133,7 +136,7 @@ carja_log_waiver_fallback() {
 TRUSTED_REF=""
 git -C "$PROJECT_ROOT" rev-parse --verify -q HEAD >/dev/null 2>&1 && TRUSTED_REF="HEAD"
 
-REQUIRED="carja_is_test_file carja_is_impl_file carja_is_eval_file carja_is_llm_feature_file carja_is_brief_doc carja_has_brief_check carja_is_ship_log carja_newest_entry_has_for_you carja_deleted_test_files carja_staged_test_paths carja_added_skip_markers carja_assertion_delta carja_protected_changes carja_log_waiver"
+REQUIRED="carja_is_test_file carja_is_impl_file carja_is_eval_file carja_is_llm_feature_file carja_is_brief_doc carja_has_brief_check carja_is_ship_log carja_newest_entry_has_for_you carja_deleted_test_files carja_staged_test_paths carja_added_skip_markers carja_assertion_delta carja_assertion_lines_added carja_integrity_findings carja_protected_changes carja_log_waiver"
 lib_ok=1
 carja_load_lib "$TRUSTED_REF" || lib_ok=0
 missing="$(carja_missing_helpers "$REQUIRED")"
@@ -155,6 +158,17 @@ if [ "$lib_ok" = "0" ] || [ -n "$missing" ]; then
   if [ -n "$TRUSTED_REF" ] && git -C "$PROJECT_ROOT" cat-file -e "HEAD:.agents/hooks/lib.sh" 2>/dev/null; then
     if [ -n "${CARJA_NO_PROTECTED:-}" ]; then
       carja_log_waiver_fallback "Protected" "$CARJA_NO_PROTECTED"
+      # The waiver line rides this commit, as on the normal path: the upgrade
+      # commit takes this path whenever a release adds a helper, and must not
+      # leave the ship-log modified. Only waiver lines, never a partial commit.
+      _log="carja/0-compass/ship-log.md"
+      case "${GIT_INDEX_FILE:-}" in *next-index-*) ;; *)
+        if [ "$PROJECT_ROOT" = "$ROOT" ] && [ -f "$ROOT/$_log" ] && ! git -C "$ROOT" diff -U0 -- "$_log" 2>/dev/null \
+             | grep -E '^[+-]' | grep -Ev '^(\+\+\+|---) ' \
+             | grep -Evq '^\+- \[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}\] Hook waiver \('; then
+          git -C "$ROOT" add -- "$_log" 2>/dev/null || true
+        fi ;;
+      esac
       echo "⚠️  Carja enforcement library unavailable — WAIVED: $CARJA_NO_PROTECTED"
       exit 0
     fi
@@ -275,6 +289,32 @@ if [ -n "$default_branch_code" ]; then
 fi
 
 # ---- Test-Driven Law ------------------------------------------------------
+# A test change beside code must touch an assertion (A4). Without one, a
+# comment or an import in a test file satisfied the gate and proved nothing.
+no_assert=0
+if [ "$impl" = "1" ] && [ "$tests" = "1" ] && [ "$(carja_assertion_lines_added "$ROOT" "${staged_tests[@]}")" = "0" ]; then
+  no_assert=1
+fi
+if [ "$impl" = "1" ] && [ "$tests" = "1" ] && [ "$no_assert" = "1" ]; then
+  if [ -n "${CARJA_NO_TEST:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "TDD" "$CARJA_NO_TEST"
+    echo "⚠️  Carja Test-Driven Law WAIVED: $CARJA_NO_TEST"
+    echo "    (logged to carja/0-compass/ship-log.md)"
+  else
+    echo ""
+    echo "🛑 Carja Test-Driven Law — commit blocked."
+    echo ""
+    echo "  The test change beside this code adds or changes no assertion:"
+    echo -e "$impl_files"
+    echo ""
+    echo "  A test edit that asserts nothing new proves nothing about the code. Either:"
+    echo "    • add or change the assertion that fails without this code, or"
+    echo "    • if the behaviour does not change (a refactor, a rename, a mock),"
+    echo "      record the reason:  CARJA_NO_TEST=\"why\" git commit …"
+    echo ""
+    blocked=1
+  fi
+fi
 if [ "$impl" = "1" ] && [ "$tests" = "0" ]; then
   if [ -n "${CARJA_NO_TEST:-}" ]; then
     carja_log_waiver "$PROJECT_ROOT" "TDD" "$CARJA_NO_TEST"
@@ -336,6 +376,38 @@ if [ -n "$boundary_why" ]; then
     echo "    • if the behaviour is genuinely gone (feature removed, test"
     echo "      merged elsewhere, assertion moved), say so:"
     echo "      CARJA_NO_BOUNDARY=\"why\" git commit …"
+    echo ""
+    blocked=1
+  fi
+fi
+
+# ---- Gate integrity -------------------------------------------------------
+# An edit that weakens another gate (A5): a type-check or coverage silencer, a
+# bare `# noqa`, a file-wide eslint-disable, a CI job allowed to fail, a
+# scripted --no-verify, a TODO nobody can find. Independent of every other
+# waiver: CARJA_NO_TEST does not license silencing the type checker.
+integrity_why=""
+while IFS=$'\t' read -r f what; do
+  [ -z "$f" ] && continue
+  integrity_why="$integrity_why\n    - $f: $what"
+done <<< "$(carja_integrity_findings "$ROOT")"
+if [ -n "$integrity_why" ]; then
+  if [ -n "${CARJA_NO_INTEGRITY:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Integrity" "$CARJA_NO_INTEGRITY"
+    echo "⚠️  Carja gate integrity WAIVED: $CARJA_NO_INTEGRITY"
+    echo "    (logged to carja/0-compass/ship-log.md)"
+  else
+    echo ""
+    echo "🛑 Carja gate integrity — commit blocked."
+    echo ""
+    echo "  This commit switches off part of a check instead of passing it:"
+    echo -e "$integrity_why"
+    echo ""
+    echo "  Each of these turns a red check green without fixing anything. Either:"
+    echo "    • fix what the check reports, or use a line-level suppression with"
+    echo "      its rule code (# noqa: E402, eslint-disable-next-line <rule>), or"
+    echo "    • if it is deliberate (generated code, a known upstream defect),"
+    echo "      say so:  CARJA_NO_INTEGRITY=\"why\" git commit …"
     echo ""
     blocked=1
   fi

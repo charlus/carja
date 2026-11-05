@@ -31,7 +31,7 @@ echo "Eval-Driven Law — pre-commit gate:"
 # ---- T1: LLM-feature file + test but NO eval → BLOCKED --------------------
 D="$(fresh_repo)"
 printf 'import OpenAI from "openai";\nexport const c = new OpenAI();\n' > "$D/svc.ts"
-printf 'test("x", () => {});\n' > "$D/svc.test.ts"
+printf 'test("x", () => { expect(1).toBe(1); });\n' > "$D/svc.test.ts"
 git -C "$D" add -A >/dev/null 2>&1
 if git -C "$D" commit -q -m "llm feature, no eval" >/tmp/t1.out 2>&1; then
   no "T1: LLM-feature code committed WITHOUT an eval (gate did not fire)"
@@ -43,7 +43,7 @@ rm -rf "$D"
 # ---- T2: LLM-feature file + test + eval → COMMITS -------------------------
 D="$(fresh_repo)"
 printf 'import OpenAI from "openai";\nexport const c = new OpenAI();\n' > "$D/svc.ts"
-printf 'test("x", () => {});\n' > "$D/svc.test.ts"
+printf 'test("x", () => { expect(1).toBe(1); });\n' > "$D/svc.test.ts"
 printf 'export const evalset = [{input:"hi", rubric:"greets"}];\n' > "$D/svc.eval.ts"
 git -C "$D" add -A >/dev/null 2>&1
 if git -C "$D" commit -q -m "llm feature + eval" >/tmp/t2.out 2>&1; then
@@ -56,7 +56,7 @@ rm -rf "$D"
 # ---- T3: non-LLM file + test, no eval → COMMITS (gate silent) -------------
 D="$(fresh_repo)"
 printf 'export const add = (a,b) => a+b;\n' > "$D/util.ts"
-printf 'test("x", () => {});\n' > "$D/util.test.ts"
+printf 'test("x", () => { expect(1).toBe(1); });\n' > "$D/util.test.ts"
 git -C "$D" add -A >/dev/null 2>&1
 if git -C "$D" commit -q -m "plain util" >/tmp/t3.out 2>&1; then
   ok "T3: non-LLM code needs no eval (gate silent)"
@@ -68,7 +68,7 @@ rm -rf "$D"
 # ---- T4: LLM file + test, no eval, CARJA_NO_EVAL waiver → COMMITS -----
 D="$(fresh_repo)"
 printf 'from anthropic import Anthropic\nc = Anthropic()\n' > "$D/agent.py"
-printf 'def test_x(): pass\n' > "$D/test_agent.py"
+printf 'def test_x(): assert True\n' > "$D/test_agent.py"
 git -C "$D" add -A >/dev/null 2>&1
 if CARJA_NO_EVAL="prototype, not shipping" git -C "$D" commit -q -m "waived" >/tmp/t4.out 2>&1; then
   ok "T4: CARJA_NO_EVAL waiver lets the commit through"

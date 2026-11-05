@@ -93,8 +93,8 @@ const read = () => { try { return require("fs").readFileSync(0, "utf8"); } catch
 // alternative is. A denial that does not name the alternative just teaches
 // the reader to find a different way around.
 const GATED = {
-  commit: 'CARJA_NO_TEST / CARJA_NO_EVAL / CARJA_NO_BOUNDARY / CARJA_NO_PROTECTED="reason" git commit …',
-  push: 'CARJA_SKIP_VERIFY / CARJA_SKIP_EVAL="reason" git push …',
+  commit: 'CARJA_NO_TEST / CARJA_NO_EVAL / CARJA_NO_BOUNDARY / CARJA_NO_INTEGRITY / CARJA_NO_PROTECTED="reason" git commit …',
+  push: 'CARJA_SKIP_VERIFY / CARJA_SKIP_EVAL / CARJA_NO_TESTS_RAN / CARJA_NO_INTEGRITY="reason" git push …',
   merge: 'CARJA_HOOKS=off (whole-repo, and deliberate) — prefer the per-gate waivers',
   am: 'CARJA_HOOKS=off (whole-repo, and deliberate) — prefer the per-gate waivers',
 };
