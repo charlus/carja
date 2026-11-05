@@ -52,6 +52,37 @@ export function rewritePaths(text) {
   return text.replace(OLD_PATH_RE, (_, pre, folder) => `${pre}${CURRENT}/${folder}/`);
 }
 
+// The project card in the root AGENTS.md (src/project-card.js): framework-written,
+// so its paths, source-stamp keys and markers follow the rename. Text outside it
+// is the owner's and stays as written (7.0.1, F6).
+const CARD_RE = new RegExp(`<!-- (?:${CURRENT}|${OLD}):project-card:begin[\\s\\S]*?<!-- (?:${CURRENT}|${OLD}):project-card:end -->`);
+
+/** `text` (a root AGENTS.md) with the project card pointed at carja/. */
+export function rewriteCardBlock(text) {
+  return text.replace(CARD_RE, (card) =>
+    rewritePaths(card)
+      .replace(new RegExp(`"${OLD}\\.config\\.json#`, "g"), `"${CURRENT}.config.json#`)
+      .replace(new RegExp(`<!-- ${OLD}:project-card:`, "g"), `<!-- ${CURRENT}:project-card:`),
+  );
+}
+
+/**
+ * Give the 6.x machine files in a git dir their 7.x names, when the 7.x one is
+ * not there yet. A clone that gets the rename by a pull never ran the rename
+ * (7.0.1, F5). Never on a 6.x layout: its own hooks still write the old names.
+ */
+export function adoptOldGitFiles(gitCommonDir) {
+  const moved = [];
+  for (const [from, to] of GIT_DIR_FILES) {
+    const src = join(gitCommonDir, from);
+    if (existsSync(src) && !existsSync(join(gitCommonDir, to))) {
+      renameSync(src, join(gitCommonDir, to));
+      moved.push(to);
+    }
+  }
+  return moved;
+}
+
 /** The reasons the rename cannot run now, [] when it can. */
 async function blockers(root, repo) {
   const out = [];
@@ -264,10 +295,7 @@ async function doRename(root, { report, moving, repo, commit, gitCommonDir, vers
   // Machine state in the git dir follows the new names (never committed), last,
   // so a refused commit leaves it as it was.
   if (gitCommonDir) {
-    for (const [from, to] of GIT_DIR_FILES) {
-      const src = join(gitCommonDir, from);
-      if (existsSync(src) && !existsSync(join(gitCommonDir, to))) renameSync(src, join(gitCommonDir, to));
-    }
+    adoptOldGitFiles(gitCommonDir);
   }
   return report;
 }

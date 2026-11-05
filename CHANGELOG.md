@@ -8,6 +8,19 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.0.1] — 2026-11-05 — What the rename missed
+
+Compatibility: upgrade only
+
+Found on the first real 7.0.0 upgrades, in the owner's checkouts that got the rename by a pull.
+
+### Fixed
+- **The project card no longer sends every session to `conductor/` paths.** The card in the root `AGENTS.md` kept its `conductor/0-compass/…` links and its source stamp after the rename. `carja upgrade` now points the card (paths, stamp, markers) at `carja/`, also in a project already on 7.0.0. Your own text around the card stays as written.
+- **`carja status` no longer calls the card stale after the rename.** A stamp that names `conductor/` or `conductor.config.json` counts as the same file under its new name. A real change is still reported.
+- **A clone that gets the rename by a pull keeps its loop logs, ready queue and hook heartbeats.** The rename gave `.git/conductor-*` their new names only in the clone that ran `carja upgrade`. Now any `carja` command, and the `pre-commit` and `pre-push` hooks, rename them on first use. A project still on the 6.x layout keeps the old names.
+
+---
+
 ## [7.0.0] — 2026-11-04 — Conductor is now Carja
 
 Compatibility: upgrade plus a step

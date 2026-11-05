@@ -16,7 +16,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { designMigrationHint } from "./design.js";
 import { ensureUnionMerge } from "../gitattributes.js";
-import { needsRename, renameInstall, renderRenameReport } from "../rename-migration.js";
+import { needsRename, renameInstall, renderRenameReport, rewriteCardBlock } from "../rename-migration.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -542,6 +542,8 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
         await rm(stubPath);
         stdout.write(`  ✅ Removed ${stub}${notes ? " — your notes moved to AGENTS.md (\"Notes moved from " + stub + "\")" : ""}\n`);
       }
+      // A card written before the rename sends every session to conductor/ paths (7.0.1, F6).
+      agentsMd = rewriteCardBlock(agentsMd);
       await writeFile(agentsMdPath, agentsMd, "utf8");
       stdout.write(`  ✅ AGENTS.md ${hadAgentsMd ? "framework block refreshed (your text kept)" : "created"}\n`);
       for (const w of await instructionWarningsFor(targetDir)) stdout.write(`  ⚠️  ${w}\n`);
