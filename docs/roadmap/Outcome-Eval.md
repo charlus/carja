@@ -78,3 +78,23 @@ Otherwise the confirmatory run's size is set from the pilot's discordant-pair ra
 - **Public result, private data:** a reader cannot rerun the eval. The hash shows the task list was fixed before the runs; the data is available to whoever has access to the project.
 - **Grader bias:** the hidden tests are fixed before any trial; the exploratory reviewer is blind to the arm.
 - **Small n:** the pilot can show a large effect or none. A small real effect needs the confirmatory run.
+
+## 2026-11-05 — Step 2, before any pilot trial
+
+Recorded before the first pilot session. The specifics are in the private record (pushed to the project's repository the same day).
+
+**Task check.** All twelve candidates pass the mechanical check (`test/evals/outcome/task-check.mjs`). The reference is the base plus the task's commits, cherry-picked. Where a conflict touched only Carja's own state files, the base side was kept. Where other commits of the same area sit between the task's commits, the task's files are taken as they are at its last commit ("range mode", recorded per task). Hidden tests are the tests that fail on the base with the hidden files and pass on the reference. Three tasks are dropped: two whose range-mode reference was not clean (an existing test broken, or tests failing on the reference), and one whose hidden tests assert an output vocabulary the real fix invented, which no task text could state without giving the solution.
+
+**Deviations from the pre-registration:**
+
+1. **Nine tasks, not ten.** No clean tenth candidate without new spec work. The pilot is 9 × 3 × 2 = 54 sessions.
+2. **Interface lines instead of rewritten tests.** 254 of the 307 hidden test ids need only names that exist at the base or appear in the task's documents. For the rest, the task text names the module, the name and the signature the tests call (12 names across 7 tasks), never the behaviour. This fixes the names, which is what "rewrite at the interface" was for, without rewriting tests by hand. Both arms get the same lines.
+3. **Run settings.** Claude Code 2.1.317, `claude-sonnet-5-5`, the loop's sandbox profile, no MCP servers, a 45-minute wall cap and no turn cap (this CLI has no `--max-turns`). The operator's user-level instructions load in both arms alike. One virtual environment, built from the lock file every task base shares.
+
+**Arms as built.** The bare arm is the task base with every Carja file removed (`.agents/`, `.claude/`, the state folder, the root instruction files, the config) and no git hooks. The carja arm is the same base upgraded to 7.1.0 from the install it had then (6.1 to 6.8), with the git hooks wired. The prompt is the same text in both.
+
+**Grader controls.** 36 of 36 correct: every untouched tree fails, and every tree with the reference implementation copied in passes, in both arms.
+
+**Noise floor.** Two tasks drawn with seed 20261105 (`mulberry32`), 3 runs × two identical bare arms = 12 sessions, run before the pilot. The pilot order is drawn with the same generator, and which arm of a pair starts first is random.
+
+**Smoke trial.** One bare session on the smallest task passed in 44 s, 6 turns, about $0.14 at list price. It is not part of the results.
