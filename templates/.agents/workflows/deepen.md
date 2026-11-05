@@ -8,14 +8,14 @@ description: Deepen (Brownfield Architecture Improvement)
 
 **Trigger:** "Deepen", "Improve codebase architecture", "Find shallow modules", "Architecture review", "Reshape this so agents can navigate it"
 **Goal:** Find architectural friction in an *existing* codebase and reshape shallow, scattered modules into deep ones with narrow interfaces — so both humans and AI agents can reason about a whole flow without loading the entire codebase, and so tests can be drawn at the boundary.
-**Output:** `conductor/1-workbench/deepening-report.md` (the ranked candidates) → accepted candidates become backlog tasks / a Carve slice.
+**Output:** `carja/1-workbench/deepening-report.md` (the ranked candidates) → accepted candidates become backlog tasks / a Carve slice.
 **Prerequisites:** An existing codebase. This is the **brownfield counterpart to `technical-vision`** — Technical Vision designs deep modules *before* code exists; Deepen finds and fixes shallow ones *after*.
 
 ---
 
 ## Who You Are
 
-You are the Conductor wearing the **Code Archaeologist hat** (`.agents/personas/code-archaeologist.md`). You respect every line as someone's best effort, you understand before you judge, and you never change code you can't test. What this workflow adds to pure archaeology is a *direction*: not just "what does this do?" but "what shape should this become so an agent can work in it safely?"
+You are the Carja wearing the **Code Archaeologist hat** (`.agents/personas/code-archaeologist.md`). You respect every line as someone's best effort, you understand before you judge, and you never change code you can't test. What this workflow adds to pure archaeology is a *direction*: not just "what does this do?" but "what shape should this become so an agent can work in it safely?"
 
 **Principles:**
 - **Deep modules (the deletion test).** The canonical definition lives in `.agents/workflows/technical-vision.md` — a good module has a *small interface hiding lots of implementation*. Mentally delete a module: if the system's complexity vanishes it was a shallow pass-through; if that complexity would reappear across several callers, the module earns its place. Judge a boundary by how much it *hides*, not by its line count.
@@ -35,10 +35,10 @@ You are the Conductor wearing the **Code Archaeologist hat** (`.agents/personas/
 **Announce:** *"We're entering Phase 0: Setup. Let me load context and find where this codebase actually churns."*
 
 1.  **Load context** (read in this order, skip what's absent):
-    * `conductor/4-context/meta/domain-model.md` (or `glossary.md`) — the ubiquitous language. Candidates MUST be described in domain terms, not generic "service"/"handler"/"manager".
-    * Any ADRs under `conductor/4-context/` or `blueprint/` — a load-bearing decision may explain why a module looks shallow. Chesterton's Fence.
+    * `carja/4-context/meta/domain-model.md` (or `glossary.md`) — the ubiquitous language. Candidates MUST be described in domain terms, not generic "service"/"handler"/"manager".
+    * Any ADRs under `carja/4-context/` or `blueprint/` — a load-bearing decision may explain why a module looks shallow. Chesterton's Fence.
     * `blueprint/technical-vision.md` if it exists — the intended shape to compare against.
-    * `conductor/4-context/technical/` — stack, conventions, known constraints.
+    * `carja/4-context/technical/` — stack, conventions, known constraints.
 
 2.  **Find the hot spots (scope by YAGNI):** run the git history to find where change concentrates — that is where friction costs the most.
     ```bash
@@ -83,11 +83,11 @@ You are the Conductor wearing the **Code Archaeologist hat** (`.agents/personas/
     * **The payoff** — locality (files an agent opens: before → after) and leverage (what the interface eliminates for callers) and where the new test boundary sits
     * **Strength badge** — **Strong** (clear duplication/scatter, deletion test passes decisively) / **Worth exploring** (plausible, some judgment) / **Speculative** (one caller today — probably YAGNI; list it so it's *not* silently dropped, but recommend waiting for the second adapter)
 
-2.  **Rank and write.** Save the ranked list to `conductor/1-workbench/deepening-report.md` (plain markdown — the `conductor/` dashboard is already the human's browsable report surface; do **not** generate a separate HTML deck). Strong first, Speculative last with an explicit "not yet" note.
+2.  **Rank and write.** Save the ranked list to `carja/1-workbench/deepening-report.md` (plain markdown — the `carja/` dashboard is already the human's browsable report surface; do **not** generate a separate HTML deck). Strong first, Speculative last with an explicit "not yet" note.
 
 3.  **Decide, don't grill.** Which modules to deepen is an **engineering decision** — yours (Grilling's *Whose Decision Is It*). Work the decision tree yourself, surface the trade-off in your own notes, and resist deepening for its own sake. Report the accepted candidates one line each. Escalate to the human only a candidate that changes what a user sees, changes what the system costs to run, or cannot be undone cheaply — a data-model or public-API reshape, not an internal refactor. When a candidate collapses complexity but adds no cleverness, take it; when candidates tie, the simpler one wins.
 
-4.  **Capture language & decisions.** If exploration surfaced a concept the domain model doesn't name, invoke `.agents/skills/domain-modeling/SKILL.md` and update `conductor/4-context/meta/domain-model.md`. If the human *rejects* a candidate for a load-bearing reason, offer to record it as an ADR (only if it passes the **ADR 3-test gate** — hard to reverse ∧ surprising ∧ a real trade-off) so it isn't re-suggested next run.
+4.  **Capture language & decisions.** If exploration surfaced a concept the domain model doesn't name, invoke `.agents/skills/domain-modeling/SKILL.md` and update `carja/4-context/meta/domain-model.md`. If the human *rejects* a candidate for a load-bearing reason, offer to record it as an ADR (only if it passes the **ADR 3-test gate** — hard to reverse ∧ surprising ∧ a real trade-off) so it isn't re-suggested next run.
 
 5.  **Confirm:** *"Which of these do you want to pursue?"* Only accepted candidates proceed.
 
@@ -121,7 +121,7 @@ For each accepted candidate, the order is non-negotiable:
 
 2.  **Strangler Fig, not big bang.** Wrap the existing shape behind the target narrow interface, migrate callers incrementally, then remove the old surface once nothing depends on it. Extract Method → introduce the interface → migrate → delete. The best deepening is the one nobody notices.
 
-3.  **Hand off to the loop.** Each candidate becomes a backlog task in `conductor/2-backlog/task-backlog.md`, or — if several are related — a single Carve slice (`.agents/workflows/carve.md`). Implementation runs through `.agents/workflows/build.md` under the always-on `test-driven-law` and `verification-iron-law`. The characterization test from step 1 is the RED that must stay GREEN through the refactor.
+3.  **Hand off to the loop.** Each candidate becomes a backlog task in `carja/2-backlog/task-backlog.md`, or — if several are related — a single Carve slice (`.agents/workflows/carve.md`). Implementation runs through `.agents/workflows/build.md` under the always-on `test-driven-law` and `verification-iron-law`. The characterization test from step 1 is the RED that must stay GREEN through the refactor.
 
 4.  **Verify no behavior changed.** A deepening is correct only when the pinned behavior is unchanged and the test boundary moved to the new interface. Confirm with evidence (`.agents/skills/verification-gate/SKILL.md`) before claiming any candidate done.
 
@@ -132,7 +132,7 @@ For each accepted candidate, the order is non-negotiable:
 **Summary:** Recap the friction found, the candidates accepted vs. deferred (and why), and the incremental plan.
 
 **Next Steps:**
-- *"The deepening report is at `conductor/1-workbench/deepening-report.md`. Accepted candidates are [tasks/a Carve slice]."*
+- *"The deepening report is at `carja/1-workbench/deepening-report.md`. Accepted candidates are [tasks/a Carve slice]."*
 - *"Ready to build? Say 'Build' to execute the reshaping under TDD — starting with the characterization tests."*
 
 ---

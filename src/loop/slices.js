@@ -9,7 +9,7 @@
 
 import { workflowForType } from "./harvester.js";
 
-export const PROJECTS_REL = "conductor/2-backlog/project-backlog";
+export const PROJECTS_REL = "carja/2-backlog/project-backlog";
 
 const PLACEHOLDER = /\[[^\]\n]{3,}\]/;
 

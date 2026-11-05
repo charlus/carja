@@ -39,7 +39,7 @@ before(async () => {
   await writeFile(join(repo, "app.py"), "x = 1\n");
   await writeFile(join(repo, ".env"), "KEY=a\n");
   execFileSync("git", ["add", "-A"], { cwd: repo });
-  execFileSync("git", ["commit", "-qm", "init"], { cwd: repo, env: { ...process.env, CONDUCTOR_HOOKS: "off" } });
+  execFileSync("git", ["commit", "-qm", "init"], { cwd: repo, env: { ...process.env, CARJA_HOOKS: "off" } });
 });
 
 after(async () => {

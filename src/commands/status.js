@@ -1,12 +1,12 @@
 // src/commands/status.js
 //
-// `conductor status` — "what's on our plate for today", answered instantly.
+// `carja status` — "what's on our plate for today", answered instantly.
 //
 // This replaces a chain of `ls`, `cd` and `vim` with one command, and it
 // replaces asking the agent, which cost a whole turn plus context every time
 // for the question asked most often in a day.
 
-import { collectState } from "../conductor-state.js";
+import { collectState } from "../carja-state.js";
 import { collectLive } from "../live-state.js";
 import { renderStatus, renderLive, painter } from "../view/status.js";
 import { instructionWarningsFor } from "../claude-instructions.js";
@@ -65,7 +65,7 @@ export async function loopOffProjects(root) {
     const raw = JSON.parse(await readFile(configPathOf(root), "utf8")).loop ?? {};
     const on = (k) => raw[k] === true || (Array.isArray(raw[k]) ? raw[k] : []);
     if (on("blueprint") === true || on("slices") === true) return [];
-    const names = (await readdir(join(root, statePath(root, "conductor/2-backlog/project-backlog")), { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
+    const names = (await readdir(join(root, statePath(root, "carja/2-backlog/project-backlog")), { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
     return names.filter((n) => !on("blueprint").includes(n) && !on("slices").includes(n));
   } catch {
     return [];
@@ -90,8 +90,8 @@ export async function statusCommand(args, context) {
 
   if (!ok) {
     context.stderr.write(
-      `  No \`conductor/\` folder in ${root}\n` +
-        "  Scaffold one with:  npx github:charlus/conductor-framework init\n"
+      `  No \`carja/\` folder in ${root}\n` +
+        "  Scaffold one with:  npx github:charlus/carja init\n"
     );
     return 1;
   }
@@ -117,7 +117,7 @@ export async function statusCommand(args, context) {
     if (block) context.stdout.write(`${block}\n\n`);
   }
   if (live) context.stdout.write(`${renderLive(live, painter(colour))}\n\n`);
-  else context.stdout.write("  MR and deploy status: not checked. Run conductor status --live.\n");
+  else context.stdout.write("  MR and deploy status: not checked. Run carja status --live.\n");
   // The project card: every session loads it, so a draft or stale card is worth a line.
   const card = await cardState(root);
   if (card === "draft") context.stdout.write("  ⚠️  Project card in AGENTS.md is a draft. Run the agents-md workflow (/agents-md).\n");
@@ -139,12 +139,12 @@ export async function statusCommand(args, context) {
   };
   const safety = await branchSafety({ root, git: gitIn }).catch(() => ({ off: [], leftovers: [] }));
   for (const o of safety.off) {
-    context.stdout.write(`  ⚠️  ${o.label === "." ? "Your folder" : `Code repository ${o.label}`} is on ${o.branch}, not on its default branch ${o.want}. Work happens in item worktrees (conductor work <item>); switch back with: git -C ${o.label === "." ? "." : o.label} switch ${o.want}\n`);
+    context.stdout.write(`  ⚠️  ${o.label === "." ? "Your folder" : `Code repository ${o.label}`} is on ${o.branch}, not on its default branch ${o.want}. Work happens in item worktrees (carja work <item>); switch back with: git -C ${o.label === "." ? "." : o.label} switch ${o.want}\n`);
   }
   const merged = safety.leftovers.length ? safety.leftovers : await mergedLoopWorktrees({ git });
   if (merged.length) {
     context.stdout.write(
-      `  ℹ️  ${merged.length} merged worktree${merged.length === 1 ? "" : "s"} (${merged.map((w) => w.branch).join(", ")}): removed on your next \`git pull\`, loop run or \`conductor work clean\`.\n`
+      `  ℹ️  ${merged.length} merged worktree${merged.length === 1 ? "" : "s"} (${merged.map((w) => w.branch).join(", ")}): removed on your next \`git pull\`, loop run or \`carja work clean\`.\n`
     );
   }
   // Step 4 (D1): rounds waiting for the owner, and how often the owner agrees.
@@ -165,10 +165,10 @@ export async function statusCommand(args, context) {
     const last = messages.at(-1);
     context.stdout.write(`  📬 ${messages.length} loop message${messages.length === 1 ? "" : "s"} in ${MESSAGES_REL}. Newest: ${last.title}${last.text ? `: ${last.text.slice(0, 160)}${last.text.length > 160 ? "…" : ""}` : ""}\n`);
   }
-  const reports = (await readdir(join(root, statePath(root, "conductor/1-workbench"))).catch(() => [])).filter((f) => /^loop-report-.+\.md$/.test(f));
-  if (reports.length) context.stdout.write(`  📋 Loop report${reports.length === 1 ? "" : "s"}: ${reports.map((f) => `${statePath(root, "conductor/1-workbench")}/${f}`).join(", ")}. Merge with /merge-stack <project>.\n`);
+  const reports = (await readdir(join(root, statePath(root, "carja/1-workbench"))).catch(() => [])).filter((f) => /^loop-report-.+\.md$/.test(f));
+  if (reports.length) context.stdout.write(`  📋 Loop report${reports.length === 1 ? "" : "s"}: ${reports.map((f) => `${statePath(root, "carja/1-workbench")}/${f}`).join(", ")}. Merge with /merge-stack <project>.\n`);
   const answeredRounds = await Promise.all((await md(`${QUESTIONS_REL}/answered`)).map((f) => readFile(join(root, QUESTIONS_REL, "answered", f), "utf8")));
-  const rulingsText = await readFile(join(root, statePath(root, "conductor/1-workbench/rulings.md")), "utf8").catch(() => "");
+  const rulingsText = await readFile(join(root, statePath(root, "carja/1-workbench/rulings.md")), "utf8").catch(() => "");
   const st = decisionStats({ rulingsText, answeredRounds });
   if (st.answered || st.rulings) {
     context.stdout.write(`  ℹ️  Loop decisions: you took the recommendation ${st.tookRecommendation} of ${st.answered} times, and overruled ${st.overruled} of ${st.rulings} ruling${st.rulings === 1 ? "" : "s"}.\n`);

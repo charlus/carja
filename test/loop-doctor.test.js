@@ -2,7 +2,7 @@
 //
 // F1/F6 from the first unattended crossing: preparing a project for the loop
 // needed six project facts, and the prep notes were proven only by a live run.
-// `conductor loop doctor` checks them before any beat. `diagnose` is pure over
+// `carja loop doctor` checks them before any beat. `diagnose` is pure over
 // gathered facts; the command test runs the real IO on a scratch project.
 
 import { test } from "node:test";
@@ -20,7 +20,7 @@ const ok = {
   claude: { available: true, warnings: [] },
   forge: { needed: true, forge: "glab", host: "code.example.com", authOk: true },
   nestedRepos: [],
-  queue: { fromConductor: true, count: 1, requireReady: true },
+  queue: { fromCarja: true, count: 1, requireReady: true },
   dotenv: { present: false, copiedBySetup: false },
   probe: { ran: true, setup: { configured: true, ok: true, secs: 18 }, verify: { command: "pytest -q", exitCode: 0, secs: 11, tail: "639 passed" } },
   beat: null,
@@ -36,7 +36,7 @@ test("a ready project passes every check", () => {
 test("an outdated sandbox profile fails: beats could stall or reach the forge", () => {
   const c = by(diagnose({ ...ok, profile: { credentials: false, strict: false } }), "sandbox-profile");
   assert.equal(c.level, "fail");
-  assert.match(c.fix, /conductor upgrade/);
+  assert.match(c.fix, /carja upgrade/);
 });
 
 test("a pre-flight halt fails with the driver's own reason", () => {
@@ -58,9 +58,9 @@ test("an unauthenticated forge fails when the run would open a PR", () => {
 });
 
 test("an empty queue with require_ready says how to give the loop an item", () => {
-  const c = by(diagnose({ ...ok, queue: { fromConductor: true, count: 0, requireReady: true } }), "queue");
+  const c = by(diagnose({ ...ok, queue: { fromCarja: true, count: 0, requireReady: true } }), "queue");
   assert.equal(c.level, "warn");
-  assert.match(c.fix, /conductor loop take/);
+  assert.match(c.fix, /carja loop take/);
 });
 
 test("a .env the worktree will not have is a warning, the eurassistant lesson", () => {
@@ -107,7 +107,7 @@ test("verify red in the main checkout but green in a fresh worktree warns of a s
   assert.equal(by(diagnose({ ...ok, probe: { ...ok.probe, verify: { ...ok.probe.verify, exitCode: 1 } }, rootVerify: { exitCode: 1 } }), "local-env"), undefined, "a red base is the verify check's finding, not this one");
 });
 
-test("conductor loop doctor runs the real checks on a scratch project", async () => {
+test("carja loop doctor runs the real checks on a scratch project", async () => {
   const { mkdtemp, writeFile, rm, readFile } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
@@ -118,7 +118,7 @@ test("conductor loop doctor runs the real checks on a scratch project", async ()
   const sink = () => ({ text: "", write(s) { this.text += s; } });
   try {
     await initCommand([dir, "--all", "--no-detect"], { cwd: tmpdir(), stdout: sink(), stderr: sink() });
-    const statePath = join(dir, "conductor/1-workbench/loop-state.json");
+    const statePath = join(dir, "carja/1-workbench/loop-state.json");
     const state = JSON.parse(await readFile(statePath, "utf8"));
     Object.assign(state, { phase: "execution", autonomy_level: "L1", sandbox: "none" });
     state.verification = { ...state.verification, command: "test -f marker.txt" };
@@ -173,7 +173,7 @@ test("doctor warns when the Checker runs on a weaker model than the Maker", () =
 });
 
 // 2026-10-22, autopportunity: the owner gave doctor a project's backlog path
-// instead of the project folder. Doctor answered "run conductor init" on an
+// instead of the project folder. Doctor answered "run carja init" on an
 // installed project. A path inside a project names the project folder, and a
 // project's own folder names `loop on`, which is how a project is chosen.
 test("doctor on a path inside a project names the project folder, not init", async () => {
@@ -184,29 +184,29 @@ test("doctor on a path inside a project names the project folder, not init", asy
   const dir = await mkdtemp(join(tmpdir(), "doctor-path-"));
   const sink = () => ({ text: "", write(s) { this.text += s; } });
   try {
-    await mkdir(join(dir, "conductor/1-workbench"), { recursive: true });
-    await writeFile(join(dir, "conductor/1-workbench/loop-state.json"), "{}");
-    await mkdir(join(dir, "conductor/2-backlog/project-backlog/cop-availability"), { recursive: true });
+    await mkdir(join(dir, "carja/1-workbench"), { recursive: true });
+    await writeFile(join(dir, "carja/1-workbench/loop-state.json"), "{}");
+    await mkdir(join(dir, "carja/2-backlog/project-backlog/cop-availability"), { recursive: true });
 
     // A typo'd name that is not a folder still finds the project, and lists the projects.
-    for (const [arg, on] of [["conductor/2-backlog/project-backlog/cop-availability", "conductor loop on cop-availability`"], ["conductor/2-backlog/project-backlog/cop-availability~", "conductor loop on`"]]) {
+    for (const [arg, on] of [["carja/2-backlog/project-backlog/cop-availability", "carja loop on cop-availability`"], ["carja/2-backlog/project-backlog/cop-availability~", "carja loop on`"]]) {
       const out = sink();
       const code = await loopCommand(["doctor", arg], { cwd: dir, stdout: out, stderr: sink() });
       assert.equal(code, 1, out.text);
       assert.match(out.text, /not the project folder/i, out.text);
-      assert.ok(out.text.includes("conductor loop doctor .`"), out.text);
+      assert.ok(out.text.includes("carja loop doctor .`"), out.text);
       assert.ok(out.text.includes(on), out.text);
-      assert.doesNotMatch(out.text, /conductor init/, out.text);
+      assert.doesNotMatch(out.text, /carja init/, out.text);
     }
     const nested = sink();
-    await loopCommand(["doctor", join(dir, "conductor")], { cwd: tmpdir(), stdout: nested, stderr: sink() });
-    assert.ok(nested.text.includes(`conductor loop doctor ${dir}\``), nested.text);
+    await loopCommand(["doctor", join(dir, "carja")], { cwd: tmpdir(), stdout: nested, stderr: sink() });
+    assert.ok(nested.text.includes(`carja loop doctor ${dir}\``), nested.text);
 
     const elsewhere = await mkdtemp(join(tmpdir(), "doctor-none-"));
     try {
       const out = sink();
       assert.equal(await loopCommand(["doctor", elsewhere], { cwd: tmpdir(), stdout: out, stderr: sink() }), 1);
-      assert.match(out.text, /conductor init/, out.text);
+      assert.match(out.text, /carja init/, out.text);
     } finally {
       await rm(elsewhere, { recursive: true, force: true });
     }

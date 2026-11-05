@@ -1,4 +1,4 @@
-// src/commands/loop-profile.js — `conductor loop profile [quality|balanced] [dir]`.
+// src/commands/loop-profile.js — `carja loop profile [quality|balanced] [dir]`.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -27,7 +27,7 @@ export async function loopProfileCommand(root, name, { stdout, stderr }) {
   }
   const cfg = parseLoopConfig(raw);
   const models = effectiveModels(cfg);
-  stdout.write(`\n  Model profile: ${cfg.profile ?? "not set: every role uses the engine's default model"}${name ? " (written to conductor.config.json)" : ""}\n`);
+  stdout.write(`\n  Model profile: ${cfg.profile ?? "not set: every role uses the engine's default model"}${name ? " (written to carja.config.json)" : ""}\n`);
   if (cfg.profile) stdout.write(`  ${WHAT[cfg.profile]}\n`);
   if (Object.keys(models).length) stdout.write(`\n${describeModels(models)}\n`);
   if (Object.keys(cfg.models).length) stdout.write(`\n  loop.models overrides: ${Object.entries(cfg.models).map(([r, m]) => `${r} ${m}`).join(", ")}\n`);
@@ -39,6 +39,6 @@ export async function loopProfileCommand(root, name, { stdout, stderr }) {
   }
   stdout.write(`  ${costBasis()}\n`);
   const other = Object.keys(PROFILES).filter((p) => p !== cfg.profile);
-  stdout.write(`\n  Switch: ${other.map((p) => `conductor loop profile ${p}`).join("  ·  ")}\n`);
+  stdout.write(`\n  Switch: ${other.map((p) => `carja loop profile ${p}`).join("  ·  ")}\n`);
   return 0;
 }

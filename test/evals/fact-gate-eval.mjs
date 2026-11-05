@@ -20,7 +20,7 @@
 // surface the downstream impact it was never told about?
 //
 //   arm A (gated)   the fact-gate hook is wired into PreToolUse
-//   arm B (control) identical, gate disabled via CONDUCTOR_FACT_GATE=off
+//   arm B (control) identical, gate disabled via CARJA_FACT_GATE=off
 //
 // No judge, no rubric. The graded metric is a string match on the final
 // answer: did it name at least two of the three dependent files? Searching
@@ -32,11 +32,11 @@
 // routing eval learned this the hard way from gstack; the same trap applies
 // here, where run-to-run variance could easily masquerade as an effect.
 //
-// Gated behind CONDUCTOR_EVALS=1: it spawns a real CLI and costs real money.
+// Gated behind CARJA_EVALS=1: it spawns a real CLI and costs real money.
 //
-//   CONDUCTOR_EVALS=1 node test/evals/fact-gate-eval.mjs
-//   CONDUCTOR_EVALS=1 node test/evals/fact-gate-eval.mjs --runs 5 --verbose
-//   CONDUCTOR_EVALS=1 node test/evals/fact-gate-eval.mjs --sensitivity
+//   CARJA_EVALS=1 node test/evals/fact-gate-eval.mjs
+//   CARJA_EVALS=1 node test/evals/fact-gate-eval.mjs --runs 5 --verbose
+//   CARJA_EVALS=1 node test/evals/fact-gate-eval.mjs --sensitivity
 
 import { mkdtemp, mkdir, writeFile, rm, chmod, readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
@@ -60,8 +60,8 @@ const NOISE_PP = 34;
 const VERBOSE = has("verbose");
 const SENSITIVITY = has("sensitivity");
 
-if (process.env.CONDUCTOR_EVALS !== "1") {
-  console.log("Skipped: set CONDUCTOR_EVALS=1 to run (spawns a real agent CLI).");
+if (process.env.CARJA_EVALS !== "1") {
+  console.log("Skipped: set CARJA_EVALS=1 to run (spawns a real agent CLI).");
   process.exit(0);
 }
 
@@ -94,7 +94,7 @@ const TASK =
 const DEPENDENTS = ["http-client.js", "worker.js", "health.js"];
 
 async function buildRepo() {
-  const dir = await mkdtemp(join(tmpdir(), "conductor-factgate-"));
+  const dir = await mkdtemp(join(tmpdir(), "carja-factgate-"));
   await mkdir(join(dir, "src"), { recursive: true });
   await mkdir(join(dir, ".claude"), { recursive: true });
   await mkdir(join(dir, ".agents/hooks"), { recursive: true });
@@ -140,8 +140,8 @@ function runAgent(cwd, gateOn) {
         env: {
           ...process.env,
           // Each run is its own session for the gate's state.
-          CONDUCTOR_HOME: join(cwd, `.state-${Math.random().toString(36).slice(2)}`),
-          ...(gateOn ? {} : { CONDUCTOR_FACT_GATE: "off" }),
+          CARJA_HOME: join(cwd, `.state-${Math.random().toString(36).slice(2)}`),
+          ...(gateOn ? {} : { CARJA_FACT_GATE: "off" }),
         },
         stdio: ["ignore", "pipe", "pipe"],
       },

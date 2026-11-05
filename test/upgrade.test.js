@@ -48,10 +48,10 @@ function makeV5Install() {
 
   // A CLAUDE.md stub with an old managed block + a user note below it.
   writeFileSync(join(dir, "CLAUDE.md"),
-    "<!-- conductor:managed:begin — managed -->\n# Conductor Framework V5\nOLD STUB BODY\n<!-- conductor:managed:end -->\n\nMY CLAUDE NOTES\n");
+    "<!-- carja:managed:begin — managed -->\n# Carja Framework V5\nOLD STUB BODY\n<!-- carja:managed:end -->\n\nMY CLAUDE NOTES\n");
 
-  // conductor/ — user knowledge (must be PRESERVED), framework 5-templates, v1 loop-state.
-  const C = join(dir, "conductor");
+  // carja/ — user knowledge (must be PRESERVED), framework 5-templates, v1 loop-state.
+  const C = join(dir, "carja");
   mkdirSync(join(C, "0-compass"), { recursive: true });
   writeFileSync(join(C, "0-compass", "north-star.md"), "MY APP KNOWLEDGE — do not touch\n");
   mkdirSync(join(C, "5-templates", "genesis-workflow"), { recursive: true });
@@ -82,15 +82,15 @@ test("upgrade replaces framework instructions, carries custom, preserves knowled
   assert.ok(existsSync(join(dir, ".agents", "skills", "grilling", "SKILL.md")), "new core skill installed");
 
   // User knowledge PRESERVED untouched.
-  assert.equal(readFileSync(join(dir, "conductor", "0-compass", "north-star.md"), "utf8"), "MY APP KNOWLEDGE — do not touch\n");
+  assert.equal(readFileSync(join(dir, "carja", "0-compass", "north-star.md"), "utf8"), "MY APP KNOWLEDGE — do not touch\n");
 
   // 5-templates: framework template refreshed, custom template kept.
-  const refreshed = readFileSync(join(dir, "conductor", "5-templates", "genesis-workflow", "problem-solar-system-template.md"), "utf8");
+  const refreshed = readFileSync(join(dir, "carja", "5-templates", "genesis-workflow", "problem-solar-system-template.md"), "utf8");
   assert.ok(!refreshed.includes("OLD FRAMEWORK TEMPLATE"), "framework template refreshed");
-  assert.ok(existsSync(join(dir, "conductor", "5-templates", "my-custom-template.md")), "custom template carried");
+  assert.ok(existsSync(join(dir, "carja", "5-templates", "my-custom-template.md")), "custom template carried");
 
   // loop-state migrated v1 → v2 (fields folded, no data lost).
-  const ls = JSON.parse(readFileSync(join(dir, "conductor", "1-workbench", "loop-state.json"), "utf8"));
+  const ls = JSON.parse(readFileSync(join(dir, "carja", "1-workbench", "loop-state.json"), "utf8"));
   assert.equal(ls.schema_version, 2);
   assert.equal(ls.budget.tokens_spent, 4321, "tokens_spent folded into budget");
   assert.equal(ls.stall.consecutive, 2, "consecutive_stalls folded into stall");
@@ -100,27 +100,27 @@ test("upgrade replaces framework instructions, carries custom, preserves knowled
   // framework block is generated, the user's note moves, the old stub body does not.
   assert.ok(!existsSync(join(dir, "CLAUDE.md")), "CLAUDE.md removed");
   const agentsMd = readFileSync(join(dir, "AGENTS.md"), "utf8");
-  assert.ok(agentsMd.includes("conductor:framework:begin"), "framework block written");
+  assert.ok(agentsMd.includes("carja:framework:begin"), "framework block written");
   assert.ok(agentsMd.includes("## Request Classifier"), "framework block generated from .agents/");
   assert.ok(agentsMd.includes("## Notes moved from CLAUDE.md"), "notes section added");
   assert.ok(agentsMd.includes("MY CLAUDE NOTES"), "user note moved");
   assert.ok(!agentsMd.includes("OLD STUB BODY"), "old managed block not carried");
 
   // Version stamp written.
-  const stamp = JSON.parse(readFileSync(join(dir, ".agents", ".conductor-version.json"), "utf8"));
+  const stamp = JSON.parse(readFileSync(join(dir, ".agents", ".carja-version.json"), "utf8"));
   assert.equal(stamp.frameworkVersion, packageVersion());
 
   // Backup created, containing the OLD edited file; gitignore updated.
-  const backupRoot = join(dir, ".conductor-backup");
+  const backupRoot = join(dir, ".carja-backup");
   assert.ok(existsSync(backupRoot), "backup dir created");
   const stampDir = join(backupRoot, readdirSync(backupRoot)[0]);
   assert.ok(readFileSync(join(stampDir, ".agents", "workflows", "genesis.md"), "utf8").includes("USER EDIT junk"), "backup holds the old edit");
-  assert.ok(readFileSync(join(dir, ".gitignore"), "utf8").includes(".conductor-backup/"), "gitignore updated");
+  assert.ok(readFileSync(join(dir, ".gitignore"), "utf8").includes(".carja-backup/"), "gitignore updated");
 });
 
 test("upgrade migrates a V4-style root-folder install", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cond-v4-"));
-  // Root numbered folders (no conductor/ wrapper), Title-Case, with user knowledge.
+  // Root numbered folders (no carja/ wrapper), Title-Case, with user knowledge.
   mkdirSync(join(dir, "0-Compass"), { recursive: true });
   writeFileSync(join(dir, "0-Compass", "north-star.md"), "V4 KNOWLEDGE\n");
   // A minimal .agents/ with no checksums (the silent-no-op case).
@@ -131,15 +131,15 @@ test("upgrade migrates a V4-style root-folder install", async () => {
   const { code } = await runUpgrade(dir);
   assert.equal(code, 0);
 
-  // Root folder migrated into conductor/ and kebab-cased; knowledge preserved.
-  assert.ok(existsSync(join(dir, "conductor", "0-compass", "north-star.md")), "root folder migrated + kebabbed");
-  assert.equal(readFileSync(join(dir, "conductor", "0-compass", "north-star.md"), "utf8"), "V4 KNOWLEDGE\n");
+  // Root folder migrated into carja/ and kebab-cased; knowledge preserved.
+  assert.ok(existsSync(join(dir, "carja", "0-compass", "north-star.md")), "root folder migrated + kebabbed");
+  assert.equal(readFileSync(join(dir, "carja", "0-compass", "north-star.md"), "utf8"), "V4 KNOWLEDGE\n");
   assert.ok(!existsSync(join(dir, "0-Compass")), "old root folder removed");
 
   // Stale instruction REPLACED even with no checksum baseline (no silent no-op).
   const genesis = readFileSync(join(dir, ".agents", "workflows", "genesis.md"), "utf8");
   assert.ok(!genesis.includes("STALE V4 GENESIS"), "stale instruction replaced despite missing checksums");
-  assert.ok(existsSync(join(dir, ".agents", ".conductor-version.json")), "stamped");
+  assert.ok(existsSync(join(dir, ".agents", ".carja-version.json")), "stamped");
 });
 
 test("--dry-run writes nothing", async () => {
@@ -149,8 +149,8 @@ test("--dry-run writes nothing", async () => {
   assert.match(stdout, /dry run/i);
   // Nothing changed.
   assert.ok(readFileSync(join(dir, ".agents", "workflows", "genesis.md"), "utf8").includes("USER EDIT junk"), "file untouched");
-  assert.ok(!existsSync(join(dir, ".agents", ".conductor-version.json")), "no stamp written");
-  assert.ok(!existsSync(join(dir, ".conductor-backup")), "no backup written");
+  assert.ok(!existsSync(join(dir, ".agents", ".carja-version.json")), "no stamp written");
+  assert.ok(!existsSync(join(dir, ".carja-backup")), "no backup written");
 });
 
 test("kebab rename leaves canonically-cased framework files (Dockerfile) alone", async () => {
@@ -176,20 +176,20 @@ test("upgrade is idempotent (second run succeeds and stays current)", async () =
 // The upgrade commits itself (maintainer: remove upgrade friction).
 //
 // An upgrade rewrites the enforcement hooks, so its commit needs the
-// CONDUCTOR_NO_PROTECTED waiver. Making every user discover and type that was
-// the friction. `conductor upgrade` now commits exactly the framework files it
+// CARJA_NO_PROTECTED waiver. Making every user discover and type that was
+// the friction. `carja upgrade` now commits exactly the framework files it
 // wrote, with the waiver set (so it is still logged), and never sweeps in the
 // user's own work. When it cannot do that safely it prints the one command.
 // ---------------------------------------------------------------------------
 import { execFileSync } from "node:child_process";
 import { initCommand } from "../src/commands/init.js";
 
-const g = (dir, ...a) => execFileSync("git", ["-C", dir, ...a], { encoding: "utf8", env: { ...process.env, CONDUCTOR_HOOKS: "off" } }).trim();
+const g = (dir, ...a) => execFileSync("git", ["-C", dir, ...a], { encoding: "utf8", env: { ...process.env, CARJA_HOOKS: "off" } }).trim();
 
 /** A git repo holding an OLDER install: current templates with lib.sh edited, committed. */
 // The upgrade commit, wherever it sits: upgrade may follow it with a commit of
 // the waiver line its own hooks logged.
-const upgradeCommit = (dir) => g(dir, "log", "-1", "--format=%H", "--grep=^chore: upgrade Conductor");
+const upgradeCommit = (dir) => g(dir, "log", "-1", "--format=%H", "--grep=^chore: upgrade Carja");
 
 async function makeGitInstall() {
   const dir = mkdtempSync(join(tmpdir(), "cond-git-"));
@@ -200,7 +200,7 @@ async function makeGitInstall() {
   // An older release: a protected file differs, exactly what a real upgrade replaces.
   writeFileSync(join(dir, ".agents/hooks/lib.sh"), readFileSync(join(dir, ".agents/hooks/lib.sh"), "utf8") + "\n# older release\n");
   g(dir, "add", "-A");
-  g(dir, "commit", "-q", "-m", "an older conductor install");
+  g(dir, "commit", "-q", "-m", "an older carja install");
   return dir;
 }
 
@@ -210,7 +210,7 @@ test("upgrade commits the framework files itself, with the waiver", async () => 
   const { code, stdout } = await runUpgrade(dir);
   assert.equal(code, 0, stdout);
   assert.notEqual(g(dir, "rev-parse", "HEAD"), before, "no commit was made");
-  assert.match(g(dir, "log", "-1", "--format=%s", upgradeCommit(dir)), new RegExp(`^chore: upgrade Conductor to ${packageVersion()}`));
+  assert.match(g(dir, "log", "-1", "--format=%s", upgradeCommit(dir)), new RegExp(`^chore: upgrade Carja to ${packageVersion()}`));
   assert.equal(g(dir, "status", "--porcelain", "--", ".agents"), "", "framework files left uncommitted");
   assert.match(stdout, /Push as usual/);
 });
@@ -219,13 +219,13 @@ test("upgrade leaves a clean tree: it commits the waiver line its own commit log
   const dir = await makeGitInstall();
   // A real ship-log whose newest entry predates the For-you rule: the report
   // gate used to block committing the waiver line, leaving the repo dirty.
-  writeFileSync(join(dir, "conductor/0-compass/ship-log.md"), "# Ship Log\n\n## 2026-09-16 — Thing\n- **What:** something\n");
+  writeFileSync(join(dir, "carja/0-compass/ship-log.md"), "# Ship Log\n\n## 2026-09-16 — Thing\n- **What:** something\n");
   g(dir, "add", "-A");
   g(dir, "commit", "-q", "-m", "an old ship-log");
   const { code, stdout } = await runUpgrade(dir);
   assert.equal(code, 0, stdout);
   assert.equal(g(dir, "status", "--porcelain"), "", "upgrade left uncommitted changes");
-  assert.match(readFileSync(join(dir, "conductor/0-compass/ship-log.md"), "utf8"), /Hook waiver \(Protected\): conductor upgrade/);
+  assert.match(readFileSync(join(dir, "carja/0-compass/ship-log.md"), "utf8"), /Hook waiver \(Protected\): carja upgrade/);
 });
 
 // F7 (first real crossing, 2026-10-19): the message said "No waiver needed"
@@ -259,13 +259,13 @@ test("upgrade does not commit over the user's uncommitted framework edits", asyn
   // them unasked would be a surprise. Print the one command instead.
   const dir = await makeGitInstall();
   // An older framework block, so the upgrade rewrites the file the note is in.
-  writeFileSync(join(dir, "AGENTS.md"), readFileSync(join(dir, "AGENTS.md"), "utf8").replace(/(conductor:framework:begin[^\n]*\n)/, "$1OLD FRAMEWORK LINE\n"));
+  writeFileSync(join(dir, "AGENTS.md"), readFileSync(join(dir, "AGENTS.md"), "utf8").replace(/(carja:framework:begin[^\n]*\n)/, "$1OLD FRAMEWORK LINE\n"));
   g(dir, "commit", "-qam", "an older framework block");
   writeFileSync(join(dir, "AGENTS.md"), readFileSync(join(dir, "AGENTS.md"), "utf8") + "\nMY UNCOMMITTED NOTE\n");
   const before = g(dir, "rev-parse", "HEAD");
   const { stdout } = await runUpgrade(dir);
   assert.equal(g(dir, "rev-parse", "HEAD"), before, "it committed over uncommitted user edits");
-  assert.match(stdout, /CONDUCTOR_NO_PROTECTED="conductor upgrade" git commit/);
+  assert.match(stdout, /CARJA_NO_PROTECTED="carja upgrade" git commit/);
   assert.match(stdout, /AGENTS\.md/);
   assert.match(readFileSync(join(dir, "AGENTS.md"), "utf8"), /MY UNCOMMITTED NOTE/, "the note survived the refresh");
   // F23: the first porcelain line lost its leading space, so the path lost its first letter.
@@ -282,8 +282,8 @@ test("an uncommitted file the upgrade did not touch stays out of its commit, and
   await runUpgrade(dir); // current release first, so the next upgrade only refreshes
   writeFileSync(join(dir, ".agents/hooks/lib.sh"), readFileSync(join(dir, ".agents/hooks/lib.sh"), "utf8") + "\n# older release\n");
   g(dir, "add", "-A");
-  g(dir, "commit", "-q", "-m", "an older conductor install");
-  const statePath = join(dir, "conductor/1-workbench/loop-state.json");
+  g(dir, "commit", "-q", "-m", "an older carja install");
+  const statePath = join(dir, "carja/1-workbench/loop-state.json");
   // As a loop run leaves it: a v2 state, written the way the driver writes it.
   const mine = `${JSON.stringify({ ...JSON.parse(readFileSync(statePath, "utf8")), status: "completed" }, null, 2)}\n`;
   writeFileSync(statePath, mine);
@@ -291,17 +291,17 @@ test("an uncommitted file the upgrade did not touch stays out of its commit, and
   const { code, stdout } = await runUpgrade(dir);
   assert.equal(code, 0, stdout);
   assert.notEqual(g(dir, "rev-parse", "HEAD"), before, `no commit was made: ${stdout}`);
-  assert.ok(!g(dir, "show", "--name-only", "--format=", upgradeCommit(dir)).split("\n").includes("conductor/1-workbench/loop-state.json"), "the user's file was committed");
+  assert.ok(!g(dir, "show", "--name-only", "--format=", upgradeCommit(dir)).split("\n").includes("carja/1-workbench/loop-state.json"), "the user's file was committed");
   assert.equal(readFileSync(statePath, "utf8"), mine, "the user's change is intact");
-  assert.match(g(dir, "status", "--porcelain", "--", "conductor/1-workbench/loop-state.json"), /^M /, "still modified, not staged (g trims the leading space)");
-  assert.match(stdout, /conductor\/1-workbench\/loop-state\.json/);
+  assert.match(g(dir, "status", "--porcelain", "--", "carja/1-workbench/loop-state.json"), /^M /, "still modified, not staged (g trims the leading space)");
+  assert.match(stdout, /carja\/1-workbench\/loop-state\.json/);
   assert.doesNotMatch(stdout, /(^|[^c])onductor\/1-workbench/m, "a path lost its first letter");
 });
 
 test("upgrade migrates a tracked CLAUDE.md and GEMINI.md: notes into AGENTS.md, deletions committed", async () => {
   const dir = await makeGitInstall();
-  writeFileSync(join(dir, "CLAUDE.md"), "<!-- conductor:managed:begin — x -->\nOLD\n<!-- conductor:managed:end -->\n\nUse plan mode for billing.\n");
-  writeFileSync(join(dir, "GEMINI.md"), "---\ntrigger: always_on\n---\n\n<!-- conductor:managed:begin — x -->\nOLD\n<!-- conductor:managed:end -->\n");
+  writeFileSync(join(dir, "CLAUDE.md"), "<!-- carja:managed:begin — x -->\nOLD\n<!-- carja:managed:end -->\n\nUse plan mode for billing.\n");
+  writeFileSync(join(dir, "GEMINI.md"), "---\ntrigger: always_on\n---\n\n<!-- carja:managed:begin — x -->\nOLD\n<!-- carja:managed:end -->\n");
   g(dir, "add", "-A");
   g(dir, "commit", "-q", "-m", "old stubs");
   const { code, stdout } = await runUpgrade(dir);
@@ -323,7 +323,7 @@ test("upgrade keeps every byte of a team-written AGENTS.md, below the framework 
   const { code, stdout } = await runUpgrade(dir);
   assert.equal(code, 0, stdout);
   const agentsMd = readFileSync(join(dir, "AGENTS.md"), "utf8");
-  assert.ok(agentsMd.startsWith("<!-- conductor:framework:begin"));
+  assert.ok(agentsMd.startsWith("<!-- carja:framework:begin"));
   assert.ok(agentsMd.endsWith(team));
 });
 
@@ -332,7 +332,7 @@ test("--no-commit prints the exact command and commits nothing", async () => {
   const before = g(dir, "rev-parse", "HEAD");
   const { stdout } = await runUpgrade(dir, ["--no-commit"]);
   assert.equal(g(dir, "rev-parse", "HEAD"), before);
-  assert.match(stdout, /CONDUCTOR_NO_PROTECTED="conductor upgrade" git commit/);
+  assert.match(stdout, /CARJA_NO_PROTECTED="carja upgrade" git commit/);
 });
 
 test("the printed command works as printed", async () => {
@@ -395,7 +395,7 @@ test("R3: a V4 .conductor/ install gets its framework names kebab-cased at every
   const { code, stdout } = await runUpgrade(dir);
   assert.equal(code, 0, stdout);
 
-  const K = join(dir, "conductor");
+  const K = join(dir, "carja");
   const expected = {
     "0-compass/north-star.md": "north star\n",
     "1-workbench/inbox.md": "- an inbox item\n",
@@ -411,18 +411,18 @@ test("R3: a V4 .conductor/ install gets its framework names kebab-cased at every
     // Not framework names: left exactly as the user named them.
     "4-context/technical/API-Discovery.md": "user file\n",
     "4-context/design/DESIGN.md": "user file\n",
-    // Retired scaffold: still renamed, so `conductor design migrate` finds it.
+    // Retired scaffold: still renamed, so `carja design migrate` finds it.
     "4-context/design/design-system.md": "our colours\n",
     "6-archive/completed-implementations/03-AI-Follow-Up-Routing/feature-spec.md": "archived\n",
   };
   for (const [rel, body] of Object.entries(expected)) {
-    assert.ok(existsSync(join(K, rel)), `missing after upgrade: conductor/${rel}`);
+    assert.ok(existsSync(join(K, rel)), `missing after upgrade: carja/${rel}`);
     assert.equal(readFileSync(join(K, rel), "utf8"), body, `content changed: ${rel}`);
   }
   assert.ok(!readdirSync(join(K, "2-backlog")).includes("Project-Backlog"), "Title-Case framework folder left behind");
 });
 
-test("R3b: an install with no checksums loses the framework files Conductor retired, and keeps its own", async () => {
+test("R3b: an install with no checksums loses the framework files Carja retired, and keeps its own", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cond-v4-retired-"));
   mkdirSync(join(dir, ".conductor", "0-Compass"), { recursive: true });
   writeFileSync(join(dir, ".conductor", "0-Compass", "North-Star.md"), "n\n");
@@ -444,7 +444,7 @@ test("R3b: an install with no checksums loses the framework files Conductor reti
   assert.match(stdout, /rules\/conductor-system\.md/, "the removal is not reported");
 });
 
-test("the retired-file list never names a file Conductor still ships", async () => {
+test("the retired-file list never names a file Carja still ships", async () => {
   const { listFiles } = await import("../src/update.js");
   const retired = JSON.parse(readFileSync(new URL("../src/retired-framework-files.json", import.meta.url), "utf8")).files;
   const shipped = new Set(listFiles(join(TEMPLATES, ".agents")));
@@ -452,7 +452,7 @@ test("the retired-file list never names a file Conductor still ships", async () 
   for (const rel of retired) assert.ok(!shipped.has(rel), `${rel} is shipped again: re-run scripts/capture-retired-files.js`);
 });
 
-test("R4: upgrade refuses an agent-only repo with no conductor/ and no version stamp, unless --force", async () => {
+test("R4: upgrade refuses an agent-only repo with no carja/ and no version stamp, unless --force", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cond-agent-only-"));
   mkdirSync(join(dir, ".agents", "skills", "Coherence-Gate"), { recursive: true });
   writeFileSync(join(dir, ".agents", "skills", "Coherence-Gate", "SKILL.md"), "---\nname: Coherence-Gate\n---\n");
@@ -461,7 +461,7 @@ test("R4: upgrade refuses an agent-only repo with no conductor/ and no version s
   const refused = await runUpgrade(dir);
   assert.equal(refused.code, 1);
   assert.match(refused.stderr, /--force/);
-  assert.ok(!existsSync(join(dir, "conductor")), "refused, but still created conductor/");
+  assert.ok(!existsSync(join(dir, "carja")), "refused, but still created carja/");
   assert.ok(!existsSync(join(dir, ".agents", "workflows")), "refused, but still installed workflows");
   assert.equal(readFileSync(join(dir, "CLAUDE.md"), "utf8"), "# Company OS\n\nRead AGENTS.md.\n");
 
@@ -497,7 +497,7 @@ test("on the default branch with a remote, upgrade commits on its own branch", a
   const { code, stdout } = await runUpgrade(dir);
   assert.equal(code, 0, stdout);
   assert.equal(g(dir, "rev-parse", main), before, "upgrade committed on the default branch");
-  const branch = `chore/conductor-${packageVersion()}`;
+  const branch = `chore/carja-${packageVersion()}`;
   assert.equal(g(dir, "rev-parse", "--abbrev-ref", "HEAD"), branch);
   assert.ok(upgradeCommit(dir), "no upgrade commit on the new branch");
   assert.match(stdout, new RegExp(`git push -u origin ${branch.replace(/\./g, "\\.")}`));

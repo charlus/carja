@@ -13,7 +13,7 @@ const HOOKS_REL = ".agents/hooks";
 const EXECUTABLE_HOOKS = [
   "pre-commit",
   "pre-push",
-  // Cleanup after `git pull`: removes merged `conductor loop` worktrees.
+  // Cleanup after `git pull`: removes merged `carja loop` worktrees.
   "post-merge",
   "verification-stop-hook.sh",
   // Opt-in Claude Code PreToolUse hook. Not wired by core.hooksPath (that is
@@ -101,13 +101,13 @@ function reportNested(results, stdout) {
   }
   if (results.some((r) => r.state === "wired"))
     stdout.write(
-      `   Set each repository's push check in conductor.config.json: conductor verify --repo <dir> --set "<command>".\n` +
-        "   The path is absolute: run `conductor install-hooks` again if you move this folder.\n",
+      `   Set each repository's push check in carja.config.json: carja verify --repo <dir> --set "<command>".\n` +
+        "   The path is absolute: run `carja install-hooks` again if you move this folder.\n",
     );
 }
 
 /**
- * Install (or uninstall) Conductor's deterministic git hooks by pointing
+ * Install (or uninstall) Carja's deterministic git hooks by pointing
  * git's core.hooksPath at .agents/hooks. Never clobbers a foreign hooksPath.
  * In the outer layout, the nested code repositories are wired too.
  */
@@ -124,7 +124,7 @@ export async function installHooksCommand(args, { cwd, stdout, stderr }) {
 
   const hooksDir = join(targetDir, HOOKS_REL);
   if (!(await exists(hooksDir))) {
-    stderr.write(`No ${HOOKS_REL}/ found. Run 'conductor init' or 'conductor upgrade' first.\n`);
+    stderr.write(`No ${HOOKS_REL}/ found. Run 'carja init' or 'carja upgrade' first.\n`);
     return 1;
   }
 
@@ -134,9 +134,9 @@ export async function installHooksCommand(args, { cwd, stdout, stderr }) {
   if (uninstall) {
     if (currentPath === HOOKS_REL) {
       await git(["config", "--local", "--unset", "core.hooksPath"], targetDir);
-      stdout.write("✅ Conductor hooks disabled (core.hooksPath unset).\n");
+      stdout.write("✅ Carja hooks disabled (core.hooksPath unset).\n");
     } else {
-      stdout.write("ℹ️  Conductor hooks were not the active hooksPath; nothing changed.\n");
+      stdout.write("ℹ️  Carja hooks were not the active hooksPath; nothing changed.\n");
     }
     for (const r of await wireNestedRepos(targetDir, { uninstall: true })) stdout.write(`✅ ${r.repo}/: hooks unwired.\n`);
     return 0;
@@ -157,7 +157,7 @@ export async function installHooksCommand(args, { cwd, stdout, stderr }) {
   if (currentPath && currentPath !== HOOKS_REL) {
     stdout.write(
       `⚠️  core.hooksPath is already set to '${currentPath}'. Leaving it as-is.\n` +
-        `   To use Conductor's hooks, wire them into that path, or run:\n` +
+        `   To use Carja's hooks, wire them into that path, or run:\n` +
         `     git config --local core.hooksPath ${HOOKS_REL}\n`
     );
     reportNested(await wireNestedRepos(targetDir), stdout);
@@ -169,13 +169,13 @@ export async function installHooksCommand(args, { cwd, stdout, stderr }) {
     stderr.write("Failed to set core.hooksPath.\n");
     return 1;
   }
-  // The floor for `conductor status`: commits from before this are not judged.
+  // The floor for `carja status`: commits from before this are not judged.
   await writeInstalledHeartbeat(targetDir);
 
   const present = new Set(await readdir(hooksDir));
   const wired = ["pre-commit", "pre-push", "post-merge"].filter((h) => present.has(h));
   stdout.write(
-    `✅ Conductor enforcement hooks enabled (core.hooksPath → ${HOOKS_REL}): ${wired.join(", ")}\n` +
+    `✅ Carja enforcement hooks enabled (core.hooksPath → ${HOOKS_REL}): ${wired.join(", ")}\n` +
       `   Test-Driven Law on commit, Verification Iron Law on push${present.has("post-merge") ? ", merged loop worktrees cleaned up on pull" : ""}. Bypass is logged; see ${HOOKS_REL}/README.md.\n`
   );
   reportNested(await wireNestedRepos(targetDir), stdout);

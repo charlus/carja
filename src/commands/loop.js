@@ -1,6 +1,6 @@
 // src/commands/loop.js
 //
-// `conductor loop` — the deterministic autonomy driver as a CLI subcommand
+// `carja loop` — the deterministic autonomy driver as a CLI subcommand
 // (ADR-0001 / Autonomous-Loop-Backend.md). Thins over src/loop/driver.js: this
 // file is the IO shell (read/persist state, run git + verify, pick the adapter);
 // all guarantees live in the pure driver so `node --test` can exercise them.
@@ -12,7 +12,7 @@ import { join, resolve, sep, basename, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { runLoop, normalizeState, resolveVerifyCommand, beatCeiling } from "../loop/driver.js";
 import { resolveAdapter } from "../loop/adapters/index.js";
-import { createWorktree, teardownWorktree, worktreePlan, taskWorktreePlan, materializeConductorContext, CONTEXT_ANCHORS, hasUniqueCommits, ensureWorktreesExcluded, isLiveWorktree, freeWorktreePath } from "../loop/worktree.js";
+import { createWorktree, teardownWorktree, worktreePlan, taskWorktreePlan, materializeCarjaContext, CONTEXT_ANCHORS, hasUniqueCommits, ensureWorktreesExcluded, isLiveWorktree, freeWorktreePath } from "../loop/worktree.js";
 import { guardedAutoCommit, autoCommitMessage, IsolationLostError } from "../loop/autocommit.js";
 import { harvestWorkQueue, renderAssignment, renderAttempts } from "../loop/harvester.js";
 import { parseCheckerVerdict, verdictToExitCode, tallyVerdicts, isInfraReason, groundFindings, VERDICT_REL } from "../loop/checker.js";
@@ -55,17 +55,18 @@ import { blankedNames, beatEnv, withBeatEnv } from "../loop/beat-env.js";
 import { mrTitles, readOnlyEnv } from "../loop/team-facing.js";
 import { STACK_FILE, REPORT_REL, forgeBranchMr, closeMr, reconcileStack, stackTop, stackNote, renderStackReport, summaryFromBody, ownerActionsFromBody } from "../loop/stack.js";
 import { configPath as configPathOf } from "../names.js";
+import { isOldLayout, oldLayoutMessage } from "../names.js";
 
-const STATE_REL = "conductor/1-workbench/loop-state.json";
-const LOCK_REL = "conductor/1-workbench/loop.lock";
+const STATE_REL = "carja/1-workbench/loop-state.json";
+const LOCK_REL = "carja/1-workbench/loop.lock";
 const WORKFLOW_REL = ".agents/workflows/unattended-loop.md";
 const CHECKER_WORKFLOW_REL = ".agents/workflows/loop-checker.md";
-const TRIGGER_DOC_REL = "conductor/1-workbench/loop-trigger.md";
+const TRIGGER_DOC_REL = "carja/1-workbench/loop-trigger.md";
 // Fleet Bridge (§5): the source-of-truth work files the harvester drains, and
 // the per-beat assignment pointer a fleet agent reads to know its work item.
-const INBOX_REL = "conductor/1-workbench/inbox.md";
-const BACKLOG_REL = "conductor/2-backlog/task-backlog.md";
-const ASSIGNMENT_REL = "conductor/1-workbench/loop-assignment.md";
+const INBOX_REL = "carja/1-workbench/inbox.md";
+const BACKLOG_REL = "carja/2-backlog/task-backlog.md";
+const ASSIGNMENT_REL = "carja/1-workbench/loop-assignment.md";
 
 /** One-line description of what an autonomy level permits (for dry-run). */
 function autonomySummary(state) {
@@ -93,7 +94,7 @@ const LOOP_FLAGS = new Set([
   "--platform",
   "--goal",
   "--event",
-  "--from-conductor",
+  "--from-carja",
   "--help",
   "-h",
   "--priority",
@@ -160,7 +161,7 @@ async function liveLockPid(path) {
   return d.acquire ? null : d.heldByPid;
 }
 
-/** The projects whose `conductor loop <project>` run is live in `runsDir`: [{project, pid}]. */
+/** The projects whose `carja loop <project>` run is live in `runsDir`: [{project, pid}]. */
 async function liveProjectRuns(runsDir) {
   const out = [];
   for (const name of (await exists(runsDir)) ? await readdir(runsDir) : []) {
@@ -259,11 +260,11 @@ export function runCli(cmd, argv, cwd) {
  */
 /**
  * The registry client of the dependency gate (I4): the real network, or, for the
- * CLI tests only, canned answers from the JSON file in CONDUCTOR_REGISTRY_FIXTURE
+ * CLI tests only, canned answers from the JSON file in CARJA_REGISTRY_FIXTURE
  * ([[url part, {status, json}], …]) so no test reaches a registry.
  */
 async function registryFetch() {
-  const fixture = process.env.CONDUCTOR_REGISTRY_FIXTURE;
+  const fixture = process.env.CARJA_REGISTRY_FIXTURE;
   if (!fixture) return globalThis.fetch;
   const routes = JSON.parse(await readFile(fixture, "utf8"));
   return async (url, opts = {}) => {
@@ -302,14 +303,14 @@ export async function configVerify(root, codeDir = null) {
     const cfg = await readJson(cfgPath);
     // Step 7: in the outer layout the code repository's own push check is the loop's verify.
     const v = String((codeDir ? cfg.repos?.[codeDir]?.verify : cfg.verify) ?? "").trim();
-    // "none" declares no tests on purpose (conductor verify --none): never a command to run.
+    // "none" declares no tests on purpose (carja verify --none): never a command to run.
     return v.toLowerCase() === "none" ? "" : v;
   } catch {
     return "";
   }
 }
 
-/** The raw conductor.config.json from the ROOT checkout ({} if absent). Throws on bad JSON. */
+/** The raw carja.config.json from the ROOT checkout ({} if absent). Throws on bad JSON. */
 async function readRootConfig(root) {
   const cfgPath = configPathOf(root);
   if (!(await exists(cfgPath))) return {};
@@ -366,7 +367,7 @@ export function refView(root, ref) {
 }
 
 export async function readSlices(root, optIn, view = diskView(root)) {
-  const tpl = (name) => diskView(root).read(join("conductor/5-templates/carve-workflow", name));
+  const tpl = (name) => diskView(root).read(join("carja/5-templates/carve-workflow", name));
   const projects = [];
   for (const entry of await view.list(PROJECTS_REL)) {
     if (!entry.dir) continue;
@@ -390,7 +391,7 @@ export async function readSlices(root, optIn, view = diskView(root)) {
 export async function readBlueprints(root, optIn, view = diskView(root)) {
   const disk = diskView(root);
   const templates = {};
-  for (const [rel, t] of Object.entries(TEMPLATE_FOR)) templates[rel] = await disk.read(join("conductor/5-templates", t));
+  for (const [rel, t] of Object.entries(TEMPLATE_FOR)) templates[rel] = await disk.read(join("carja/5-templates", t));
   const projects = [];
   for (const entry of await view.list(PROJECTS_REL)) {
     if (!entry.dir) continue; // .gitkeep and other files are not projects
@@ -406,7 +407,7 @@ export async function readBlueprints(root, optIn, view = diskView(root)) {
 }
 
 /**
- * `conductor loop <project>`, the stacked run (owner, 2026-10-22). After the
+ * `carja loop <project>`, the stacked run (owner, 2026-10-22). After the
  * owner's approved Technical Vision, one command builds the Carve and every
  * slice, each item on the branch of the item below it, until the project is
  * built, an item asks a one-way question, or an item stops. Each item is one
@@ -415,12 +416,12 @@ export async function readBlueprints(root, optIn, view = diskView(root)) {
  */
 async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, runDir, runsDir }) {
   const dryRun = args.includes("--dry-run");
-  const cmd = `conductor loop ${scope}`;
+  const cmd = `carja loop ${scope}`;
   let loopConfig;
   try {
     loopConfig = parseLoopConfig(await readRootConfig(root));
   } catch (e) {
-    stderr.write(`Could not parse conductor.config.json: ${e.message}\n`);
+    stderr.write(`Could not parse carja.config.json: ${e.message}\n`);
     return 1;
   }
   const rootGit = makeGit(root);
@@ -443,12 +444,12 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
   if (!dryRun) {
     const whole = await liveLockPid(join(root, LOCK_REL));
     if (whole) {
-      stderr.write(`⛔  A \`conductor loop --from-conductor\` run is going on in this folder (pid ${whole}), and it can take the same work. Wait for it to end, then run \`${cmd}\`.\n`);
+      stderr.write(`⛔  A \`carja loop --from-carja\` run is going on in this folder (pid ${whole}), and it can take the same work. Wait for it to end, then run \`${cmd}\`.\n`);
       return 1;
     }
     const lock = await acquireLock(lockPath);
     if (!lock.acquired) {
-      stderr.write(`⛔  ${scope} is already being built by another loop in this folder (pid ${lock.heldByPid}). Watch it with \`conductor watch\`.\n`);
+      stderr.write(`⛔  ${scope} is already being built by another loop in this folder (pid ${lock.heldByPid}). Watch it with \`carja watch\`.\n`);
       return 1;
     }
     await runCli("git", ["fetch", "-q", "origin"], root);
@@ -492,7 +493,7 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
     }
     const { keep, superseded, notes } = reconcileStack(recorded, observed);
     const entries = [...keep];
-    for (const n of notes) stdout.write(`[CONDUCTOR LOOP] ${n}\n`);
+    for (const n of notes) stdout.write(`[CARJA LOOP] ${n}\n`);
     if (!dryRun) {
       // The MRs above a closed or changed one are built on a base that is gone: close them.
       for (const e of superseded) {
@@ -516,7 +517,7 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
         `Budget: each item gets up to ${projState.budget.max_beats} beats and ${projState.budget.max_wall_clock_min} minutes (loop-state.json).\n\n`
     );
 
-    // I7: where the stacked run is, for `conductor watch`.
+    // I7: where the stacked run is, for `carja watch`.
     const stackEmit = dryRun ? async () => {} : makeEmitter(dirname(runsDir), `${new Date().toISOString()}#${process.pid}:stack`);
     const waitingBelow = entries.filter((e) => !e.merged).length;
     await stackEmit("stack_start", { project: scope, pid: process.pid, total: waitingBelow + plan.items.length, items: plan.items.map((t) => itemName(t)) });
@@ -546,7 +547,7 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
           base: belowHeads,
           adopted: true,
         });
-        stdout.write(`[CONDUCTOR LOOP] ${itemName(next)}: its MR is already open (${open.url}). Taken into the stack as it is.\n`);
+        stdout.write(`[CARJA LOOP] ${itemName(next)}: its MR is already open (${open.url}). Taken into the stack as it is.\n`);
         if (!dryRun) await atomicWriteJson(stackPath, entries);
         continue;
       }
@@ -556,7 +557,7 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
       }
       const below = [...entries].reverse().find((e) => !e.merged) ?? null;
       const belowCode = [...entries].reverse().find((e) => !e.merged && e.code) ?? null;
-      stdout.write(`\n[CONDUCTOR LOOP] building ${itemName(next)} on ${viewRef.replace(/^origin\//, "")}\n`);
+      stdout.write(`\n[CARJA LOOP] building ${itemName(next)} on ${viewRef.replace(/^origin\//, "")}\n`);
       built += 1;
       await stackEmit("stack_item", { project: scope, item: itemName(next), n: waitingBelow + built, of: waitingBelow + plan.items.length });
       const code = await loopCommand(args, {
@@ -616,7 +617,7 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
     stdout.write(`\n${report}`);
     const open = entries.filter((e) => !e.merged).length;
     stdout.write(
-      `\n[CONDUCTOR LOOP] Next: ${stop?.status === "awaiting_answers" ? `answer the questions in conductor/1-workbench/questions/, then run \`${cmd}\` again.` : stop?.status === "done" ? (open ? `merge the ${open} item(s) in the order of ${REPORT_REL(scope)}.` : "nothing.") : `read ${MESSAGES_REL}, then run \`${cmd}\` again.`}\n`
+      `\n[CARJA LOOP] Next: ${stop?.status === "awaiting_answers" ? `answer the questions in carja/1-workbench/questions/, then run \`${cmd}\` again.` : stop?.status === "done" ? (open ? `merge the ${open} item(s) in the order of ${REPORT_REL(scope)}.` : "nothing.") : `read ${MESSAGES_REL}, then run \`${cmd}\` again.`}\n`
     );
     return stop?.status === "done" || stop?.status === "awaiting_answers" ? 0 : 1;
   } finally {
@@ -646,7 +647,7 @@ async function writeStackReport(root, project, entries, stop, notes) {
   const text = renderStackReport({ project, entries, stop, notes });
   await ensureOwnerFilesExcluded(root);
   try {
-    await mkdir(join(root, "conductor/1-workbench"), { recursive: true });
+    await mkdir(join(root, "carja/1-workbench"), { recursive: true });
     await writeFile(join(root, REPORT_REL(project)), text, "utf8");
   } catch {
     /* the report is printed too */
@@ -660,9 +661,9 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     stdout.write(`${LOOP_HELP}\n`);
     return 0;
   }
-  // `conductor loop on|off <project> [dir]`: turn the loop on for a project, without JSON.
+  // `carja loop on|off <project> [dir]`: turn the loop on for a project, without JSON.
   const sub = args.find((a) => !a.startsWith("-"));
-  // `conductor loop profile [quality|balanced] [dir]`: the models, by budget.
+  // `carja loop profile [quality|balanced] [dir]`: the models, by budget.
   if (sub === "profile") {
     let [name, dir] = args.slice(args.indexOf(sub) + 1).filter((a) => !a.startsWith("-"));
     if (name && !dir && (name.includes("/") || name === ".")) [name, dir] = [undefined, name];
@@ -679,20 +680,20 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       ? loopOnCommand(resolve(cwd, dir || "."), project, { args: rest, stdout, stderr })
       : loopOffCommand(resolve(cwd, dir || "."), project, { stdout, stderr });
   }
-  // `conductor loop take ["<item>"] [dir] [--drop]`: give the loop a backlog item (C4-F4).
+  // `carja loop take ["<item>"] [dir] [--drop]`: give the loop a backlog item (C4-F4).
   if (sub === "take") {
     const rest = args.slice(args.indexOf(sub) + 1).filter((a) => !a.startsWith("-"));
     const { loopTakeCommand } = await import("./loop-take.js");
     return loopTakeCommand(resolve(cwd, rest[1] || "."), rest[0], { drop: args.includes("--drop"), stdout, stderr });
   }
-  // `conductor loop doctor [dir]`: check a project before an unattended run.
+  // `carja loop doctor [dir]`: check a project before an unattended run.
   if (args.find((a) => !a.startsWith("-")) === "doctor") {
     const rest = args.slice(args.indexOf("doctor") + 1);
     const dir = rest.find((a) => !a.startsWith("-"));
     const { loopDoctor } = await import("./loop-doctor.js");
     return loopDoctor(resolve(cwd, dir || "."), { stdout, cwd, beat: rest.includes("--beat") });
   }
-  // `conductor loop <project> [dir]`: the project named is the whole scope.
+  // `carja loop <project> [dir]`: the project named is the whole scope.
   const pos = positionals(args);
   const isDir = (t) => {
     try {
@@ -703,19 +704,23 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   };
   const scope = looksLikeProject(pos[0], isDir) ? pos[0] : null;
   const root = resolve(cwd, (scope ? pos[1] : pos[0]) || ".");
+  if (isOldLayout(root)) {
+    stderr.write(oldLayoutMessage(root));
+    return 1;
+  }
   const commonDirRes = await runCli("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], root);
   const runsDir = commonDirRes.ok ? join(commonDirRes.stdout, BEAT_LOG_DIR, RUNS_DIR) : null;
   const runDir = scope && runsDir ? join(runsDir, runKey(scope)) : null;
   const dryRun = args.includes("--dry-run");
-  const fromConductor = args.includes("--from-conductor") || Boolean(scope);
+  const fromCarja = args.includes("--from-carja") || Boolean(scope);
   // The owner merged the last MR on the forge: the backlog, the slices, the
   // Blueprint and a new project are on the default branch, not in this folder.
   // Fast-forward it before anything is read, so the same command takes the next item.
-  if (fromConductor && !dryRun && !stack && commonDirRes.ok) {
+  if (fromCarja && !dryRun && !stack && commonDirRes.ok) {
     await runCli("git", ["fetch", "-q", "origin"], root);
     const up = await catchUpCheckout({ git: makeGit(root) });
-    if (up.status === "updated") stdout.write(`[CONDUCTOR LOOP] updated to ${up.ref} (${up.count} new commit${up.count === 1 ? "" : "s"})\n`);
-    if (up.status === "failed") stderr.write(`[CONDUCTOR LOOP] ⚠️  could not update ${root} to ${up.ref}: ${up.reason}. The loop reads the backlog as it is on disk.\n`);
+    if (up.status === "updated") stdout.write(`[CARJA LOOP] updated to ${up.ref} (${up.count} new commit${up.count === 1 ? "" : "s"})\n`);
+    if (up.status === "failed") stderr.write(`[CARJA LOOP] ⚠️  could not update ${root} to ${up.ref}: ${up.reason}. The loop reads the backlog as it is on disk.\n`);
   }
   if (scope) {
     const base = join(root, PROJECTS_REL);
@@ -730,11 +735,11 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       return 1;
     }
     if (!runDir) {
-      stderr.write(`${root} is not a git repository: \`conductor loop ${scope}\` needs one.\n`);
+      stderr.write(`${root} is not a git repository: \`carja loop ${scope}\` needs one.\n`);
       return 1;
     }
     if (args.includes("--goal") || args.includes("--event")) {
-      stderr.write(`\`conductor loop ${scope}\` builds that project: --goal and --event do not apply.\n`);
+      stderr.write(`\`carja loop ${scope}\` builds that project: --goal and --event do not apply.\n`);
       return 1;
     }
     // The stacked run drives the project item by item; each item is one run of this function.
@@ -742,7 +747,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   }
   const statePath = scope ? join(runDir, "loop-state.json") : join(root, STATE_REL);
   const lockPath = scope ? join(runDir, "loop.lock") : join(root, LOCK_REL);
-  const loopCmd = scope ? `conductor loop ${scope}` : undefined;
+  const loopCmd = scope ? `carja loop ${scope}` : undefined;
   const unsafe = args.includes("--unsafe-no-sandbox");
   const platformFlag = flagValue(args, "--platform");
   const goalFlag = flagValue(args, "--goal");
@@ -751,7 +756,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   const noInbox = args.includes("--no-inbox");
 
   if (!(await exists(join(root, STATE_REL)))) {
-    stderr.write(`No ${STATE_REL} found. Run 'conductor init' or 'conductor upgrade' first.\n`);
+    stderr.write(`No ${STATE_REL} found. Run 'carja init' or 'carja upgrade' first.\n`);
     return 1;
   }
 
@@ -766,14 +771,14 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // A project's run: its own run state, the owner's settings.
   const state = scope ? scopedState(raw, (await exists(statePath)) ? await readJson(statePath).catch(() => null) : null) : normalizeState(raw);
 
-  // The "loop" block of conductor.config.json, read from the ROOT checkout only:
+  // The "loop" block of carja.config.json, read from the ROOT checkout only:
   // a beat runs in a worktree and cannot widen its own sandbox or setup. A bad
   // value stops the run (dry-run included) rather than being silently ignored.
   let loopConfig;
   try {
     loopConfig = parseLoopConfig(await readRootConfig(root));
   } catch (e) {
-    stderr.write(`Could not parse conductor.config.json: ${e.message}\n`);
+    stderr.write(`Could not parse carja.config.json: ${e.message}\n`);
     return 1;
   }
   if (priorityFlag !== null) {
@@ -783,7 +788,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   }
   if (noInbox) loopConfig.inbox = false;
   if (loopConfig.errors.length) {
-    stderr.write(`⛔  Invalid loop settings in conductor.config.json:\n${loopConfig.errors.map((e) => `    - ${e}`).join("\n")}\n`);
+    stderr.write(`⛔  Invalid loop settings in carja.config.json:\n${loopConfig.errors.map((e) => `    - ${e}`).join("\n")}\n`);
     return 1;
   }
   if (scope) loopConfig = scopeLoopConfig(loopConfig, scope);
@@ -795,11 +800,11 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // untouched. Safe: the one-loop lock guarantees no live worker to race, and a
   // re-run is idempotent (maker re-verifies, auto-commit no-ops, merge reuses PR).
   const fresh = startNewRun(state);
-  if (fresh.reset && !scope) stdout.write(`[CONDUCTOR LOOP] new run: the previous one ended '${fresh.from}' — beats, clock and stall counters reset\n`);
+  if (fresh.reset && !scope) stdout.write(`[CARJA LOOP] new run: the previous one ended '${fresh.from}' — beats, clock and stall counters reset\n`);
   const revived = reviveForResume(state);
   if (revived.tasks || revived.run) {
     stdout.write(
-      `[CONDUCTOR LOOP] resuming: revived ${revived.tasks} in-flight task(s)` +
+      `[CARJA LOOP] resuming: revived ${revived.tasks} in-flight task(s)` +
         `${revived.run ? " + the run status" : ""} from a prior interrupted run\n`
     );
   }
@@ -840,14 +845,14 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     }
   }
 
-  // ---- Fleet Bridge FB-1: harvest ./conductor/ into the swarm's work queue ----
-  // `--from-conductor` makes the ONE source of truth the fleet's backlog: open
+  // ---- Fleet Bridge FB-1: harvest ./carja/ into the swarm's work queue ----
+  // `--from-carja` makes the ONE source of truth the fleet's backlog: open
   // inbox thoughts + backlog checkboxes become typed, routed tasks[]. Re-harvested
   // every run (FB-5: the folder is truth, the Spine is cache), so a human editing
-  // conductor/ in VS Code and the fleet draining it stay coherent. Never escalates
+  // carja/ in VS Code and the fleet draining it stay coherent. Never escalates
   // autonomy; the operator's autonomy_level/sandbox/concurrency still gate the run.
   let harvestedQueue = [];
-  if (fromConductor) {
+  if (fromCarja) {
     // A project's run never takes the inbox or the backlog.
     const inboxMd = !scope && (await exists(join(root, INBOX_REL))) ? await readFile(join(root, INBOX_REL), "utf8") : "";
     const backlogMd = !scope && (await exists(join(root, BACKLOG_REL))) ? await readFile(join(root, BACKLOG_REL), "utf8") : "";
@@ -882,16 +887,16 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       if (codeDirAbs && !dryRun) await runCli("git", ["fetch", "-q", "origin"], codeDirAbs);
       const remote = codeDirAbs ? unionBranches(await remoteLoopBranches(rootGit), await remoteLoopBranches(makeGit(codeDirAbs))) : await remoteLoopBranches(rootGit);
       if (remote === null) {
-        stderr.write("[CONDUCTOR LOOP] ⚠️  could not read the remote's loop branches: items in review elsewhere are not skipped\n");
+        stderr.write("[CARJA LOOP] ⚠️  could not read the remote's loop branches: items in review elsewhere are not skipped\n");
       } else {
         const claims = skipClaimed(harvestedQueue, {
           remoteBranches: remote,
           mergedBranches: await mergedBranches(rootGit, [...remote]),
           branchFor: (t) => taskWorktreePlan(root, state.goal_description, t.id).branch,
         });
-        if (!scope) for (const t of claims.inReview) stdout.write(`[CONDUCTOR LOOP] skipped ${t.id}: its loop branch is on the remote (in progress or in review)\n`);
+        if (!scope) for (const t of claims.inReview) stdout.write(`[CARJA LOOP] skipped ${t.id}: its loop branch is on the remote (in progress or in review)\n`);
         for (const t of claims.mergedButOpen)
-          stdout.write(`[CONDUCTOR LOOP] skipped ${t.id}: its loop branch is merged but the item is still open in the backlog — tick it\n`);
+          stdout.write(`[CARJA LOOP] skipped ${t.id}: its loop branch is merged but the item is still open in the backlog — tick it\n`);
         harvestedQueue = claims.queue;
       }
     }
@@ -901,7 +906,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     // persist + audit DEFERRED to the post-lock block below (dry-run stays read-only).
   }
 
-  // Resolve the verify command up front (mirrors conductor_verify_cmd).
+  // Resolve the verify command up front (mirrors carja_verify_cmd).
   const verifyCommand = resolveVerifyCommand({
     stateCommand: state.verification.command,
     configVerify: loopConfig.codeDir ? await configVerify(root, loopConfig.codeDir) : await configVerify(root),
@@ -917,7 +922,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   if (state.sandbox === "none" && !unsafe && !dryRun) {
     stderr.write(
       [
-        "⛔  'conductor loop' would run an unattended agent with shell access UNSANDBOXED (sandbox: none).",
+        "⛔  'carja loop' would run an unattended agent with shell access UNSANDBOXED (sandbox: none).",
         "    Set \"sandbox\": \"cli-native\" in loop-state.json to use the agent CLI's own sandbox",
         "    (Anthropic's bubblewrap for claude — needs `bubblewrap`+`socat` on the host; no Docker),",
         "    or \"container\" for a BYO container. See .agents/sandbox/README.md.",
@@ -939,7 +944,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   }
   const promptPath = join(root, WORKFLOW_REL);
 
-  // D1: an outer conductor repo whose code lives in a gitignored nested repo
+  // D1: an outer carja repo whose code lives in a gitignored nested repo
   // cannot work: worktrees of THIS repo never contain that code, so every beat
   // would run against the wrong repository. Refuse and say why.
   // Step 7: the repository named by loop.code_dir is the code, not a mistake.
@@ -951,9 +956,9 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   if (nestedRepos.length) {
     stderr.write(
       nestedRepos
-        .map((d) => `⛔  '${d}' is a separate git repository that this repo ignores. conductor loop works on ONE repository: its worktrees, commits and PRs would be in this repo, without that code.\n`)
+        .map((d) => `⛔  '${d}' is a separate git repository that this repo ignores. carja loop works on ONE repository: its worktrees, commits and PRs would be in this repo, without that code.\n`)
         .join("") +
-        "    If it holds the code, set loop.code_dir to it in conductor.config.json (the outer layout). If it is unrelated to the work, set loop.allow_nested_repo: true.\n"
+        "    If it holds the code, set loop.code_dir to it in carja.config.json (the outer layout). If it is unrelated to the work, set loop.allow_nested_repo: true.\n"
     );
     return 1;
   }
@@ -970,7 +975,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       .map(([n]) => n);
     stdout.write(
       [
-        "conductor loop — dry run",
+        "carja loop — dry run",
         `  state:    ${statePath}`,
         `  status:   ${state.status}`,
         `  goal:     ${state.goal_description || "(none set)"}`,
@@ -1011,13 +1016,13 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         "",
       ].join("\n")
     );
-    if (fromConductor) {
+    if (fromCarja) {
       const filters = [
         loopConfig.requireReady && "taken or loop-ready only",
         loopConfig.priorities.length && `priorities ${loopConfig.priorities.join(",")}`,
         !loopConfig.inbox && "no inbox",
       ].filter(Boolean);
-      stdout.write(`  harvested: ${harvestedQueue.length} work item(s) from conductor/${filters.length ? ` (${filters.join(", ")})` : ""}\n`);
+      stdout.write(`  harvested: ${harvestedQueue.length} work item(s) from carja/${filters.length ? ` (${filters.join(", ")})` : ""}\n`);
       for (const t of harvestedQueue) {
         stdout.write(`    - [${t.type}${t.priority ? " " + t.priority : ""}] ${t.title}  → ${t.route ?? "(brief)"}\n`);
       }
@@ -1044,7 +1049,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   //      nothing can be diagnosed after teardown. Best-effort.
   const gitCommonDir = await runCli("git", ["rev-parse", "--git-common-dir"], root);
   const beatLogDir = gitCommonDir.ok ? join(resolve(root, gitCommonDir.stdout), BEAT_LOG_DIR) : null;
-  // Loop Monitor M1: one event log per repository, read by `conductor watch`.
+  // Loop Monitor M1: one event log per repository, read by `carja watch`.
   const emit = makeEmitter(beatLogDir, `${new Date().toISOString()}#${process.pid}`, { runInfo: { pid: process.pid, ...(scope ? { project: scope } : {}) } });
   const cwdTask = new Map(); // worktree path → task id, so every beat names its item
   const modelFor = (kind, opts) => {
@@ -1058,7 +1063,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     try {
       await syncLoopStateInto({ root, cwd: opts.cwd ?? root, git: makeGit(opts.cwd ?? root), from: statePath });
     } catch (e) {
-      stderr.write(`[CONDUCTOR LOOP] ⚠️  could not copy loop-state.json into ${opts.cwd}: ${e.message}\n`);
+      stderr.write(`[CARJA LOOP] ⚠️  could not copy loop-state.json into ${opts.cwd}: ${e.message}\n`);
     }
     const startedAt = Date.now();
     // M3: each tool step of the beat, as the engine streams it.
@@ -1101,10 +1106,10 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     withQuotaWait(run, {
       maxWaitMin: loopConfig.quotaMaxWaitMin,
       // The margin past the reset; tests shorten it.
-      marginS: Number.isFinite(Number(process.env.CONDUCTOR_QUOTA_MARGIN_S)) && process.env.CONDUCTOR_QUOTA_MARGIN_S !== "" ? Number(process.env.CONDUCTOR_QUOTA_MARGIN_S) : DEFAULT_QUOTA_MARGIN_S,
+      marginS: Number.isFinite(Number(process.env.CARJA_QUOTA_MARGIN_S)) && process.env.CARJA_QUOTA_MARGIN_S !== "" ? Number(process.env.CARJA_QUOTA_MARGIN_S) : DEFAULT_QUOTA_MARGIN_S,
       onWait: async (w, opts) => {
         const task = opts?.task?.id ?? cwdTask.get(resolve(opts?.cwd ?? root)) ?? "run";
-        stdout.write(`[CONDUCTOR LOOP] usage limit reached. Waiting until ${w.clock} for it to reset, then the same beat runs again (loop.quota_max_wait_min: ${loopConfig.quotaMaxWaitMin}).\n`);
+        stdout.write(`[CARJA LOOP] usage limit reached. Waiting until ${w.clock} for it to reset, then the same beat runs again (loop.quota_max_wait_min: ${loopConfig.quotaMaxWaitMin}).\n`);
         await emit("quota_wait", { task, until: new Date(w.until).toISOString() });
         await audit(`usage limit: waiting until ${new Date(w.until).toISOString()} (${task})`);
       },
@@ -1118,16 +1123,16 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     runSpecBeat: quota(logged("spec", modelled.runSpecBeat)),
     runBlueprintBeat: quota(logged("blueprint", modelled.runBlueprintBeat)),
   };
-  stdout.write(`[CONDUCTOR LOOP] platform: ${adapter.name}\n`);
-  if (blanked.length) stdout.write(`[CONDUCTOR LOOP] beats run with ${blanked.join(", ")} empty (loop.blank_env)\n`);
+  stdout.write(`[CARJA LOOP] platform: ${adapter.name}\n`);
+  if (blanked.length) stdout.write(`[CARJA LOOP] beats run with ${blanked.join(", ")} empty (loop.blank_env)\n`);
   if (Object.keys(models).length) {
-    if (adapter.name === "claude") stdout.write(`[CONDUCTOR LOOP] models: ${loopConfig.profile ? `profile ${loopConfig.profile} — ` : ""}${describeModels(models, { inline: true })}\n`);
-    else stderr.write(`[CONDUCTOR LOOP] ⚠️  the model profile applies to the claude engine only; ${adapter.name} runs its own default model\n`);
+    if (adapter.name === "claude") stdout.write(`[CARJA LOOP] models: ${loopConfig.profile ? `profile ${loopConfig.profile} — ` : ""}${describeModels(models, { inline: true })}\n`);
+    else stderr.write(`[CARJA LOOP] ⚠️  the model profile applies to the claude engine only; ${adapter.name} runs its own default model\n`);
   }
 
   // D9: a claude beat that cannot read the root AGENTS.md runs without the laws.
   if (adapter.name === "claude") {
-    for (const w of await instructionWarningsFor(root)) stderr.write(`[CONDUCTOR LOOP] ⚠️  ${w}\n`);
+    for (const w of await instructionWarningsFor(root)) stderr.write(`[CARJA LOOP] ⚠️  ${w}\n`);
   }
 
   if (willOpenPr) {
@@ -1140,11 +1145,11 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     if (!auth.ok) {
       stderr.write(
         `⛔  This run opens a PR/MR with '${forgeInfo.forge}' (${forgeInfo.source}), but '${forgeInfo.forge} ${authArgs.join(" ")}' failed. ` +
-          `Install and authenticate it, or set loop.forge in conductor.config.json. Nothing was run.\n`
+          `Install and authenticate it, or set loop.forge in carja.config.json. Nothing was run.\n`
       );
       return 1;
     }
-    stdout.write(`[CONDUCTOR LOOP] forge: ${forgeInfo.forge} (${forgeInfo.source})\n`);
+    stdout.write(`[CARJA LOOP] forge: ${forgeInfo.forge} (${forgeInfo.source})\n`);
   }
 
   // cli-native sandbox: hand the claude beats a settings profile that turns ON
@@ -1163,17 +1168,17 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       const extraWrites = codeGitDir?.ok ? nestedSandboxWrites(codeGitDir.stdout.trim()) : [];
       if (loopConfig.allowedDomains.length || extraWrites.length) {
         const merged = mergeSandboxSettings(await readJson(p), loopConfig.allowedDomains, extraWrites);
-        const dir = await mkdtemp(join(tmpdir(), "conductor-sandbox-"));
+        const dir = await mkdtemp(join(tmpdir(), "carja-sandbox-"));
         process.once("exit", () => rmSync(dir, { recursive: true, force: true }));
         sandboxSettingsPath = join(dir, "claude-sandbox.settings.json");
         await writeFile(sandboxSettingsPath, `${JSON.stringify(merged, null, 2)}\n`, "utf8");
-        if (loopConfig.allowedDomains.length) stdout.write(`[CONDUCTOR LOOP] sandbox network: + ${loopConfig.allowedDomains.join(", ")}\n`);
-        if (extraWrites.length) stdout.write(`[CONDUCTOR LOOP] sandbox: commits allowed in ${loopConfig.codeDir}/ (its config and hooks stay read-only)\n`);
+        if (loopConfig.allowedDomains.length) stdout.write(`[CARJA LOOP] sandbox network: + ${loopConfig.allowedDomains.join(", ")}\n`);
+        if (extraWrites.length) stdout.write(`[CARJA LOOP] sandbox: commits allowed in ${loopConfig.codeDir}/ (its config and hooks stay read-only)\n`);
       }
-      stdout.write(`[CONDUCTOR LOOP] sandbox: cli-native (Anthropic bubblewrap via ${sandboxSettingsPath === p ? ".agents/sandbox/claude-sandbox.settings.json" : sandboxSettingsPath})\n`);
+      stdout.write(`[CARJA LOOP] sandbox: cli-native (Anthropic bubblewrap via ${sandboxSettingsPath === p ? ".agents/sandbox/claude-sandbox.settings.json" : sandboxSettingsPath})\n`);
     } else {
       stderr.write(
-        `[CONDUCTOR LOOP] ⛔ sandbox=cli-native but .agents/sandbox/claude-sandbox.settings.json is missing — refusing to run unsandboxed. Run 'conductor upgrade' to restore it.\n`
+        `[CARJA LOOP] ⛔ sandbox=cli-native but .agents/sandbox/claude-sandbox.settings.json is missing — refusing to run unsandboxed. Run 'carja upgrade' to restore it.\n`
       );
       return 1;
     }
@@ -1225,7 +1230,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
           return await readFile(verdictPath, "utf8");
         } catch {
           if (attempt === 0) {
-            stdout.write(`[CONDUCTOR LOOP] checker emitted no verdict file — retrying once\n`);
+            stdout.write(`[CARJA LOOP] checker emitted no verdict file — retrying once\n`);
           }
         }
       }
@@ -1236,11 +1241,11 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       verdicts.push(groundFindings(parsed, await checkerSources(parsed, [cwd, codeWtOf(cwd)].filter(Boolean))));
     }
     const tally = tallyVerdicts(verdicts, votes);
-    stdout.write(`[CONDUCTOR LOOP] checker: ${tally.approved ? "APPROVED" : "REJECTED"} — ${tally.reason}\n`);
+    stdout.write(`[CARJA LOOP] checker: ${tally.approved ? "APPROVED" : "REJECTED"} — ${tally.reason}\n`);
     // P1.2: surface each verdict's reason so a rejection is diagnosable (empty-diff
     // / no-file plumbing issue vs a genuine substantive rejection).
     if (!tally.approved) {
-      tally.reasons.forEach((r, i) => stdout.write(`[CONDUCTOR LOOP]   checker vote ${i + 1}: ${r}\n`));
+      tally.reasons.forEach((r, i) => stdout.write(`[CARJA LOOP]   checker vote ${i + 1}: ${r}\n`));
       // Distinguish an INFRASTRUCTURE outage (every vote failed to run/produce a
       // verdict) from a substantive rejection, so the self-improvement miner never
       // proposes a content rule for a beat where no Checker actually ran.
@@ -1288,12 +1293,12 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   }
   const nestedNote = () =>
     loopConfig.codeDir
-      ? `\n\n- **Code repository:** \`${loopConfig.codeDir}/\` is a separate git repository on this same branch name. Commit code there (\`git -C ${loopConfig.codeDir} commit\`), with its hooks and waivers as usual; Conductor documents stay here. Run tests inside \`${loopConfig.codeDir}/\`. A line \`packed-refs.lock: Read-only file system\` during a commit is harmless when the commit exits 0. Whatever you leave uncommitted, the driver commits after your beat: a failed commit is never a reason to escalate.\n`
+      ? `\n\n- **Code repository:** \`${loopConfig.codeDir}/\` is a separate git repository on this same branch name. Commit code there (\`git -C ${loopConfig.codeDir} commit\`), with its hooks and waivers as usual; Carja documents stay here. Run tests inside \`${loopConfig.codeDir}/\`. A line \`packed-refs.lock: Read-only file system\` during a commit is harmless when the commit exits 0. Whatever you leave uncommitted, the driver commits after your beat: a failed commit is never a reason to escalate.\n`
       : "";
   // Every Checker prompt, in this layout, says where the code diff is.
   async function withNestedNote(promptFile, key) {
     if (!loopConfig.codeDir) return promptFile;
-    const p = join(tmpdir(), `conductor-checker-nested-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-checker-nested-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
     await writeFile(p, `${(await exists(promptFile)) ? await readFile(promptFile, "utf8") : ""}${checkerNestedNote(loopConfig.codeDir)}`, "utf8");
     return p;
   }
@@ -1302,7 +1307,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // instead of 124–141 s, some tests waiting on a blocked network.
   async function withVerifyNote(promptFile, key, cmd) {
     if (!cmd) return promptFile;
-    const p = join(tmpdir(), `conductor-checker-verify-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-checker-verify-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
     await writeFile(
       p,
       `${(await exists(promptFile)) ? await readFile(promptFile, "utf8") : ""}\n\n---\n\n# The full verification already ran\n\n` +
@@ -1341,7 +1346,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       openState: ({ codeUrl }) =>
         openPullRequest({
           branch,
-          title: `Conductor state: ${title}`,
+          title: `Carja state: ${title}`,
           body: stateMrBody({ codeUrl, body: `${stack ? stackNote({ below: stack.belowUrl }) : ""}${body}` }),
           git: makeGit(cwd),
           run: (cmd, argv) => runCli(cmd, argv, cwd),
@@ -1359,12 +1364,12 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // the agent sandbox: the command is operator-authored and read from the root.
   async function runWorktreeSetup(worktreePath) {
     if (!loopConfig.setup) return { ok: true };
-    const markerRel = await runCli("git", ["rev-parse", "--git-path", "conductor-setup.done"], worktreePath);
+    const markerRel = await runCli("git", ["rev-parse", "--git-path", "carja-setup.done"], worktreePath);
     const marker = markerRel.ok ? resolve(worktreePath, markerRel.stdout) : null;
     if (marker && (await exists(marker))) return { ok: true, skipped: true };
-    stdout.write(`[CONDUCTOR LOOP] setup: ${loopConfig.setup} (in ${worktreePath})\n`);
-    // CONDUCTOR_ROOT / CONDUCTOR_CODE_ROOT: the owner's checkouts, e.g. to link an untracked venv.
-    const env = `export CONDUCTOR_ROOT=${JSON.stringify(root)}${codeRoot ? ` CONDUCTOR_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; `;
+    stdout.write(`[CARJA LOOP] setup: ${loopConfig.setup} (in ${worktreePath})\n`);
+    // CARJA_ROOT / CARJA_CODE_ROOT: the owner's checkouts, e.g. to link an untracked venv.
+    const env = `export CARJA_ROOT=${JSON.stringify(root)}${codeRoot ? ` CARJA_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; `;
     const before = await untrackedPaths({ git: makeGit(worktreePath) });
     const res = await sh(`${env}${loopConfig.setup}`, worktreePath);
     const hidden = await hideSetupArtifacts({ before, cwd: worktreePath, git: makeGit(worktreePath) });
@@ -1378,10 +1383,10 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     return { ok: true };
   }
 
-  // Fill a fresh worktree with any conductor scaffold git didn't check out because
-  // it's untracked / gitignored (both tracked and gitignored conductor repos exist
+  // Fill a fresh worktree with any carja scaffold git didn't check out because
+  // it's untracked / gitignored (both tracked and gitignored carja repos exist
   // in the wild). Without this the isolated Maker is BLIND: no CLAUDE.md/.agents
-  // (instructions/skills) and no conductor/ (product KB). Ignored files stay ignored
+  // (instructions/skills) and no carja/ (product KB). Ignored files stay ignored
   // in the worktree too, so nothing pollutes the feature branch / PR. Excludes
   // `.worktrees` (would recurse) + `.git`. Best-effort — never fails the run.
   async function materializeContextInto(worktreePath) {
@@ -1392,7 +1397,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         atRoot[a] = await exists(join(root, a));
         inWt[a] = await exists(join(worktreePath, a));
       }
-      const filled = await materializeConductorContext({
+      const filled = await materializeCarjaContext({
         existsAtRoot: (a) => atRoot[a],
         existsInWorktree: (a) => inWt[a],
         copy: async (a) => {
@@ -1415,24 +1420,24 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       });
       if (filled.length) {
         stdout.write(
-          `[CONDUCTOR LOOP] materialized untracked conductor context into the worktree (${filled.join(", ")}) — Maker is conductor-enabled\n`
+          `[CARJA LOOP] materialized untracked carja context into the worktree (${filled.join(", ")}) — Maker is carja-enabled\n`
         );
       }
       return filled;
     } catch (e) {
-      stderr.write(`[CONDUCTOR LOOP] ⚠️  could not materialize conductor context into the worktree: ${e.message}\n`);
+      stderr.write(`[CARJA LOOP] ⚠️  could not materialize carja context into the worktree: ${e.message}\n`);
       return [];
     }
   }
 
   // ---- Route: swarm (task graph) vs. pair (single fuzzy goal) --------------
-  if (fromConductor && state.tasks.length === 0) {
-    if (!scope) stdout.write("[CONDUCTOR LOOP] conductor/ has no open work items (inbox + backlog empty). Nothing to do.\n");
+  if (fromCarja && state.tasks.length === 0) {
+    if (!scope) stdout.write("[CARJA LOOP] carja/ has no open work items (inbox + backlog empty). Nothing to do.\n");
     return 0;
   }
 
   // One loop per target: independent loop processes race on the shared worktree/
-  // branch/PR and the conductor/ write-back. Refuse to start a second (dry-run,
+  // branch/PR and the carja/ write-back. Refuse to start a second (dry-run,
   // which never mutates, is exempt above by returning before this point).
   // A project's run and a whole-folder run can take the same work: never both.
   if (stack) {
@@ -1440,13 +1445,13 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   } else if (scope) {
     const whole = await liveLockPid(join(root, LOCK_REL));
     if (whole) {
-      stderr.write(`⛔  A \`conductor loop --from-conductor\` run is going on in this folder (pid ${whole}), and it can take the same work. Wait for it to end, then run \`${loopCmd}\`.\n`);
+      stderr.write(`⛔  A \`carja loop --from-carja\` run is going on in this folder (pid ${whole}), and it can take the same work. Wait for it to end, then run \`${loopCmd}\`.\n`);
       return 1;
     }
   } else if (runsDir) {
     const live = await liveProjectRuns(runsDir);
     if (live.length) {
-      stderr.write(`⛔  \`conductor loop <project>\` runs are going on in this folder (${live.map((r) => `${r.project}, pid ${r.pid}`).join("; ")}), and a whole-folder run can take the same work. Wait for them to end.\n`);
+      stderr.write(`⛔  \`carja loop <project>\` runs are going on in this folder (${live.map((r) => `${r.project}, pid ${r.pid}`).join("; ")}), and a whole-folder run can take the same work. Wait for them to end.\n`);
       return 1;
     }
   }
@@ -1454,22 +1459,22 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   if (!lock.acquired) {
     stderr.write(
       scope
-        ? `⛔  ${scope} is already being built by another loop in this folder (pid ${lock.heldByPid}). Watch it with \`conductor watch\`.\n`
-        : `⛔  Another 'conductor loop' is already running on this target (pid ${lock.heldByPid}). ` +
+        ? `⛔  ${scope} is already being built by another loop in this folder (pid ${lock.heldByPid}). Watch it with \`carja watch\`.\n`
+        : `⛔  Another 'carja loop' is already running on this target (pid ${lock.heldByPid}). ` +
             `Concurrent loops race on the worktree/branch/write-back — refusing to start a second. ` +
             `Wait for it to finish, or kill it and retry.\n`
     );
     return 1;
   }
-  if (lock.stale) stdout.write(`[CONDUCTOR LOOP] cleared a stale lock (dead pid ${lock.heldByPid})\n`);
-  // `conductor watch --all` finds a project's run without `conductor loop on`.
+  if (lock.stale) stdout.write(`[CARJA LOOP] cleared a stale lock (dead pid ${lock.heldByPid})\n`);
+  // `carja watch --all` finds a project's run without `carja loop on`.
   if (scope) await import("../loop/projects-registry.js").then((m) => m.addLoopProject(root)).catch(() => {});
 
   // ---- Deferred writes: EVERY disk mutation happens HERE, after the one-loop
   // lock is held. A --dry-run returns before the lock (never reaching this), and
   // a 2nd invocation racing a live run is refused by the lock above — so neither
   // can rewind on-disk state. Single persist point for the v1→v2 migration, the
-  // resume-revive, the ignition trigger, and the --from-conductor harvest.
+  // resume-revive, the ignition trigger, and the --from-carja harvest.
   await atomicWriteJson(statePath, state);
   // I6: what the loop writes for the owner stays out of git.
   await ensureOwnerFilesExcluded(root);
@@ -1484,10 +1489,10 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       Date.now()
     );
   }
-  if (fromConductor) {
+  if (fromCarja) {
     await appendAudit(
       beatLogDir,
-      `harvested ${harvestedQueue.length} work item(s) from conductor/ (inbox + backlog)`,
+      `harvested ${harvestedQueue.length} work item(s) from carja/ (inbox + backlog)`,
       Date.now()
     );
   }
@@ -1499,33 +1504,33 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     // F22: a squash-merged branch is merged when the forge says so.
     const forgeMerged = (dir) => (branch) => forgeMergedHead(dir, branch);
     const codeDir = loopConfig.codeDir ? join(root, loopConfig.codeDir) : null;
-    // Interactive items (`conductor work`) merged since are cleaned up too.
+    // Interactive items (`carja work`) merged since are cleaned up too.
     const prefixes = [LOOP_PREFIX, WORK_PREFIX];
     const code = codeDir ? await pruneMergedLoopWorktrees({ git: makeGit(codeDir), forgeMerged: forgeMerged(codeDir), prefixes }) : { removed: [], kept: [] };
-    for (const w of code.removed) stdout.write(`[CONDUCTOR LOOP] removed the merged code worktree ${w.path} (${w.branch})\n`);
+    for (const w of code.removed) stdout.write(`[CARJA LOOP] removed the merged code worktree ${w.path} (${w.branch})\n`);
     const p = await pruneMergedLoopWorktrees({
       git: makeGit(root),
       forgeMerged: forgeMerged(root),
       prefixes,
       skip: async (w) => (loopConfig.codeDir && (await exists(join(w.path, loopConfig.codeDir, ".git"))) ? "its code worktree is still open (the code MR is not merged yet)" : null),
     });
-    for (const w of p.removed) stdout.write(`[CONDUCTOR LOOP] removed the merged loop worktree ${basename(w.path)} (${w.branch})\n`);
-    for (const w of code.kept) stdout.write(`[CONDUCTOR LOOP] kept the merged code worktree ${w.path}: ${w.reason}\n`);
-    for (const w of p.kept) stdout.write(`[CONDUCTOR LOOP] kept the merged loop worktree ${basename(w.path)}: ${w.reason}\n`);
+    for (const w of p.removed) stdout.write(`[CARJA LOOP] removed the merged loop worktree ${basename(w.path)} (${w.branch})\n`);
+    for (const w of code.kept) stdout.write(`[CARJA LOOP] kept the merged code worktree ${w.path}: ${w.reason}\n`);
+    for (const w of p.kept) stdout.write(`[CARJA LOOP] kept the merged loop worktree ${basename(w.path)}: ${w.reason}\n`);
   }
 
-  // Step 7: the outer layout runs work items (--from-conductor), not a free goal.
+  // Step 7: the outer layout runs work items (--from-carja), not a free goal.
   if (loopConfig.codeDir && !(Array.isArray(state.tasks) && state.tasks.length > 0)) {
     if (!stack) await releaseLock(lockPath);
-    stderr.write("⛔  With loop.code_dir, the loop runs work items from conductor/: use --from-conductor. A single --goal run (pair mode) is not supported in the outer layout.\n");
+    stderr.write("⛔  With loop.code_dir, the loop runs work items from carja/: use --from-carja. A single --goal run (pair mode) is not supported in the outer layout.\n");
     return 1;
   }
-  // `conductor loop <project>` cleans up after itself, at the end and on Ctrl+C:
+  // `carja loop <project>` cleans up after itself, at the end and on Ctrl+C:
   // every worktree it held that has no uncommitted change.
   async function cleanupScoped() {
     if (!scope) return;
     const r = await removeHeldWorktrees({ git: makeGit(root), codeGit: loopConfig.codeDir ? makeGit(join(root, loopConfig.codeDir)) : null, codeDir: loopConfig.codeDir ?? null });
-    for (const w of r.kept) stdout.write(`[CONDUCTOR LOOP] kept ${w.path}: ${w.reason}.\n`);
+    for (const w of r.kept) stdout.write(`[CARJA LOOP] kept ${w.path}: ${w.reason}.\n`);
   }
   const onSignal = (sig) => {
     (async () => {
@@ -1550,16 +1555,16 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       await atomicWriteJson(statePath, state);
       await writeInbox(root, state, `The run stopped and committed nothing: ${e.message}. Run the loop again: it starts this item over in a new worktree.`);
       await audit(`halted_isolation: ${e.message}`);
-      stderr.write(`[CONDUCTOR LOOP] ⛔ stopped: ${e.message}. Nothing was committed.\n`);
+      stderr.write(`[CARJA LOOP] ⛔ stopped: ${e.message}. Nothing was committed.\n`);
       code = 1;
     }
-    await cleanupScoped().catch((e) => stderr.write(`[CONDUCTOR LOOP] ⚠️  cleanup failed: ${e.message}\n`));
+    await cleanupScoped().catch((e) => stderr.write(`[CARJA LOOP] ⚠️  cleanup failed: ${e.message}\n`));
     try {
       if (stack) throw new Error("the stacked driver prints the next step");
       const after = await readJson(statePath);
       const prUrls = [after.merge?.pr_url, ...(after.tasks ?? []).flatMap((t) => [t.merge?.code_pr_url, t.merge?.pr_url])].filter((u) => u && u !== "n/a");
       const hint = nextAfterLoop(after.status, { prUrls: [...new Set(prUrls)], cmd: loopCmd });
-      if (hint) stdout.write(`\n[CONDUCTOR LOOP] ${hint}\n`);
+      if (hint) stdout.write(`\n[CARJA LOOP] ${hint}\n`);
     } catch {
       /* a hint never fails a run */
     }
@@ -1580,15 +1585,15 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   async function runSelfImprovement() {
     try {
       // F21: the audit trail is in the git dir. Ship-logs written before 6.44 still hold [loop] lines.
-      const trail = [join(root, "conductor/0-compass/ship-log.md"), beatLogDir && join(beatLogDir, AUDIT_FILE)];
+      const trail = [join(root, "carja/0-compass/ship-log.md"), beatLogDir && join(beatLogDir, AUDIT_FILE)];
       const texts = await Promise.all(trail.filter(Boolean).map((f) => readFile(f, "utf8").catch(() => "")));
       const patterns = mineRecurringFailures(texts.join("\n"));
       const report = renderImprovementReport(patterns, { nowIso: new Date(Date.now()).toISOString() });
       if (!report) return; // nothing recurring → nothing to propose
-      await writeFile(join(root, "conductor/1-workbench/loop-improvements.md"), report, "utf8");
+      await writeFile(join(root, "carja/1-workbench/loop-improvements.md"), report, "utf8");
       stdout.write(
-        `[CONDUCTOR LOOP] self-improvement: ${patterns.length} recurring failure pattern(s) mined ` +
-          `→ conductor/1-workbench/loop-improvements.md (proposed rules for review)\n`
+        `[CARJA LOOP] self-improvement: ${patterns.length} recurring failure pattern(s) mined ` +
+          `→ carja/1-workbench/loop-improvements.md (proposed rules for review)\n`
       );
     } catch {
       /* best-effort — self-improvement must never break a run */
@@ -1599,7 +1604,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // malformed → no signal this beat.
   async function readSignalAt(cwd) {
     try {
-      const sig = JSON.parse(await readFile(join(cwd, "conductor/1-workbench/maker-signal.json"), "utf8"));
+      const sig = JSON.parse(await readFile(join(cwd, "carja/1-workbench/maker-signal.json"), "utf8"));
       return sig && typeof sig === "object" ? sig : {};
     } catch {
       return {};
@@ -1635,14 +1640,14 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     const shipPath = join(root, stageWorkflowPath("ship"));
     const ship = (await exists(shipPath)) ? await readFile(shipPath, "utf8") : "";
     const rules = shipBeatSection((await exists(promptPath)) ? await readFile(promptPath, "utf8") : "");
-    const p = join(tmpdir(), `conductor-ship-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-ship-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
     const parts = [ship, "---", rules, `${renderShipAssignment(task, { branch })}${nestedNote()}`];
     if (attempts?.length) parts.push(renderAttempts(attempts));
     await writeFile(p, `${parts.join("\n\n")}\n`, "utf8");
     return p;
   }
   async function runShipIn(cwd, { key, task, branch, holder }) {
-    await rm(join(cwd, "conductor/1-workbench/maker-signal.json"), { force: true }).catch(() => {});
+    await rm(join(cwd, "carja/1-workbench/maker-signal.json"), { force: true }).catch(() => {});
     await rm(join(cwd, PR_BODY_REL), { force: true }).catch(() => {});
     const rulingsBefore = await readRulingsAt(cwd);
     const result = await adapter.runShipBeat({
@@ -1663,7 +1668,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   }
   // Step 3: the Spec beat is Spec-It itself, then its unattended rules, then the slice.
   async function runSpecIn(cwd, task) {
-    await rm(join(cwd, "conductor/1-workbench/maker-signal.json"), { force: true }).catch(() => {});
+    await rm(join(cwd, "carja/1-workbench/maker-signal.json"), { force: true }).catch(() => {});
     const specPath = join(root, stageWorkflowPath("spec"));
     const specIt = (await exists(specPath)) ? await readFile(specPath, "utf8") : "";
     const rules = sectionOf((await exists(promptPath)) ? await readFile(promptPath, "utf8") : "", loopStage("spec").section);
@@ -1673,7 +1678,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       (task.answered_round ? `\n- **Your questions were answered:** read \`${task.answered_round}\` first, apply each answer, and record it as a decision in the spec.` : "");
     const parts = [specIt, "---", rules, `${assignment}${nestedNote()}`];
     if (task.attempts?.length) parts.push(renderAttempts(task.attempts));
-    const p = join(tmpdir(), `conductor-spec-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-spec-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
     await writeFile(p, `${parts.join("\n\n")}\n`, "utf8");
     const rulingsBefore = await readRulingsAt(cwd);
     const result = await adapter.runSpecBeat({
@@ -1691,14 +1696,14 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     return checkSpecEvidence({
       spec: await read(join(dir, "feature-spec.md")),
       plan: await read(join(dir, "implementation-plan.md")),
-      specTemplate: await read(join(root, "conductor/5-templates/carve-workflow/feature-spec.md")),
-      planTemplate: await read(join(root, "conductor/5-templates/carve-workflow/implementation-plan.md")),
+      specTemplate: await read(join(root, "carja/5-templates/carve-workflow/feature-spec.md")),
+      planTemplate: await read(join(root, "carja/5-templates/carve-workflow/implementation-plan.md")),
     });
   }
   // D2: the spec review is the Checker, told what it is reviewing this time.
   async function specCheckerPrompt(task) {
     const base = (await exists(checkerPromptPath)) ? await readFile(checkerPromptPath, "utf8") : "";
-    const p = join(tmpdir(), `conductor-spec-review-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-spec-review-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
     await writeFile(
       p,
       `${base}\n\n---\n\n# This review: the slice's spec, before any code (D2)\n\n` +
@@ -1713,7 +1718,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // Step 5: a Blueprint beat is the stage's workflow, then its unattended rules, then the project.
   async function runStageIn(cwd, task, key) {
     const stage = BLUEPRINT_STAGES.find((s) => s.key === key);
-    await rm(join(cwd, "conductor/1-workbench/maker-signal.json"), { force: true }).catch(() => {});
+    await rm(join(cwd, "carja/1-workbench/maker-signal.json"), { force: true }).catch(() => {});
     const wfPath = join(root, stageWorkflowPath(key));
     const workflow = (await exists(wfPath)) ? await readFile(wfPath, "utf8") : "";
     const rules = sectionOf((await exists(promptPath)) ? await readFile(promptPath, "utf8") : "", loopStage(key).section);
@@ -1724,7 +1729,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       (task.answered_round ? `\n- **Your questions were answered:** read \`${task.answered_round}\` first, apply each answer, and record it as a decision in the document.` : "");
     const parts = [workflow, "---", rules, `${assignment}${nestedNote()}`];
     if (task.attempts?.length) parts.push(renderAttempts(task.attempts));
-    const p = join(tmpdir(), `conductor-blueprint-${key}-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-blueprint-${key}-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
     await writeFile(p, `${parts.join("\n\n")}\n`, "utf8");
     const rulingsBefore = await readRulingsAt(cwd);
     const result = await adapter.runBlueprintBeat({
@@ -1743,7 +1748,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     const templates = {};
     for (const s of BLUEPRINT_STAGES) {
       docs[s.doc] = await read(join(dir, s.doc));
-      templates[s.doc] = await read(join(root, "conductor/5-templates", TEMPLATE_FOR[s.doc]));
+      templates[s.doc] = await read(join(root, "carja/5-templates", TEMPLATE_FOR[s.doc]));
     }
     const impl = join(dir, "implementations");
     let sliceCount = 0;
@@ -1758,11 +1763,11 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   async function blueprintCheckerPrompt(task, key) {
     const stage = BLUEPRINT_STAGES.find((s) => s.key === key);
     const base = (await exists(checkerPromptPath)) ? await readFile(checkerPromptPath, "utf8") : "";
-    const p = join(tmpdir(), `conductor-blueprint-review-${key}-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-blueprint-review-${key}-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
     await writeFile(
       p,
       `${base}\n\n---\n\n# This review: the ${stage.key} stage of the Blueprint (D4)\n\n` +
-        `Review \`${task.source?.path}/${stage.doc}\`${key === "ux-ui-brief" ? " and `DESIGN.md`" : ""}${key === "carve" ? ", the slice folders under `implementations/` and `conductor/1-workbench/pr-body.md`" : ""} ` +
+        `Review \`${task.source?.path}/${stage.doc}\`${key === "ux-ui-brief" ? " and `DESIGN.md`" : ""}${key === "carve" ? ", the slice folders under `implementations/` and `carja/1-workbench/pr-body.md`" : ""} ` +
         `with the **${stage.lens}** lens of \`.agents/skills/independent-review/SKILL.md\` (its Review lenses table says what done means). ` +
         `Read the inputs it builds on: Discovery (\`genesis/\`, \`storyboard/\`) and the earlier Blueprint documents in \`${task.source?.path}/blueprint/\`. ` +
         "There is no code to test: do not run tests. A document that would send every later stage the wrong way is a BLOCKER. " +
@@ -1866,11 +1871,11 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     }
     if (toInstall.length) {
       if (!loopConfig.install) {
-        return { escalate: true, reason: `${toInstall.map((t) => `${t.dep.name} ${t.check.facts.version}`).join(", ")} passed the dependency gate, but nothing installs it: set loop.install in conductor.config.json to the command that installs the project's dependencies (for example ".venv/bin/pip install -r requirements.txt" or "npm ci"), then run the loop again.` };
+        return { escalate: true, reason: `${toInstall.map((t) => `${t.dep.name} ${t.check.facts.version}`).join(", ")} passed the dependency gate, but nothing installs it: set loop.install in carja.config.json to the command that installs the project's dependencies (for example ".venv/bin/pip install -r requirements.txt" or "npm ci"), then run the loop again.` };
       }
       const where = code ?? cwd;
-      stdout.write(`[CONDUCTOR LOOP] ${task.id}: ${toInstall.map((t) => `${t.dep.name} ${t.check.facts.version}`).join(", ")} passed the dependency gate. Installing with loop.install (outside the sandbox).\n`);
-      const env = `export CONDUCTOR_ROOT=${JSON.stringify(root)}${codeRoot ? ` CONDUCTOR_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; `;
+      stdout.write(`[CARJA LOOP] ${task.id}: ${toInstall.map((t) => `${t.dep.name} ${t.check.facts.version}`).join(", ")} passed the dependency gate. Installing with loop.install (outside the sandbox).\n`);
+      const env = `export CARJA_ROOT=${JSON.stringify(root)}${codeRoot ? ` CARJA_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; `;
       const res = await sh(`${env}${loopConfig.install}`, where);
       if (res.exitCode !== 0) {
         const tail = res.output.trim().split("\n").slice(-5).join(" | ");
@@ -1920,7 +1925,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // D1: a fresh Checker confirms each question is a one-way door the owner can answer cold.
   async function questionsCheckerPrompt(task) {
     const base = (await exists(checkerPromptPath)) ? await readFile(checkerPromptPath, "utf8") : "";
-    const p = join(tmpdir(), `conductor-questions-review-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-questions-review-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
     await writeFile(
       p,
       `${base}\n\n---\n\n# This review: a round of questions for the owner (D1, D5)\n\n` +
@@ -1936,17 +1941,17 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
 
   async function shipEvidenceIn(cwd, task) {
     const read = async (base, rel) => ((await exists(join(base, rel))) ? readFile(join(base, rel), "utf8") : "");
-    const backlogRel = "conductor/2-backlog/task-backlog.md";
+    const backlogRel = "carja/2-backlog/task-backlog.md";
     const res = checkShipEvidence({
-      rootShipLog: await read(root, "conductor/0-compass/ship-log.md"),
-      branchShipLog: await read(cwd, "conductor/0-compass/ship-log.md"),
+      rootShipLog: await read(root, "carja/0-compass/ship-log.md"),
+      branchShipLog: await read(cwd, "carja/0-compass/ship-log.md"),
       body: await read(cwd, PR_BODY_REL),
       backlog: task?.source?.kind === "backlog" ? { title: task.title, after: await read(cwd, backlogRel) } : null,
       slice:
         task?.source?.kind === "slice"
           ? {
               stillInBacklog: await exists(join(cwd, task.source.path)),
-              archived: await exists(join(cwd, "conductor/6-archive/completed-implementations", task.source.slice)),
+              archived: await exists(join(cwd, "carja/6-archive/completed-implementations", task.source.slice)),
             }
           : null,
     });
@@ -1957,7 +1962,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   async function checkerPromptWithRulings(basePath, rulings, key) {
     const section = rulingsForChecker(rulings);
     if (!section) return basePath;
-    const p = join(tmpdir(), `conductor-checker-rulings-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const p = join(tmpdir(), `carja-checker-rulings-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
     const base = (await exists(basePath)) ? await readFile(basePath, "utf8") : "";
     await writeFile(p, `${base}\n\n---\n\n${section}\n`, "utf8");
     return p;
@@ -1988,8 +1993,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         await markWorktreeHeld({ git: makeGit(wt.path) });
         state.worktree = { path: wt.path, branch: wt.branch };
         await atomicWriteJson(statePath, state);
-        stdout.write(`[CONDUCTOR LOOP] worktree: ${wt.branch} @ ${wt.path}${wt.created ? " (new)" : " (reused)"}\n`);
-        // Conductor-enable the isolated Maker even if the scaffold is gitignored.
+        stdout.write(`[CARJA LOOP] worktree: ${wt.branch} @ ${wt.path}${wt.created ? " (new)" : " (reused)"}\n`);
+        // Carja-enable the isolated Maker even if the scaffold is gitignored.
         await materializeContextInto(workCwd);
       } catch (e) {
         stderr.write(`Worktree isolation failed: ${e.message}\n`);
@@ -2008,7 +2013,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
 
     // The maker signals "goal complete" by writing maker-signal.json; the driver
     // reads it after each beat (never trusts in-memory / clobbered state).
-    const makerSignalPath = join(workCwd, "conductor/1-workbench/maker-signal.json");
+    const makerSignalPath = join(workCwd, "carja/1-workbench/maker-signal.json");
     const readMakerDone = async () => {
       try {
         return JSON.parse(await readFile(makerSignalPath, "utf8"))?.done === true;
@@ -2019,7 +2024,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
 
     // A13: when earlier beats were rejected, the Maker's prompt carries why.
     const pairWorkflowText = (await exists(promptPath)) ? await readFile(promptPath, "utf8") : "";
-    const pairPromptPath = join(tmpdir(), `conductor-pair-beat-${process.pid}.md`);
+    const pairPromptPath = join(tmpdir(), `carja-pair-beat-${process.pid}.md`);
     const deps = {
       verifyCommand,
       runBeat: async ({ escalateModel } = {}) => {
@@ -2051,7 +2056,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         });
         if (cap.committed) {
           const note = `auto-captured uncommitted maker changes${cap.bypassedHooks ? " (commit hook bypassed)" : ""}`;
-          stdout.write(`[CONDUCTOR LOOP] ${note}\n`);
+          stdout.write(`[CARJA LOOP] ${note}\n`);
           await audit(`beat ${state.iterations.current}: ${note}`);
         }
         await collectRulings(state, workCwd, rulingsBefore);
@@ -2063,7 +2068,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       readMakerDone,
       readMakerSignal: () => readSignalAt(workCwd),
       changedFiles: ({ from }) => changedFilesIn(workCwd, from),
-      merge: makeMerge(workCwd, state.worktree?.branch, `Conductor loop: ${state.goal_description || "goal"}`, () => branchRulings(workCwd), () => state.ship?.body),
+      merge: makeMerge(workCwd, state.worktree?.branch, `Carja loop: ${state.goal_description || "goal"}`, () => branchRulings(workCwd), () => state.ship?.body),
       runShip: () => runShipIn(workCwd, { key: "pair", task: null, branch: state.worktree?.branch, holder: state }),
       shipEvidence: () => shipEvidenceIn(workCwd, null),
       // Empty done-claim guard: only ship if the loop branch carries committed work
@@ -2084,24 +2089,24 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     const final = await runLoop(state, deps);
     const cost = usageSummary(final);
     if (cost) {
-      stdout.write(`[CONDUCTOR LOOP] cost: ${cost}\n`);
+      stdout.write(`[CARJA LOOP] cost: ${cost}\n`);
       await audit(`run cost: ${cost}`);
     }
-    if (final.merge?.pr_url) stdout.write(`[CONDUCTOR LOOP] PR opened: ${final.merge.pr_url}\n`);
+    if (final.merge?.pr_url) stdout.write(`[CARJA LOOP] PR opened: ${final.merge.pr_url}\n`);
 
     if (state.phase === "execution" && final.worktree) {
       const t = await teardownWorktree({ root, goalDescription: state.goal_description, git });
-      stdout.write(`[CONDUCTOR LOOP] ${t.reason}\n`);
+      stdout.write(`[CARJA LOOP] ${t.reason}\n`);
     }
-    stdout.write(`\n[CONDUCTOR LOOP] finished: ${final.status}\n`);
+    stdout.write(`\n[CARJA LOOP] finished: ${final.status}\n`);
     return final.status === "completed" || final.status === "awaiting_review" ? 0 : 1;
   }
 
   async function runSwarmMode() {
-    stdout.write(`[CONDUCTOR SWARM] ${state.tasks.length} tasks, concurrency=${state.concurrency}\n`);
+    stdout.write(`[CARJA SWARM] ${state.tasks.length} tasks, concurrency=${state.concurrency}\n`);
     // Read the loop workflow once; each beat's assignment is appended to it (FB-4).
     const swarmWorkflowText = (await exists(promptPath)) ? await readFile(promptPath, "utf8") : "";
-    const beatPromptFile = (id) => join(tmpdir(), `conductor-beat-${id.replace(/[^a-z0-9]+/gi, "-")}.md`);
+    const beatPromptFile = (id) => join(tmpdir(), `carja-beat-${id.replace(/[^a-z0-9]+/gi, "-")}.md`);
     // The Checker runs in the task's ISOLATED worktree, which by design holds ONLY
     // this task's work. Left to its own devices it re-runs the repo-wide suite and
     // false-rejects (other tasks' files are absent) — the concurrency finding. So
@@ -2111,7 +2116,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     const checkerWorkflowText = (await exists(checkerPromptPath)) ? await readFile(checkerPromptPath, "utf8") : "";
     const checkerPromptFor = async (task) => {
       if (!task.verify) return checkerPromptPath;
-      const p = join(tmpdir(), `conductor-checker-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
+      const p = join(tmpdir(), `carja-checker-${task.id.replace(/[^a-z0-9]+/gi, "-")}.md`);
       await writeFile(
         p,
         `${checkerWorkflowText}\n\n---\n\n# Verification for THIS task (isolated worktree)\n` +
@@ -2140,7 +2145,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
           // I5: a leftover folder at the path (a run that died) is moved aside, never deleted.
           const freed = await freeWorktreePath({ git, path: plan.path });
           if (freed.moved) {
-            stdout.write(`[CONDUCTOR LOOP] ${task.id}: a leftover folder sat where its worktree goes. Moved aside to ${freed.moved}.\n`);
+            stdout.write(`[CARJA LOOP] ${task.id}: a leftover folder sat where its worktree goes. Moved aside to ${freed.moved}.\n`);
             await audit(`task ${task.id}: leftover folder moved aside to ${freed.moved}`);
           }
           // F14: from the default branch, never from the branch the owner has checked out.
@@ -2158,7 +2163,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         }
         // Another loop's cleanup must never remove a worktree this run holds.
         await markWorktreeHeld({ git: makeGit(plan.path) });
-        // Conductor-enable the isolated Maker even if the scaffold is gitignored.
+        // Carja-enable the isolated Maker even if the scaffold is gitignored.
         await materializeContextInto(plan.path);
         cwdFor.set(task.id, plan.path);
         cwdTask.set(resolve(plan.path), task.id);
@@ -2169,7 +2174,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
           const c = await ensureCodeWorktree({ codeGit: makeGit(codeRoot), path: codeWorktree, branch: plan.branch, base: stack?.codeBase ?? null });
           if (!c.ok) return { path: plan.path, branch: plan.branch, setup_error: `code worktree: ${c.reason}` };
           if (c.movedAside) {
-            stdout.write(`[CONDUCTOR LOOP] ${task.id}: a leftover folder sat where its code worktree goes. Moved aside to ${c.movedAside}.\n`);
+            stdout.write(`[CARJA LOOP] ${task.id}: a leftover folder sat where its code worktree goes. Moved aside to ${c.movedAside}.\n`);
             await audit(`task ${task.id}: leftover code folder moved aside to ${c.movedAside}`);
           }
           await markWorktreeHeld({ git: makeGit(codeWorktree) });
@@ -2183,7 +2188,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       runBeat: async ({ task, role, phase, escalateModel }) => {
         const taskCwd = cwdFor.get(task.id) ?? root;
         // F3: the swarm reads the Maker's signal too; clear the last beat's first.
-        await rm(join(taskCwd, "conductor/1-workbench/maker-signal.json"), { force: true }).catch(() => {});
+        await rm(join(taskCwd, "carja/1-workbench/maker-signal.json"), { force: true }).catch(() => {});
         const rulingsBefore = await readRulingsAt(taskCwd);
         // FB-4: hand the agent its work item by appending the routed assignment to
         // the loop workflow prompt, via a scratch file. Nothing lands in the
@@ -2207,7 +2212,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         const cap = await captureAll(taskCwd, autoCommitMessage({ role: role || "maker", goal: `${state.goal_description} — task ${task.id}` }));
         if (cap.committed) {
           const note = `task ${task.id}: auto-captured uncommitted changes${cap.bypassedHooks ? " (commit hook bypassed)" : ""}`;
-          stdout.write(`[CONDUCTOR SWARM] ${note}\n`);
+          stdout.write(`[CARJA SWARM] ${note}\n`);
           await audit(note);
         }
         await collectRulings(task, taskCwd, rulingsBefore);
@@ -2258,7 +2263,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         const code = await predictConflicts({ git: codeGit, base, branch: task.worktree?.branch });
         return code?.conflicted ? { ...code, files: (code.files ?? []).map((f) => `${loopConfig.codeDir}/${f}`) } : outer;
       },
-      // I3: a conflict only in Conductor documents: merge what the item lands on
+      // I3: a conflict only in Carja documents: merge what the item lands on
       // into its branch, keep both sides of each document, commit with the hooks.
       resolveDocConflict: async ({ task }) => {
         const cwd = cwdFor.get(task.id);
@@ -2271,7 +2276,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
           base,
           read: (rel) => readFile(join(cwd, rel), "utf8").catch(() => null),
           write: (rel, text) => writeFile(join(cwd, rel), text, "utf8"),
-          message: `chore(conductor): take ${base.replace(/^origin\//, "")} into ${task.worktree?.branch}, both sides of each Conductor document kept`,
+          message: `chore(carja): take ${base.replace(/^origin\//, "")} into ${task.worktree?.branch}, both sides of each Carja document kept`,
         });
       },
       runShip: ({ task }) => runShipIn(cwdFor.get(task.id) ?? root, { key: task.id, task, branch: task.worktree?.branch, holder: task }),
@@ -2310,11 +2315,11 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     const final = await runSwarm(state, deps);
     const cost = usageSummary(final);
     if (cost) {
-      stdout.write(`[CONDUCTOR SWARM] cost: ${cost}\n`);
+      stdout.write(`[CARJA SWARM] cost: ${cost}\n`);
       await audit(`run cost: ${cost}`);
     }
     const merged = final.tasks.filter((t) => t.status === "merged").length;
-    stdout.write(`\n[CONDUCTOR SWARM] finished: ${final.status} (${merged}/${final.tasks.length} tasks merged)\n`);
+    stdout.write(`\n[CARJA SWARM] finished: ${final.status} (${merged}/${final.tasks.length} tasks merged)\n`);
     // A round of questions is a planned pause for the owner, not a failure.
     return ["completed", "awaiting_review", "awaiting_answers"].includes(final.status) ? 0 : 1;
   }

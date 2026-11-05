@@ -85,7 +85,7 @@ function buildRegistry() {
         bundles: [
             {
                 name: 'core',
-                description: 'Core conductor framework capabilities',
+                description: 'Core carja framework capabilities',
                 skills: skills.map(s => s.name),
                 rules: rules.map(r => r.name),
                 workflows: workflows.map(w => w.name)

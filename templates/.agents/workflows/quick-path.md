@@ -68,7 +68,7 @@ After the questions, present a scope summary:
 - **Estimated size:** [Small / Medium / Large]
 ```
 
-**Brief check (before the confirm):** run Grilling's C1–C4 against this project's `conductor/` docs and current behaviour. State any hit in two sentences with the source, or say **"Brief check: none found."** It does not block — the human answers in one line and you continue. Carry the result into `feature-spec.md`.
+**Brief check (before the confirm):** run Grilling's C1–C4 against this project's `carja/` docs and current behaviour. State any hit in two sentences with the source, or say **"Brief check: none found."** It does not block — the human answers in one line and you continue. Carry the result into `feature-spec.md`.
 
 **Confirm:** *"Is this scope correct?"*
 
@@ -76,7 +76,7 @@ After the questions, present a scope summary:
 
 ## Phase 2: Quick Spec
 
-**Work in the item's worktree:** run `conductor work <item name>` first, then read, edit, test and commit only in the folder it prints (`conductor/` files too). The owner's folder stays on its default branch. In a loop beat, skip this. See `skills/git-worktrees/SKILL.md`.
+**Work in the item's worktree:** run `carja work <item name>` first, then read, edit, test and commit only in the folder it prints (`carja/` files too). The owner's folder stays on its default branch. In a loop beat, skip this. See `skills/git-worktrees/SKILL.md`.
 
 
 **Goal:** Create a lightweight Feature Spec. No 12-page PRD — just enough to build.
@@ -118,7 +118,7 @@ The `## Brief check` heading is required: the `pre-commit` hook rejects a `featu
 
 ### Save
 * Save to the active Implementation folder as `feature-spec.md`
-* Or to `conductor/1-workbench/` if no Implementation folder exists yet
+* Or to `carja/1-workbench/` if no Implementation folder exists yet
 
 ---
 
@@ -167,9 +167,9 @@ The plan is an engineering artefact. Save it as `implementation-plan.md` next to
 
 * Read `.agents/workflows/build.md` whole, then follow it with one adjustment: **batch size = all tasks** (Quick-Path implementations are small). Reading only its first lines skips the steps below, and real builds lost all three.
 * These Build steps are not optional on the quick path:
-  1. **Personas:** before each task's RED, run `conductor personas <the files the task creates or changes>` and read every persona and context path it lists. The Designer for UI files, the Security Auditor for auth, the Database Architect for schema.
+  1. **Personas:** before each task's RED, run `carja personas <the files the task creates or changes>` and read every persona and context path it lists. The Designer for UI files, the Security Auditor for auth, the Database Architect for schema.
   2. **Per task:** RED → GREEN → REFACTOR, full verification, the two-stage self-review, a commit, and the task tracker updated.
-  3. **Independent review:** run `.agents/skills/independent-review/SKILL.md` on the whole diff. Hand the reviewer `.agents/skills/independent-review/reviewer.md` verbatim, plus the acceptance criteria and the Review Lens lines from `conductor personas` on the diff. Never an improvised reviewer prompt. Record every finding and its disposition with `conductor review-log append '{…}'`.
+  3. **Independent review:** run `.agents/skills/independent-review/SKILL.md` on the whole diff. Hand the reviewer `.agents/skills/independent-review/reviewer.md` verbatim, plus the acceptance criteria and the Review Lens lines from `carja personas` on the diff. Never an improvised reviewer prompt. Record every finding and its disposition with `carja review-log append '{…}'`.
 
 ---
 

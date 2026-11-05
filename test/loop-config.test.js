@@ -1,6 +1,6 @@
 // test/loop-config.test.js
 //
-// The `loop` block of conductor.config.json (field report F2–F5) and the pure
+// The `loop` block of carja.config.json (field report F2–F5) and the pure
 // helpers built on it: forge from the origin host (F4), the generated sandbox
 // settings (F3), and the setup command (F2).
 

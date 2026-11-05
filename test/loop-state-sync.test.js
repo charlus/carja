@@ -1,7 +1,7 @@
 // test/loop-state-sync.test.js
 //
 // F15: an agent beat runs in a worktree, which holds the COMMITTED loop-state.json,
-// not the driver's live one. In the common setup (conductor/ tracked) the agent saw
+// not the driver's live one. In the common setup (carja/ tracked) the agent saw
 // an old goal and phase and refused to work. syncLoopStateInto copies the live
 // state into the worktree before every beat and keeps the copy out of commits.
 // Real git, temp repos: this is exactly the layer a stub would hide.
@@ -22,9 +22,9 @@ async function repoWith({ track = true, ignore = false } = {}, fn) {
     git(root, "init", "-q");
     git(root, "config", "user.email", "t@t");
     git(root, "config", "user.name", "t");
-    await mkdir(join(root, "conductor/1-workbench"), { recursive: true });
+    await mkdir(join(root, "carja/1-workbench"), { recursive: true });
     await writeFile(join(root, "README.md"), "x\n");
-    if (ignore) await writeFile(join(root, ".gitignore"), "conductor/1-workbench/loop-state.json\n");
+    if (ignore) await writeFile(join(root, ".gitignore"), "carja/1-workbench/loop-state.json\n");
     await writeFile(join(root, STATE_REL), JSON.stringify({ phase: "discovery", goal_description: "" }));
     git(root, "add", track ? "-A" : "README.md");
     if (ignore) git(root, "add", ".gitignore");
@@ -89,8 +89,8 @@ test("F15: running in the root itself is a no-op", async () => {
 test("F18: the driver's signal files in the worktree are never committed", async () => {
   await repoWith({ track: true }, async (root, wt) => {
     await syncLoopStateInto({ root, cwd: wt, git: run(wt) });
-    await writeFile(join(wt, "conductor/1-workbench/maker-signal.json"), '{"done":true}');
-    await writeFile(join(wt, "conductor/1-workbench/checker-verdict.json"), '{"verdict":"approve"}');
+    await writeFile(join(wt, "carja/1-workbench/maker-signal.json"), '{"done":true}');
+    await writeFile(join(wt, "carja/1-workbench/checker-verdict.json"), '{"verdict":"approve"}');
     await writeFile(join(wt, "hello.txt"), "hi\n");
     git(wt, "add", "-A");
     git(wt, "commit", "-qm", "auto-capture");
@@ -98,11 +98,11 @@ test("F18: the driver's signal files in the worktree are never committed", async
   });
 });
 
-test("a driver file a beat writes under a wrong folder (conductor/conductor/…) is not committed either", async () => {
+test("a driver file a beat writes under a wrong folder (carja/carja/…) is not committed either", async () => {
   await repoWith({ track: true }, async (root, wt) => {
     await syncLoopStateInto({ root, cwd: wt, git: run(wt) });
-    await mkdir(join(wt, "conductor/conductor/1-workbench"), { recursive: true });
-    await writeFile(join(wt, "conductor/conductor/1-workbench/maker-signal.json"), '{"done":true}');
+    await mkdir(join(wt, "carja/carja/1-workbench"), { recursive: true });
+    await writeFile(join(wt, "carja/carja/1-workbench/maker-signal.json"), '{"done":true}');
     await writeFile(join(wt, "hello.txt"), "hi\n");
     git(wt, "add", "-A");
     git(wt, "commit", "-qm", "auto-capture");

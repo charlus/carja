@@ -1,6 +1,6 @@
 // src/loop/resume.js
 //
-// Resume discipline (P1.4). A `conductor loop` process can die mid-run — a kill,
+// Resume discipline (P1.4). A `carja loop` process can die mid-run — a kill,
 // a wall-clock timeout, a crash. The Spine is persisted atomically after every
 // beat, so state survives; the problem is that a task/run left in a *working*
 // status is never re-entered:

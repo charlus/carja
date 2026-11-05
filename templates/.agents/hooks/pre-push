@@ -1,37 +1,41 @@
 #!/usr/bin/env bash
-# Conductor — Verification Iron Law + Eval-Driven Law (run-gate), enforced at the
+# Carja — Verification Iron Law + Eval-Driven Law (run-gate), enforced at the
 # push boundary (ADR-0001 D1). Verify: the project's verification command must pass.
 # Eval: if the repo has evalsets and an eval command, they must pass too — presence
 # was gated at commit; passing is gated here. No "should work" — proof or no push.
-# Escapes (logged): CONDUCTOR_SKIP_VERIFY / CONDUCTOR_SKIP_EVAL. Disable: CONDUCTOR_HOOKS=off.
+# Escapes (logged): CARJA_SKIP_VERIFY / CARJA_SKIP_EVAL. Disable: CARJA_HOOKS=off.
 set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 [ -z "$ROOT" ] && exit 0
-[ "${CONDUCTOR_HOOKS:-on}" = "off" ] && exit 0
+# 6.x names still work through 7.x: each CONDUCTOR_X sets CARJA_X when unset.
+for _k in $(compgen -e); do case "$_k" in CONDUCTOR_*) _n="CARJA_${_k#CONDUCTOR_}"; [ -n "${!_n:-}" ] || export "$_n=${!_k}" ;; esac; done
+# …and each CARJA_X sets CONDUCTOR_X, for a 6.x committed lib.sh (the push of the upgrade itself).
+for _k in $(compgen -e); do case "$_k" in CARJA_*) _n="CONDUCTOR_${_k#CARJA_}"; [ -n "${!_n:-}" ] || export "$_n=${!_k}" ;; esac; done
+[ "${CARJA_HOOKS:-on}" = "off" ] && exit 0
 
-# Heartbeat: `conductor status` compares it with the reflog to name the commits
-# and pushes that skipped this hook (--no-verify, CONDUCTOR_HOOKS=off, a client
+# Heartbeat: `carja status` compares it with the reflog to name the commits
+# and pushes that skipped this hook (--no-verify, CARJA_HOOKS=off, a client
 # that ignores hooks). Written here, not in lib.sh, so the commit that upgrades
 # the hooks has one too.
 HB_DIR="$(git rev-parse --git-common-dir 2>/dev/null || true)"
 case "$HB_DIR" in "") ;; /*) ;; *) HB_DIR="$(pwd)/$HB_DIR" ;; esac
-[ -n "$HB_DIR" ] && printf '%s pre-push\n' "$(date +%s)" >> "$HB_DIR/conductor-heartbeat" 2>/dev/null || true
+[ -n "$HB_DIR" ] && printf '%s pre-push\n' "$(date +%s)" >> "$HB_DIR/carja-heartbeat" 2>/dev/null || true
 
-# ---- The project root: where .agents/, conductor/ and the config live -------
+# ---- The project root: where .agents/, carja/ and the config live -------
 # It is ROOT, except in the outer layout. There a gitignored nested code
 # repository has core.hooksPath set to the outer .agents/hooks by absolute path
-# (`conductor install-hooks`). The gates then judge the code repository's diff,
+# (`carja install-hooks`). The gates then judge the code repository's diff,
 # and the library, the config and the ship-log come from the outer repository.
 # The library is read from the outer repository's COMMITTED copy, which no
 # commit or push in the code repository can rewrite.
 PROJECT_ROOT="$ROOT"
 NESTED_REPO=""
-conductor_find_project_root() {
+carja_find_project_root() {
   local home common main rel
   home="$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd -P)" || return 0
   [ -n "$home" ] && [ "$home" != "$(cd "$ROOT" && pwd -P)" ] || return 0
-  [ -d "$home/.agents/hooks" ] && [ -d "$home/conductor" ] || return 0
+  [ -d "$home/.agents/hooks" ] && [ -d "$home/carja" ] || return 0
   common="$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null)" || return 0
   case "$common" in /*) ;; *) common="$ROOT/$common" ;; esac
   main="$(cd "$common/.." 2>/dev/null && pwd -P)" || return 0
@@ -41,13 +45,13 @@ conductor_find_project_root() {
   PROJECT_ROOT="$home"
   NESTED_REPO="$rel"
 }
-conductor_find_project_root
+carja_find_project_root
 
 # The fingerprint of the pre-commit released WITH this pre-push. An edit to
 # pre-commit that lands on exactly this content is an upgrade, not a neutering,
 # and needs no waiver at push. Forging a match means editing pre-push as well —
 # both entry scripts, the stated limit. Pinned by test/hooks-registry-drift.test.js.
-CONDUCTOR_OFFICIAL_PRECOMMIT_SHA256="5207d0e91f96295d5f4651a3e6b3b3224f40ff7caf3e9b8f631efe67b3538657"
+CARJA_OFFICIAL_PRECOMMIT_SHA256="a055c1d9aed78d8d3cb729b00acc61fda5f12d5176853c820f3f28b43dec4a54"
 
 # git feeds one line per pushed ref: <local ref> <local sha> <remote ref> <remote sha>.
 PUSH_LINES="$(cat)"
@@ -71,7 +75,17 @@ ZERO="0000000000000000000000000000000000000000"
 # pre-commit is caught at pre-push below; rewriting both entry scripts defeats
 # every client-side hook, and the backstop for that is the PR gate and the
 # loop's Checker, not this file.
-conductor_load_lib() {
+# A trusted lib.sh committed under 6.x names its helpers conductor_*. Through
+# 7.x it is still the trusted copy (the remote's, at the push of the upgrade
+# itself): give each helper its carja_* name rather than failing closed.
+carja_compat_old_lib() {
+  local f
+  for f in $(compgen -A function conductor_); do
+    type "carja_${f#conductor_}" >/dev/null 2>&1 || eval "carja_${f#conductor_}() { $f \"\$@\"; }"
+  done
+}
+
+carja_load_lib() {
   local ref="$1" tmp
   if [ -n "$ref" ] && git -C "$PROJECT_ROOT" cat-file -e "$ref:.agents/hooks/lib.sh" 2>/dev/null; then
     tmp="$(mktemp 2>/dev/null)" || return 1
@@ -82,17 +96,19 @@ conductor_load_lib() {
     # shellcheck source=/dev/null
     . "$tmp"
     rm -f "$tmp"
+    carja_compat_old_lib
     return 0
   fi
   [ -f "$PROJECT_ROOT/.agents/hooks/lib.sh" ] || return 1
   # shellcheck source=/dev/null
   . "$PROJECT_ROOT/.agents/hooks/lib.sh"
+  carja_compat_old_lib
 }
 
 # Every helper `$1` needs, or the names that are missing. A committed lib.sh
 # older than this hook (mid-upgrade) lacks the newer helpers; running on with
 # them undefined would silently skip their gates, so a gap fails closed instead.
-conductor_missing_helpers() {
+carja_missing_helpers() {
   local fn missing=""
   for fn in $1; do
     type "$fn" >/dev/null 2>&1 || missing="$missing $fn"
@@ -102,8 +118,8 @@ conductor_missing_helpers() {
 
 # Minimal ship-log writer for the one path where lib.sh could not be loaded,
 # so even that waiver is recorded rather than silent.
-conductor_log_waiver_fallback() {
-  local log="$PROJECT_ROOT/conductor/0-compass/ship-log.md"
+carja_log_waiver_fallback() {
+  local log="$PROJECT_ROOT/carja/0-compass/ship-log.md"
   [ -f "$log" ] || return 0
   printf -- '- [%s] Hook waiver (%s): %s\n' "$(date '+%Y-%m-%d %H:%M')" "$1" "$2" >> "$log"
 }
@@ -134,21 +150,21 @@ if [ -n "$NESTED_REPO" ]; then
   git -C "$PROJECT_ROOT" rev-parse --verify -q HEAD >/dev/null 2>&1 && LIB_REF="HEAD"
 fi
 
-REQUIRED="conductor_verify_cmd conductor_eval_cmd conductor_has_eval_files conductor_log_waiver"
+REQUIRED="carja_verify_cmd carja_eval_cmd carja_has_eval_files carja_log_waiver"
 lib_ok=1
-conductor_load_lib "$LIB_REF" || lib_ok=0
-missing="$(conductor_missing_helpers "$REQUIRED")"
+carja_load_lib "$LIB_REF" || lib_ok=0
+missing="$(carja_missing_helpers "$REQUIRED")"
 
 if [ "$lib_ok" = "0" ] || [ -n "$missing" ]; then
-  # Nothing loadable. If the remote had Conductor, this push is removing it.
+  # Nothing loadable. If the remote had Carja, this push is removing it.
   if [ -n "$LIB_REF" ] && git -C "$PROJECT_ROOT" cat-file -e "$LIB_REF:.agents/hooks/lib.sh" 2>/dev/null; then
-    if [ -n "${CONDUCTOR_NO_PROTECTED:-}" ]; then
-      conductor_log_waiver_fallback "Protected" "$CONDUCTOR_NO_PROTECTED"
-      echo "⚠️  Conductor enforcement library unavailable — WAIVED: $CONDUCTOR_NO_PROTECTED"
+    if [ -n "${CARJA_NO_PROTECTED:-}" ]; then
+      carja_log_waiver_fallback "Protected" "$CARJA_NO_PROTECTED"
+      echo "⚠️  Carja enforcement library unavailable — WAIVED: $CARJA_NO_PROTECTED"
       exit 0
     fi
-    echo "🛑 Conductor — the committed enforcement library cannot run this hook; push blocked."
-    echo "   If you are deliberately removing or upgrading Conductor: CONDUCTOR_NO_PROTECTED=\"why\" git push …"
+    echo "🛑 Carja — the committed enforcement library cannot run this hook; push blocked."
+    echo "   If you are deliberately removing or upgrading Carja: CARJA_NO_PROTECTED=\"why\" git push …"
     exit 1
   fi
   exit 0
@@ -195,7 +211,7 @@ hook_changes() {
         __EDITED__*)
           path="${line#*$'\t'}"
           # The official pre-commit for this release is an upgrade: let it through.
-          [ "$(blob_sha256 "$to" "$path")" = "$CONDUCTOR_OFFICIAL_PRECOMMIT_SHA256" ] && continue
+          [ "$(blob_sha256 "$to" "$path")" = "$CARJA_OFFICIAL_PRECOMMIT_SHA256" ] && continue
           printf '%s (edited — the edited copy judged its own commit)\n' "$path"
           ;;
         *) printf '%s\n' "$line" ;;
@@ -213,28 +229,28 @@ while read -r _lref lsha _rref rsha; do
 done <<< "$PUSH_LINES"
 
 if [ -n "$removed_hooks" ]; then
-  if [ -n "${CONDUCTOR_NO_PROTECTED:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "Protected" "$CONDUCTOR_NO_PROTECTED"
-    echo "⚠️  Conductor hook removal WAIVED: $CONDUCTOR_NO_PROTECTED"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+  if [ -n "${CARJA_NO_PROTECTED:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Protected" "$CARJA_NO_PROTECTED"
+    echo "⚠️  Carja hook removal WAIVED: $CARJA_NO_PROTECTED"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
     echo ""
-    echo "🛑 Conductor — this push removes or disables an enforcement hook; push blocked."
+    echo "🛑 Carja — this push removes or disables an enforcement hook; push blocked."
     echo -e "$removed_hooks"
     echo ""
     echo "  A deleted pre-commit runs no commit gate at all, so the commit that"
     echo "  removed it was never judged. If the removal is deliberate, say so:"
-    echo "    CONDUCTOR_NO_PROTECTED=\"why\" git push …"
+    echo "    CARJA_NO_PROTECTED=\"why\" git push …"
     echo ""
     exit 1
   fi
 fi
 
 # ---- Verification Iron Law ------------------------------------------------
-# ---- A push that changes only conductor/ proves nothing by running tests ----
-# conductor/ is project state: backlog, specs, ship-log. Running the suite and
+# ---- A push that changes only carja/ proves nothing by running tests ----
+# carja/ is project state: backlog, specs, ship-log. Running the suite and
 # live evals for a backlog edit cost minutes and failed on flaky evals. Any file
-# outside conductor/, or a range that cannot be computed, counts as code.
+# outside carja/, or a range that cannot be computed, counts as code.
 code_in_push=0; ranges=0
 while read -r _lref lsha _rref rsha; do
   [ -z "${lsha:-}" ] || [ "$lsha" = "$ZERO" ] && continue
@@ -243,67 +259,67 @@ while read -r _lref lsha _rref rsha; do
   [ -z "${from:-}" ] || [ "$from" = "$ZERO" ] && from="$TRUSTED_REF"
   if [ -z "$from" ] || [ "$from" = "HEAD" ]; then code_in_push=1; break; fi
   changed="$(git -C "$ROOT" diff --name-only "$from" "$lsha" 2>/dev/null)" || { code_in_push=1; break; }
-  if printf '%s\n' "$changed" | grep -v '^$' | grep -qv '^conductor/'; then code_in_push=1; break; fi
+  if printf '%s\n' "$changed" | grep -v '^$' | grep -qv '^carja/'; then code_in_push=1; break; fi
 done <<< "$PUSH_LINES"
 [ "$ranges" = "0" ] && code_in_push=1   # nothing to compare: judge as before
 if [ "$code_in_push" = "0" ]; then
-  echo "ℹ️  Conductor: this push changes only conductor/ — no verify, no evals."
+  echo "ℹ️  Carja: this push changes only carja/ — no verify, no evals."
   echo "✅ Push allowed."
   exit 0
 fi
 
-cmd="$(conductor_verify_cmd "$ROOT" "$PROJECT_ROOT" "$NESTED_REPO")"
+cmd="$(carja_verify_cmd "$ROOT" "$PROJECT_ROOT" "$NESTED_REPO")"
 if [ "$cmd" = "none" ]; then
-  # A DECLARED off (`conductor verify --none`). Silent on purpose: a docs or
+  # A DECLARED off (`carja verify --none`). Silent on purpose: a docs or
   # state repo has nothing to run, and a warning it can never clear is how a
   # safety message gets trained out of the reader.
   :
 elif [ -z "$cmd" ]; then
-  echo "ℹ️  Conductor: push gate OFF — no verification command, so this push proves nothing."
+  echo "ℹ️  Carja: push gate OFF — no verification command, so this push proves nothing."
   if [ -n "$NESTED_REPO" ]; then
     echo "    Set it, in $PROJECT_ROOT:"
-    echo "      conductor verify --repo $NESTED_REPO --set \"npm test\"   (the command that proves this repository works)"
-    echo "      conductor verify --repo $NESTED_REPO --none"
+    echo "      carja verify --repo $NESTED_REPO --set \"npm test\"   (the command that proves this repository works)"
+    echo "      carja verify --repo $NESTED_REPO --none"
   else
-    echo "    Set it:        conductor verify --set \"npm test\"    (the command that proves this project works)"
-    echo "    Or declare it: conductor verify --none               (nothing to verify in this repo)"
+    echo "    Set it:        carja verify --set \"npm test\"    (the command that proves this project works)"
+    echo "    Or declare it: carja verify --none               (nothing to verify in this repo)"
   fi
-elif [ -n "${CONDUCTOR_SKIP_VERIFY:-}" ]; then
-  conductor_log_waiver "$PROJECT_ROOT" "VERIFY" "$CONDUCTOR_SKIP_VERIFY"
-  echo "⚠️  Conductor Verification Iron Law WAIVED: $CONDUCTOR_SKIP_VERIFY"
-  echo "    (logged to conductor/0-compass/ship-log.md)"
+elif [ -n "${CARJA_SKIP_VERIFY:-}" ]; then
+  carja_log_waiver "$PROJECT_ROOT" "VERIFY" "$CARJA_SKIP_VERIFY"
+  echo "⚠️  Carja Verification Iron Law WAIVED: $CARJA_SKIP_VERIFY"
+  echo "    (logged to carja/0-compass/ship-log.md)"
 else
   # ---- Evidence ledger fast path (E2) ------------------------------------
   # If this EXACT command already ran green against this EXACT working-tree
-  # content, re-running it proves nothing new. `conductor evidence check` binds
+  # content, re-running it proves nothing new. `carja evidence check` binds
   # freshness to a content fingerprint, so committing the tested code keeps its
   # evidence FRESH while any source change invalidates it.
   #
-  # Strictly opt-out and strictly fail-safe: no `conductor` on PATH, no ledger,
+  # Strictly opt-out and strictly fail-safe: no `carja` on PATH, no ledger,
   # any doubt at all → we run the command. The ledger can only ever SKIP a
   # redundant run; it can never satisfy the gate on its own.
   fresh=0
-  if [ "${CONDUCTOR_EVIDENCE:-on}" != "off" ] && command -v conductor >/dev/null 2>&1; then
+  if [ "${CARJA_EVIDENCE:-on}" != "off" ] && { command -v carja >/dev/null 2>&1 || command -v conductor >/dev/null 2>&1; }; then
     # Allow-list: a release-note or version edit between the test run and the
     # push is not a behaviour change. Deliberately SMALL and never a source
-    # path — override with CONDUCTOR_EVIDENCE_ALLOW_PATHS if your release flow
+    # path — override with CARJA_EVIDENCE_ALLOW_PATHS if your release flow
     # touches other non-source files.
-    allow="${CONDUCTOR_EVIDENCE_ALLOW_PATHS:-CHANGELOG.md,VERSION}"
-    if ( cd "$ROOT" && conductor evidence check --label verify --expect-cmd "$cmd" --allow-paths "$allow" >/dev/null 2>&1 ); then
+    allow="${CARJA_EVIDENCE_ALLOW_PATHS:-CHANGELOG.md,VERSION}"
+    if ( cd "$ROOT" && carja evidence check --label verify --expect-cmd "$cmd" --allow-paths "$allow" >/dev/null 2>&1 ); then
       fresh=1
     fi
   fi
 
   if [ "$fresh" = "1" ]; then
     echo "✅ Verification FRESH — this exact command already passed against this exact content."
-    echo "   (evidence ledger; re-run anyway with CONDUCTOR_EVIDENCE=off)"
+    echo "   (evidence ledger; re-run anyway with CARJA_EVIDENCE=off)"
   else
-    echo "🔬 Conductor Verification Iron Law — running: $cmd"
+    echo "🔬 Carja Verification Iron Law — running: $cmd"
     # Wrap the run so the result is recorded and the next push can trust it.
     # The wrapper never turns a red suite green. --stable-tree fails a green
     # run that changed files while it ran: the code that passed is not on disk.
-    if [ "${CONDUCTOR_EVIDENCE:-on}" != "off" ] && command -v conductor >/dev/null 2>&1; then
-      runner() { ( cd "$ROOT" && conductor evidence run --label verify --stable-tree -- "$cmd" ); }
+    if [ "${CARJA_EVIDENCE:-on}" != "off" ] && { command -v carja >/dev/null 2>&1 || command -v conductor >/dev/null 2>&1; }; then
+      runner() { ( cd "$ROOT" && carja evidence run --label verify --stable-tree -- "$cmd" ); }
     else
       runner() { ( cd "$ROOT" && eval "$cmd" ); }
     fi
@@ -312,7 +328,7 @@ else
     else
       echo ""
       echo "🛑 Verification FAILED — push blocked."
-      echo "   Fix it, or bypass explicitly: CONDUCTOR_SKIP_VERIFY=\"why\" git push …"
+      echo "   Fix it, or bypass explicitly: CARJA_SKIP_VERIFY=\"why\" git push …"
       exit 1
     fi
   fi
@@ -321,25 +337,25 @@ fi
 # ---- Eval-Driven Law (run-gate) -------------------------------------------
 # Presence was enforced at commit; here the evalsets must actually pass. Only
 # engages when the repo has evalsets — non-LLM projects never see it.
-if conductor_has_eval_files "$ROOT"; then
-  eval_cmd="$(conductor_eval_cmd "$ROOT" "$PROJECT_ROOT" "$NESTED_REPO")"
+if carja_has_eval_files "$ROOT"; then
+  eval_cmd="$(carja_eval_cmd "$ROOT" "$PROJECT_ROOT" "$NESTED_REPO")"
   if [ "$eval_cmd" = "none" ]; then
     :   # declared: these evals are run by hand, not on push
   elif [ -z "$eval_cmd" ]; then
-    echo "ℹ️  Conductor: evalsets exist but no eval command is configured — the Eval-Driven Law run-gate is NOT enforced on this push. Add \"eval\" to conductor.config.json (e.g. \"eval\": \"python -m pytest evals/ -q\") or an \"eval\" npm script."
-  elif [ -n "${CONDUCTOR_SKIP_EVAL:-}" ]; then
-    conductor_log_waiver "$PROJECT_ROOT" "EVAL" "$CONDUCTOR_SKIP_EVAL"
-    echo "⚠️  Conductor Eval-Driven Law (run) WAIVED: $CONDUCTOR_SKIP_EVAL"
-    echo "    (logged to conductor/0-compass/ship-log.md)"
+    echo "ℹ️  Carja: evalsets exist but no eval command is configured — the Eval-Driven Law run-gate is NOT enforced on this push. Add \"eval\" to carja.config.json (e.g. \"eval\": \"python -m pytest evals/ -q\") or an \"eval\" npm script."
+  elif [ -n "${CARJA_SKIP_EVAL:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "EVAL" "$CARJA_SKIP_EVAL"
+    echo "⚠️  Carja Eval-Driven Law (run) WAIVED: $CARJA_SKIP_EVAL"
+    echo "    (logged to carja/0-compass/ship-log.md)"
   else
-    echo "🧪 Conductor Eval-Driven Law — running evals: $eval_cmd"
+    echo "🧪 Carja Eval-Driven Law — running evals: $eval_cmd"
     if ( cd "$ROOT" && eval "$eval_cmd" ); then
       echo "✅ Evals passed."
     else
       echo ""
       echo "🛑 Evals FAILED — push blocked."
       echo "   Tests being green is not enough — the non-deterministic surface regressed."
-      echo "   Fix the evalset, or bypass explicitly: CONDUCTOR_SKIP_EVAL=\"why\" git push …"
+      echo "   Fix the evalset, or bypass explicitly: CARJA_SKIP_EVAL=\"why\" git push …"
       exit 1
     fi
   fi

@@ -24,11 +24,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 const WORKTREES = "/.agents/.worktrees/";
-export const LOOP_PREFIX = "conductor/loop/";
-// Interactive work (`conductor work <item>`): its own prefix, so a loop item and
+export const LOOP_PREFIX = "carja/loop/";
+/** The 6.x prefix, read through 7.x. */
+export const OLD_LOOP_PREFIX = "conductor/loop/";
+// Interactive work (`carja work <item>`): its own prefix, so a loop item and
 // an interactive item never share a branch. Cleaned by the same prune.
-export const WORK_PREFIX = "conductor/work/";
-export const HOLDER_FILE = "conductor-holder";
+export const WORK_PREFIX = "carja/work/";
+export const HOLDER_FILE = "carja-holder";
 
 /** Is `pid` a live process? EPERM means alive but not ours. */
 export function isPidAlive(pid) {
@@ -186,14 +188,15 @@ export async function pruneMergedLoopWorktrees({ git, skip = async () => null, f
 
 /** The loop branches on the remote, from `git ls-remote`; null when it cannot be read. */
 export async function remoteLoopBranches(git) {
-  const r = await git(["ls-remote", "--heads", "origin", `${LOOP_PREFIX}*`]);
+  // A 6.x run pushed conductor/loop/<item>: through 7.x it still claims <item>.
+  const r = await git(["ls-remote", "--heads", "origin", `${LOOP_PREFIX}*`, `${OLD_LOOP_PREFIX}*`]);
   if (!r.ok) return null;
   return new Set(
     r.stdout
       .split("\n")
       .map((l) => l.split("\t")[1])
       .filter(Boolean)
-      .map((ref) => ref.replace(/^refs\/heads\//, ""))
+      .map((ref) => ref.replace(/^refs\/heads\//, "").replace(OLD_LOOP_PREFIX, LOOP_PREFIX))
   );
 }
 
@@ -226,7 +229,7 @@ export function skipClaimed(queue, { remoteBranches, mergedBranches: merged = ne
 }
 
 /**
- * `conductor loop <project>` cleans up after itself: every loop worktree that run
+ * `carja loop <project>` cleans up after itself: every loop worktree that run
  * `pid` holds is removed when it has no uncommitted change. The commits stay in
  * the branch, so nothing is lost; a branch whose tip is already on the remote is
  * deleted too. The code worktree inside (`codeDir`) goes first. A worktree with

@@ -1,6 +1,6 @@
 // src/commands/survey.js
 //
-// `conductor survey [dir]` — the IO shell around src/survey.js.
+// `carja survey [dir]` — the IO shell around src/survey.js.
 //
 // Walks a real tree, reads the few files worth reading, and prints the facts.
 // Everything judgemental lives in the workflow; everything here is countable.

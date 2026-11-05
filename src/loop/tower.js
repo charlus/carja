@@ -51,7 +51,7 @@ const shortTask = (t) => String(t).replace(/^(task|bugfix|slice|blueprint|featur
  */
 export function renderTower(products, now, { color = false } = {}) {
   const p = paint(color);
-  if (!products.length) return "  No product registered for the loop on this machine. `conductor loop on <project>` (or `--backlog`) in a product registers it.\n";
+  if (!products.length) return "  No product registered for the loop on this machine. `carja loop on <project>` (or `--backlog`) in a product registers it.\n";
   const rows = products.map((x) => ({ ...x, state: productState(x.model, x.waiting.length) })).sort((a, b) => ORDER[a.state] - ORDER[b.state]);
   const count = (s) => rows.filter((r) => r.state === s).length;
   const cost = rows.reduce((s, r) => s + (r.model?.cost ?? 0), 0);
@@ -63,7 +63,7 @@ export function renderTower(products, now, { color = false } = {}) {
     ...(count("failed") ? [p.failed(`✖ ${count("failed")} stopped`)] : []),
     `≈ $${cost.toFixed(2)} at list price`,
   ].join(" · ");
-  const out = [` ${p.bold("CONDUCTOR watch tower")} · ${new Date(now).toTimeString().slice(0, 5)} · ${head}`, ""];
+  const out = [` ${p.bold("CARJA watch tower")} · ${new Date(now).toTimeString().slice(0, 5)} · ${head}`, ""];
   for (const r of rows) {
     const m = r.model;
     const sym = p[r.state](SYMBOL[r.state]);

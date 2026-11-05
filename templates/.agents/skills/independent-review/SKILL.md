@@ -6,7 +6,7 @@ category: core
 
 # Independent Review (Fresh-Context Gate)
 
-> The author cannot be their own last reviewer. A mind that just produced an artifact is anchored on the reasoning that produced it — it sees what it *meant*, not what it *wrote*. A reviewer in a **separate, clean context** reads only what's actually there, which is the whole point. This is Conductor's Maker/Checker split (`personas/checker.md`, `skills/subagent-isolation/SKILL.md`) applied to any consequential output, not just code.
+> The author cannot be their own last reviewer. A mind that just produced an artifact is anchored on the reasoning that produced it — it sees what it *meant*, not what it *wrote*. A reviewer in a **separate, clean context** reads only what's actually there, which is the whole point. This is Carja's Maker/Checker split (`personas/checker.md`, `skills/subagent-isolation/SKILL.md`) applied to any consequential output, not just code.
 
 **This skill is the caller's half of the gate: when to run it, what to hand the reviewer, and how the cycle terminates.** The reviewer's own instructions are one self-contained file — `reviewer.md` — handed over verbatim. Do not append other skills to it.
 
@@ -50,11 +50,11 @@ Freeze a baseline before the first cycle: the original request, the artifact's i
 
 **No follow-up backlog from review.** A proven in-scope defect is fixed in this cycle or written into the PR body. Deferral lists rot and are never acted on — recording a gap where the merger reads it is honest; filing it into a backlog nobody re-reads is not.
 
-**Dismissing a finding is a valid outcome.** For each one you decide *"deliberate trade-off → dismiss with a one-line reason"* or *"I only told myself it was deliberate — the reviewer is right."* Record the disposition either way with `conductor review-log append '{…}'`, the reviewer's `class` as `category` and its `lens` as `persona` (omit it for `spec`) — one line per finding into `conductor/1-workbench/review-log.jsonl` (Ship 4.4 shows the record): a class dismissed most of the time is a rubric defect to fix in `calibration.md`, not an author defect.
+**Dismissing a finding is a valid outcome.** For each one you decide *"deliberate trade-off → dismiss with a one-line reason"* or *"I only told myself it was deliberate — the reviewer is right."* Record the disposition either way with `carja review-log append '{…}'`, the reviewer's `class` as `category` and its `lens` as `persona` (omit it for `spec`) — one line per finding into `carja/1-workbench/review-log.jsonl` (Ship 4.4 shows the record): a class dismissed most of the time is a rubric defect to fix in `calibration.md`, not an author defect.
 
 ## Conflicting findings
 
-The reviewer reads the Review Lens of every persona `conductor personas` listed, so two findings can pull opposite ways: the Security Auditor wants a re-authentication step, the Designer wants no extra step. You are the accountable engineer of a team, and the human is its product owner. Settle the conflict yourself, in this order: **security and data integrity, then acceptance criteria, then architecture, then performance, then design**. The higher one wins. Record the losing finding as dismissed with `persona` and `overridden_by`; the ledger refuses an override that reverses the order.
+The reviewer reads the Review Lens of every persona `carja personas` listed, so two findings can pull opposite ways: the Security Auditor wants a re-authentication step, the Designer wants no extra step. You are the accountable engineer of a team, and the human is its product owner. Settle the conflict yourself, in this order: **security and data integrity, then acceptance criteria, then architecture, then performance, then design**. The higher one wins. Record the losing finding as dismissed with `persona` and `overridden_by`; the ledger refuses an override that reverses the order.
 
 Ask the product owner only when **every option changes what the user sees or does** (an extra step, a slower screen, a dropped behaviour). Then it is a product decision: one question, both options in one line each, your recommendation first. Record their answer with `po_decision: true`. A conflict whose resolution the user cannot see is never theirs.
 
@@ -89,7 +89,7 @@ Hitting a brake is a successful outcome of the gate: it has found that the work 
 | **Technical Vision** (`technical-vision`) | Does the architecture support **every** Epic and serve **every** screen? Is any complexity unjustified (deep-module / deletion test)? Are the ADRs sound and the data model internally consistent? Are the named risks the real ones? |
 | **Feature Spec + Plan** (`spec-it`) | Is every acceptance criterion **testable** and unambiguous? Does the plan implement exactly the spec — nothing missing, nothing extra? Is it sliced into thin vertical increments? |
 | **Carve slicing** (`carve`) | Does each Implementation deliver testable value on its own? Is the dependency order a valid DAG with no cycles or orphans? Is anything from the Blueprint uncarved, or any slice too big to build safely? |
-| **Diff** (`ship`, loop execution) | The spec's acceptance criteria (or `goal_description`), walked as a checklist, plus every item of `conductor/0-compass/architecture-checklist.md` if it exists, plus the **Review Lens** lines `conductor personas` prints for the diff. For a runtime surface, pair the static read with a source-blind behavior check of the running artifact (`skills/behavior-validator/SKILL.md`) — run by the **author**, its output handed to the reviewer as evidence. |
+| **Diff** (`ship`, loop execution) | The spec's acceptance criteria (or `goal_description`), walked as a checklist, plus every item of `carja/0-compass/architecture-checklist.md` if it exists, plus the **Review Lens** lines `carja personas` prints for the diff. For a runtime surface, pair the static read with a source-blind behavior check of the running artifact (`skills/behavior-validator/SKILL.md`) — run by the **author**, its output handed to the reviewer as evidence. |
 
 ## In the autonomous loop
 

@@ -8,8 +8,8 @@ import { prTitle } from "./merge.js";
 
 /** The code MR's title, and the outer state MR's. */
 export function mrTitles(task) {
-  const plain = prTitle(task?.title || "") || task?.id || task?.type || "Conductor work item";
-  return { code: plain, state: `Conductor state: ${plain}` };
+  const plain = prTitle(task?.title || "") || task?.id || task?.type || "Carja work item";
+  return { code: plain, state: `Carja state: ${plain}` };
 }
 
 /** A command prefixed so that a run in the owner's checkout leaves no Python bytecode or pytest cache. */

@@ -1,7 +1,7 @@
 // test/loop-stage-conformance.test.js
 //
 // Unattended Lifecycle step 6 (docs/roadmap/Unattended-Lifecycle.md): the loop
-// runs Conductor's own workflows, stage by stage, and nothing else. Two halves:
+// runs Carja's own workflows, stage by stage, and nothing else. Two halves:
 //   - static: the stage table in code (src/loop/stages.js) names real workflow
 //     files and real beat sections, and matches the roadmap's Stage map.
 //   - behaviour: the real CLI, driven through every stage of a project with a
@@ -67,26 +67,26 @@ function project() {
   mkdirSync(bin);
   writeFileSync(join(bin, "claude"), readFileSync(join(REPO, "test/fixtures/stub-engine/claude")), { mode: 0o755 });
   writeFileSync(join(bin, "gh"), '#!/bin/sh\n[ "$1" = auth ] && exit 0\n[ "$1" = pr ] && [ "$2" = list ] && exit 0\necho https://example.invalid/pr/1\n', { mode: 0o755 });
-  execFileSync("node", [join(REPO, "bin/conductor.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
+  execFileSync("node", [join(REPO, "bin/carja.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
   G(root, "init", "-q", "-b", "master");
   G(root, "config", "user.email", "t@t");
   G(root, "config", "user.name", "t");
   writeFileSync(join(root, "package.json"), '{ "name": "app", "type": "module", "scripts": { "test": "true" } }\n');
   writeFileSync(join(root, ".gitignore"), ".agents/.worktrees/\n", { flag: "a" });
-  const p = join(root, "conductor/2-backlog/project-backlog/notes");
+  const p = join(root, "carja/2-backlog/project-backlog/notes");
   for (const rel of DISCOVERY) {
     mkdirSync(join(p, rel, ".."), { recursive: true });
     writeFileSync(join(p, rel), `# ${rel}\n\nWriters keep notes.\n`);
   }
-  const cfg = JSON.parse(readFileSync(join(root, "conductor.config.json"), "utf8"));
+  const cfg = JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8"));
   cfg.verify = "true";
   cfg.loop = { forge: "gh", blueprint: ["notes"], slices: ["notes"], inbox: false };
-  writeFileSync(join(root, "conductor.config.json"), JSON.stringify(cfg, null, 2));
-  const st = JSON.parse(readFileSync(join(root, "conductor/1-workbench/loop-state.json"), "utf8"));
+  writeFileSync(join(root, "carja.config.json"), JSON.stringify(cfg, null, 2));
+  const st = JSON.parse(readFileSync(join(root, "carja/1-workbench/loop-state.json"), "utf8"));
   Object.assign(st, { phase: "execution", autonomy_level: "L3", sandbox: "cli-native", platform: "claude", concurrency: 1 });
   st.budget = { max_beats: 30, max_wall_clock_min: 10 };
   st.iterations = { current: 0, max_allowed: 30 };
-  writeFileSync(join(root, "conductor/1-workbench/loop-state.json"), JSON.stringify(st, null, 2));
+  writeFileSync(join(root, "carja/1-workbench/loop-state.json"), JSON.stringify(st, null, 2));
   G(root, "add", "-A");
   G(root, "commit", "-qm", "init");
   G(base, "init", "-q", "--bare", "-b", "master", "origin.git");
@@ -97,7 +97,7 @@ function project() {
 }
 
 function loop({ base, root, bin }, logDir, env = {}) {
-  const r = spawnSync("node", [join(REPO, "bin/conductor.js"), "loop", root, "--from-conductor"], {
+  const r = spawnSync("node", [join(REPO, "bin/carja.js"), "loop", root, "--from-carja"], {
     cwd: root,
     encoding: "utf8",
     env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, STUB_LOG_DIR: join(base, logDir), ...env },
@@ -144,7 +144,7 @@ test("the CLI runs a project through every loop stage, each beat on its stage's 
     assert.match(r1.stdout, /Next: review and merge the MR/, "the run ends with the next command");
 
     // The owner merges the Blueprint MR: the slices now exist on the default branch.
-    const branch = G(p.root, "ls-remote", "--heads", "origin", "conductor/loop/*").split("\t")[1].replace("refs/heads/", "");
+    const branch = G(p.root, "ls-remote", "--heads", "origin", "carja/loop/*").split("\t")[1].replace("refs/heads/", "");
     G(p.root, "fetch", "-q", "origin", branch);
     G(p.root, "merge", "-q", "--no-ff", "-m", "merge Blueprint MR", "FETCH_HEAD");
     G(p.root, "push", "-q", "origin", "master");
@@ -167,7 +167,7 @@ test("the CLI runs a project through every loop stage, each beat on its stage's 
 test("the balanced profile: each beat starts on its role's model, through the real CLI", () => {
   const p = project();
   try {
-    const cfgPath = join(p.root, "conductor.config.json");
+    const cfgPath = join(p.root, "carja.config.json");
     const cfg = JSON.parse(readFileSync(cfgPath, "utf8"));
     cfg.loop.profile = "balanced";
     writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
@@ -178,7 +178,7 @@ test("the balanced profile: each beat starts on its role's model, through the re
     const routes1 = r1.prompts.map((x) => routeOf(x, p.root));
     assert.equal(at(routes1, r1.models, "grand-prd"), "opus", "designs on Opus");
     assert.equal(at(routes1, r1.models, "checker:grand-prd"), "opus", "review on Opus");
-    const branch = G(p.root, "ls-remote", "--heads", "origin", "conductor/loop/*").split("\t")[1].replace("refs/heads/", "");
+    const branch = G(p.root, "ls-remote", "--heads", "origin", "carja/loop/*").split("\t")[1].replace("refs/heads/", "");
     G(p.root, "fetch", "-q", "origin", branch);
     G(p.root, "merge", "-q", "--no-ff", "-m", "merge", "FETCH_HEAD");
     G(p.root, "push", "-q", "origin", "master");

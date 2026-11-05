@@ -15,17 +15,17 @@ no() { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 fresh_repo() {
   local d; d="$(mktemp -d)"
-  mkdir -p "$d/.agents/hooks" "$d/conductor/0-compass" "$d/conductor/2-implementations/01-thing"
+  mkdir -p "$d/.agents/hooks" "$d/carja/0-compass" "$d/carja/2-implementations/01-thing"
   cp "$REPO_ROOT/templates/.agents/hooks/"* "$d/.agents/hooks/"
   chmod +x "$d/.agents/hooks/pre-commit" "$d/.agents/hooks/pre-push" 2>/dev/null
-  : > "$d/conductor/0-compass/ship-log.md"
+  : > "$d/carja/0-compass/ship-log.md"
   git -C "$d" init -q
   git -C "$d" config user.email t@t.local
   git -C "$d" config user.name t
   git -C "$d" config core.hooksPath .agents/hooks
   printf '%s' "$d"
 }
-SPEC_DIR="conductor/2-implementations/01-thing"
+SPEC_DIR="carja/2-implementations/01-thing"
 
 echo "Outward Rigour — pre-commit brief-check gate:"
 
@@ -55,8 +55,8 @@ rm -rf "$D"
 D="$(fresh_repo)"
 printf '# Feature Spec\n\n## Scope\nA thing.\n' > "$D/$SPEC_DIR/feature-spec.md"
 git -C "$D" add -A >/dev/null 2>&1
-if CONDUCTOR_NO_BRIEF="carried over from a pre-A5 spec" git -C "$D" commit -q -m "waived" >/dev/null 2>&1; then
-  if grep -qi "brief" "$D/conductor/0-compass/ship-log.md"; then
+if CARJA_NO_BRIEF="carried over from a pre-A5 spec" git -C "$D" commit -q -m "waived" >/dev/null 2>&1; then
+  if grep -qi "brief" "$D/carja/0-compass/ship-log.md"; then
     ok "B3: waiver commits AND is logged to the ship-log"
   else
     no "B3: waiver committed but was not logged"
@@ -68,7 +68,7 @@ rm -rf "$D"
 
 # ---- B4: other markdown is untouched --------------------------------------
 D="$(fresh_repo)"
-printf '# Notes\nsome notes\n' > "$D/conductor/notes.md"
+printf '# Notes\nsome notes\n' > "$D/carja/notes.md"
 git -C "$D" add -A >/dev/null 2>&1
 if git -C "$D" commit -q -m "unrelated markdown" >/dev/null 2>&1; then
   ok "B4: unrelated markdown is untouched by the gate"
@@ -81,10 +81,10 @@ rm -rf "$D"
 D="$(fresh_repo)"
 printf '# Feature Spec\n\n## Scope\nA thing.\n' > "$D/$SPEC_DIR/feature-spec.md"
 git -C "$D" add -A >/dev/null 2>&1
-if CONDUCTOR_HOOKS=off git -C "$D" commit -q -m "hooks off" >/dev/null 2>&1; then
-  ok "B5: CONDUCTOR_HOOKS=off disables the gate"
+if CARJA_HOOKS=off git -C "$D" commit -q -m "hooks off" >/dev/null 2>&1; then
+  ok "B5: CARJA_HOOKS=off disables the gate"
 else
-  no "B5: gate still fired with CONDUCTOR_HOOKS=off"
+  no "B5: gate still fired with CARJA_HOOKS=off"
 fi
 rm -rf "$D"
 

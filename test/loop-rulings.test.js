@@ -2,7 +2,7 @@
 //
 // A12 (docs/roadmap/Superlite-Imports.md): an unattended Maker decides product
 // questions alone, and before this only its diff showed what it chose. It now
-// logs each decision the spec did not settle in conductor/1-workbench/rulings.md:
+// logs each decision the spec did not settle in carja/1-workbench/rulings.md:
 //   - [YYYY-MM-DD HH:MM] <task id> · <decision> · why: <reason> · if wrong: low|medium|high · <what breaks>
 // The driver reads the new lines after each beat. Every ruling goes in the PR
 // body, a `high` one also goes to the inbox (owner D4: the run continues), and
@@ -67,8 +67,8 @@ test("only a high ruling reaches the inbox", () => {
 });
 
 test("the PR body lists every ruling, high ones first", () => {
-  const body = rulingsPrBody(parseRulings(LOG), "Opened by conductor loop.");
-  assert.match(body, /Opened by conductor loop\./);
+  const body = rulingsPrBody(parseRulings(LOG), "Opened by carja loop.");
+  assert.match(body, /Opened by carja loop\./);
   assert.match(body, /## Decisions the Maker made alone \(2\)/);
   assert.ok(body.indexOf("Expired tokens") < body.indexOf("Empty results"));
   assert.equal(rulingsPrBody([], "base"), "base");

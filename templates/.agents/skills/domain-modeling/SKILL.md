@@ -8,7 +8,7 @@ category: core
 
 > A model is only useful if everyone — human, agent, spec, UI, and code — uses the **same words for the same things**. This skill makes the domain vocabulary an active, maintained artifact instead of a glossary nobody updates.
 
-Conductor already ships a static `conductor/4-context/meta/glossary.md`. This skill upgrades it into a *living* domain model and keeps the language consistent everywhere it appears.
+Carja already ships a static `carja/4-context/meta/glossary.md`. This skill upgrades it into a *living* domain model and keeps the language consistent everywhere it appears.
 
 ## When to reach for this
 
@@ -36,7 +36,7 @@ Do not passively record whatever words appear. **Interrogate the language:**
 
 ## The living artifact
 
-Maintain **`conductor/4-context/meta/domain-model.md`** (create it from the shape below on first use; keep `glossary.md` as the quick lookup table and keep the two in sync — a term added here is added there).
+Maintain **`carja/4-context/meta/domain-model.md`** (create it from the shape below on first use; keep `glossary.md` as the quick lookup table and keep the two in sync — a term added here is added there).
 
 ```markdown
 # Domain Model

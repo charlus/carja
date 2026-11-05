@@ -21,27 +21,27 @@ no() { echo "  [FAIL] $1"; fail=$((fail+1)); }
 gitq() { git "$@" >/dev/null 2>&1; }
 
 BIN="$(mktemp -d)"
-printf '#!/usr/bin/env bash\nexec node "%s/bin/conductor.js" "$@"\n' "$REPO_ROOT" > "$BIN/conductor"
-chmod +x "$BIN/conductor"
+printf '#!/usr/bin/env bash\nexec node "%s/bin/carja.js" "$@"\n' "$REPO_ROOT" > "$BIN/carja"
+chmod +x "$BIN/carja"
 export PATH="$BIN:$PATH"
-export CONDUCTOR_HOME="$(mktemp -d)"
+export CARJA_HOME="$(mktemp -d)"
 
 repo() {
   local d; d="$(mktemp -d)"
-  mkdir -p "$d/.agents/hooks" "$d/conductor/0-compass" "$d/src"
+  mkdir -p "$d/.agents/hooks" "$d/carja/0-compass" "$d/src"
   cp "$REPO_ROOT/templates/.agents/hooks/"* "$d/.agents/hooks/"
-  printf '# Ship Log\n' > "$d/conductor/0-compass/ship-log.md"
+  printf '# Ship Log\n' > "$d/carja/0-compass/ship-log.md"
   printf 'export const a = 1;\n' > "$d/src/a.js"
   printf '*.log\n' > "$d/.gitignore"
-  printf '{ "verify": "%s", "eval": "none" }\n' "$1" > "$d/conductor.config.json"
+  printf '{ "verify": "%s", "eval": "none" }\n' "$1" > "$d/carja.config.json"
   git -C "$d" init -q
   git -C "$d" config user.email t@t.local
   git -C "$d" config user.name t
   git -C "$d" config core.hooksPath .agents/hooks
   git -C "$d" add -A
-  CONDUCTOR_HOOKS=off gitq -C "$d" commit -q -m base
+  CARJA_HOOKS=off gitq -C "$d" commit -q -m base
   local b; b="$(mktemp -d)"; git init -q --bare "$b"; git -C "$d" remote add origin "$b"
-  CONDUCTOR_HOOKS=off gitq -C "$d" push -q origin HEAD:main
+  CARJA_HOOKS=off gitq -C "$d" push -q origin HEAD:main
   printf 'export const b = 2;\n' > "$d/src/b.js"
   printf 'test("b", () => {});\n' > "$d/src/b.test.js"
   git -C "$d" add -A; gitq -C "$d" commit -q -m b
@@ -68,7 +68,7 @@ out="$(git -C "$D" push origin HEAD:main 2>&1)"; rc=$?
 [ "$rc" = "0" ] && ok "a verify command that changes nothing passes" || no "a clean verify blocked the push: $out"
 rm -rf "$D"
 
-rm -rf "$BIN" "$CONDUCTOR_HOME"
+rm -rf "$BIN" "$CARJA_HOME"
 echo ""
 echo "  hooks-verify-stable-tree: $pass passed, $fail failed"
 [ "$fail" = "0" ] && echo "  STATUS: PASSED ✅" && exit 0

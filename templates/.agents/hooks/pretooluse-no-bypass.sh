@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Conductor — hook-bypass blocker (F11). A Claude Code `PreToolUse` hook.
+# Carja — hook-bypass blocker (F11). A Claude Code `PreToolUse` hook.
 #
-# WHY THIS EXISTS. Every Conductor gate lives in a git hook: the Test-Driven
+# WHY THIS EXISTS. Every Carja gate lives in a git hook: the Test-Driven
 # Law, the Eval-Driven Law, the Goodhart boundary and protected paths on
 # commit; the Verification Iron Law on push. `git commit --no-verify` skips all
 # of them, in one flag, silently, with no ship-log line. Until now the only
@@ -9,7 +9,7 @@
 # and prose is advisory, which is the whole reason these gates are code.
 #
 # The rule this enforces is not "never bypass". It is "every bypass is
-# logged". Conductor already ships a named, ship-logged waiver for each gate;
+# logged". Carja already ships a named, ship-logged waiver for each gate;
 # this hook refuses the unlogged shortcut and names the logged one instead.
 #
 # CONTRACT. stdin is Claude Code PreToolUse JSON; exit 2 blocks the tool call
@@ -36,21 +36,23 @@
 # runs git, or a hook path set in git config beforehand. Those are exactly
 # what the PR gate and the loop's Checker exist for.
 #
-# Disable with CONDUCTOR_HOOKS=off, like every other Conductor hook.
+# Disable with CARJA_HOOKS=off, like every other Carja hook.
 set -uo pipefail
 
-[ "${CONDUCTOR_HOOKS:-on}" = "off" ] && exit 0
+# 6.x names still work through 7.x: each CONDUCTOR_X sets CARJA_X when unset.
+for _k in $(compgen -e); do case "$_k" in CONDUCTOR_*) _n="CARJA_${_k#CONDUCTOR_}"; [ -n "${!_n:-}" ] || export "$_n=${!_k}" ;; esac; done
+[ "${CARJA_HOOKS:-on}" = "off" ] && exit 0
 command -v node >/dev/null 2>&1 || exit 0
 
 # A PreToolUse hook sits in front of every tool call, so it must be bounded.
 # Anything slow here is a bug whatever the cause — and at least one real one
 # is not ours: on some kernels `mkdirSync(..., {recursive:true})` against a
-# pathological path (a CONDUCTOR_HOME under /proc, say) never returns. The
+# pathological path (a CARJA_HOME under /proc, say) never returns. The
 # harness has its own timeout, but relying on it means the failure mode is
 # "the session stalls" rather than "the gate stepped aside". Bound it here and
 # fail OPEN on expiry.
 run_bounded() {
-  local rc t="${CONDUCTOR_HOOK_TIMEOUT:-5}" pt
+  local rc t="${CARJA_HOOK_TIMEOUT:-5}" pt
   # A value that is not a positive number means "no bound" to both tools —
   # coreutils treats 0 as disabled, perl's `alarm 0` cancels the alarm — so
   # anything else falls back to 5. perl takes whole seconds: round UP, never 0.
@@ -84,17 +86,17 @@ run_bounded() {
   exit "$rc"
 }
 
-read -r -d '' CONDUCTOR_BYPASS_GUARD_JS <<'NODE'
+read -r -d '' CARJA_BYPASS_GUARD_JS <<'NODE'
 const read = () => { try { return require("fs").readFileSync(0, "utf8"); } catch { return ""; } };
 
 // Git commands whose hooks a flag can skip, and what each gate's logged
 // alternative is. A denial that does not name the alternative just teaches
 // the reader to find a different way around.
 const GATED = {
-  commit: 'CONDUCTOR_NO_TEST / CONDUCTOR_NO_EVAL / CONDUCTOR_NO_BOUNDARY / CONDUCTOR_NO_PROTECTED="reason" git commit …',
-  push: 'CONDUCTOR_SKIP_VERIFY / CONDUCTOR_SKIP_EVAL="reason" git push …',
-  merge: 'CONDUCTOR_HOOKS=off (whole-repo, and deliberate) — prefer the per-gate waivers',
-  am: 'CONDUCTOR_HOOKS=off (whole-repo, and deliberate) — prefer the per-gate waivers',
+  commit: 'CARJA_NO_TEST / CARJA_NO_EVAL / CARJA_NO_BOUNDARY / CARJA_NO_PROTECTED="reason" git commit …',
+  push: 'CARJA_SKIP_VERIFY / CARJA_SKIP_EVAL="reason" git push …',
+  merge: 'CARJA_HOOKS=off (whole-repo, and deliberate) — prefer the per-gate waivers',
+  am: 'CARJA_HOOKS=off (whole-repo, and deliberate) — prefer the per-gate waivers',
 };
 
 // git accepts any unambiguous prefix. `--no-v` already resolves to
@@ -228,7 +230,7 @@ function checkSegment(argv, depth) {
     while (i < argv.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(argv[i])) {
       const [name, ...rest] = argv[i].split("=");
       const value = rest.join("=");
-      if (name === "CONDUCTOR_HOOKS" && /^(off|0|false)$/i.test(value)) hooksOff = true;
+      if (/^(CARJA|CONDUCTOR)_HOOKS$/.test(name) && /^(off|0|false)$/i.test(value)) hooksOff = true; // the 6.x name still works in 7.x
       if (/^GIT_CONFIG_KEY_\d+$/.test(name) && /^core\.hookspath$/i.test(value)) hooksPathEnv = true;
       if (name === "GIT_CONFIG_PARAMETERS" && /core\.hookspath/i.test(value)) hooksPathEnv = true;
       i++;
@@ -319,7 +321,7 @@ function checkSegment(argv, depth) {
       }
     }
   }
-  if (hooksOff) return { sub, how: "CONDUCTOR_HOOKS=off disables every gate and writes no ship-log line" };
+  if (hooksOff) return { sub, how: "CARJA_HOOKS=off disables every gate and writes no ship-log line" };
   return null;
 }
 
@@ -342,7 +344,7 @@ const hit = verdict(command);
 if (!hit) process.exit(0);
 
 process.stderr.write(
-  `\n🛑 Conductor: hook bypass blocked.\n\n` +
+  `\n🛑 Carja: hook bypass blocked.\n\n` +
   `  ${hit.how}.\n\n` +
   `  Those hooks are the Test-Driven Law, the Eval-Driven Law, the Goodhart\n` +
   `  boundary, protected paths and the Verification Iron Law. Skipping them\n` +
@@ -356,4 +358,4 @@ process.stderr.write(
 process.exit(2);
 NODE
 
-run_bounded "$CONDUCTOR_BYPASS_GUARD_JS"
+run_bounded "$CARJA_BYPASS_GUARD_JS"

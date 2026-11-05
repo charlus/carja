@@ -10,10 +10,10 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const UNION_PATHS = [
-  "conductor/0-compass/ship-log.md",
-  "conductor/1-workbench/inbox.md",
-  "conductor/1-workbench/review-log.jsonl",
-  "conductor/1-workbench/rulings.md",
+  "carja/0-compass/ship-log.md",
+  "carja/1-workbench/inbox.md",
+  "carja/1-workbench/review-log.jsonl",
+  "carja/1-workbench/rulings.md",
 ];
 
 /** Add `<path> merge=union` for each log missing from .gitattributes. Returns true if it wrote. */
@@ -24,7 +24,7 @@ export function ensureUnionMerge(targetDir) {
   const missing = UNION_PATHS.filter((path) => !present.has(path));
   if (!missing.length) return false;
   if (content && !content.endsWith("\n")) content += "\n";
-  const header = content.includes("# Conductor: append-only logs") ? "" : "# Conductor: append-only logs keep both sides on merge\n";
+  const header = content.includes("# Carja: append-only logs") ? "" : "# Carja: append-only logs keep both sides on merge\n";
   writeFileSync(p, content + header + missing.map((path) => `${path} merge=union\n`).join(""));
   return true;
 }

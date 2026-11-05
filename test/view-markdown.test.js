@@ -1,9 +1,9 @@
 // test/view-markdown.test.js
 //
-// The dependency-free markdown renderer that `conductor view` uses at
+// The dependency-free markdown renderer that `carja view` uses at
 // GENERATION time (never in the browser, so the page carries no parser).
 //
-// The security tests are the important ones. `conductor/` holds text written by
+// The security tests are the important ones. `carja/` holds text written by
 // the human, by agents, and — via the inbox — by whatever the human pasted in.
 // The generated page is opened from `file://`, an origin with more local reach
 // than a website, so the renderer must NEVER pass raw HTML through and must

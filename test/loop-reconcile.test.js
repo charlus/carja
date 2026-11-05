@@ -41,11 +41,11 @@ function setup() {
 
 function loopWorktree(repo, name) {
   const path = join(repo, ".agents/.worktrees", name);
-  G(repo, "worktree", "add", "-q", "-b", `conductor/loop/${name}`, path);
+  G(repo, "worktree", "add", "-q", "-b", `carja/loop/${name}`, path);
   writeFileSync(join(path, `${name}.txt`), "work\n");
   G(path, "add", "-A");
   G(path, "commit", "-qm", `work ${name}`);
-  G(path, "push", "-q", "-u", "origin", `conductor/loop/${name}`);
+  G(path, "push", "-q", "-u", "origin", `carja/loop/${name}`);
   return path;
 }
 
@@ -56,23 +56,23 @@ test("a merged loop worktree is removed; unmerged and dirty ones are kept", asyn
     const open = loopWorktree(repo, "open");
     const dirty = loopWorktree(repo, "dirty");
     // The owner merges two MRs on the forge; the third stays open.
-    G(repo, "merge", "-q", "--no-ff", "-m", "merge", "conductor/loop/merged", "conductor/loop/dirty");
+    G(repo, "merge", "-q", "--no-ff", "-m", "merge", "carja/loop/merged", "carja/loop/dirty");
     G(repo, "push", "-q", "origin", "master");
     writeFileSync(join(dirty, "uncommitted.txt"), "not committed\n");
     G(repo, "fetch", "-q", "origin");
 
     assert.equal(await defaultBranchRef(git(repo)), "origin/master");
     const found = await mergedLoopWorktrees({ git: git(repo) });
-    assert.deepEqual(found.map((w) => w.branch).sort(), ["conductor/loop/dirty", "conductor/loop/merged"]);
+    assert.deepEqual(found.map((w) => w.branch).sort(), ["carja/loop/dirty", "carja/loop/merged"]);
 
     const pruned = await pruneMergedLoopWorktrees({ git: git(repo) });
-    assert.deepEqual(pruned.removed.map((w) => w.branch), ["conductor/loop/merged"]);
-    assert.deepEqual(pruned.kept.map((w) => w.branch), ["conductor/loop/dirty"]);
+    assert.deepEqual(pruned.removed.map((w) => w.branch), ["carja/loop/merged"]);
+    assert.deepEqual(pruned.kept.map((w) => w.branch), ["carja/loop/dirty"]);
     assert.match(pruned.kept[0].reason, /uncommitted/);
     assert.equal(existsSync(merged), false);
     assert.equal(existsSync(open), true, "an open MR's worktree stays");
     assert.equal(existsSync(dirty), true, "uncommitted work is never removed");
-    assert.equal(G(repo, "branch", "--list", "conductor/loop/merged"), "", "the merged local branch is deleted");
+    assert.equal(G(repo, "branch", "--list", "carja/loop/merged"), "", "the merged local branch is deleted");
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
@@ -80,10 +80,10 @@ test("a merged loop worktree is removed; unmerged and dirty ones are kept", asyn
 
 test("skipClaimed leaves out items whose loop branch is on the remote, and names merged-but-open ones", () => {
   const queue = [{ id: "task:a" }, { id: "task:b" }, { id: "task:c" }];
-  const branchFor = (t) => `conductor/loop/loop-${t.id.replace(/[^a-z0-9]+/g, "-")}`;
+  const branchFor = (t) => `carja/loop/loop-${t.id.replace(/[^a-z0-9]+/g, "-")}`;
   const r = skipClaimed(queue, {
-    remoteBranches: new Set(["conductor/loop/loop-task-a", "conductor/loop/loop-task-c"]),
-    mergedBranches: new Set(["conductor/loop/loop-task-c"]),
+    remoteBranches: new Set(["carja/loop/loop-task-a", "carja/loop/loop-task-c"]),
+    mergedBranches: new Set(["carja/loop/loop-task-c"]),
     branchFor,
   });
   assert.deepEqual(r.queue.map((t) => t.id), ["task:b"]);
@@ -106,7 +106,7 @@ test("the post-merge hook removes a merged loop worktree when the owner pulls", 
     execFileSync("git", ["clone", "-q", join(base, "origin.git"), forge], { stdio: "pipe" });
     G(forge, "config", "user.email", "t@t");
     G(forge, "config", "user.name", "t");
-    G(forge, "merge", "-q", "--no-ff", "-m", "merge MR", "origin/conductor/loop/shipped");
+    G(forge, "merge", "-q", "--no-ff", "-m", "merge MR", "origin/carja/loop/shipped");
     G(forge, "push", "-q", "origin", "master");
     G(repo, "config", "core.hooksPath", ".agents/hooks");
     const out = execFileSync("git", ["pull", "-q", "--no-rebase", "origin", "master"], { cwd: repo, stdio: "pipe" }).toString();
@@ -116,7 +116,7 @@ test("the post-merge hook removes a merged loop worktree when the owner pulls", 
   }
 });
 
-test("conductor status names merged loop worktrees and deletes nothing", async () => {
+test("carja status names merged loop worktrees and deletes nothing", async () => {
   const { base, repo } = setup();
   try {
     const { initCommand } = await import("../src/commands/init.js");
@@ -124,12 +124,12 @@ test("conductor status names merged loop worktrees and deletes nothing", async (
     const sink = () => ({ text: "", write(s) { this.text += s; } });
     await initCommand([repo, "--all", "--no-detect"], { cwd: tmpdir(), stdout: sink(), stderr: sink() });
     const path = loopWorktree(repo, "done");
-    G(repo, "merge", "-q", "--no-ff", "-m", "merge", "conductor/loop/done");
+    G(repo, "merge", "-q", "--no-ff", "-m", "merge", "carja/loop/done");
     G(repo, "push", "-q", "origin", "master");
     G(repo, "fetch", "-q", "origin");
     const out = sink();
     await statusCommand([repo, "--no-color"], { cwd: repo, stdout: out, stderr: sink() });
-    assert.match(out.text, /1 merged worktree \(conductor\/loop\/done\)/);
+    assert.match(out.text, /1 merged worktree \(carja\/loop\/done\)/);
     assert.equal(existsSync(path), true, "status never deletes");
   } finally {
     rmSync(base, { recursive: true, force: true });
@@ -152,12 +152,12 @@ test("step 7: a merged outer worktree that still holds a code worktree is kept, 
     writeFileSync(join(code, "a.py"), "a\n");
     G(code, "add", "-A");
     G(code, "commit", "-qm", "init");
-    G(code, "worktree", "add", "-q", "-b", "conductor/loop/slice", join(path, "repo"));
+    G(code, "worktree", "add", "-q", "-b", "carja/loop/slice", join(path, "repo"));
     const forge = join(base, "forge");
     execFileSync("git", ["clone", "-q", join(base, "origin.git"), forge], { stdio: "pipe" });
     G(forge, "config", "user.email", "t@t");
     G(forge, "config", "user.name", "t");
-    G(forge, "merge", "-q", "--no-ff", "-m", "merge state MR", "origin/conductor/loop/slice");
+    G(forge, "merge", "-q", "--no-ff", "-m", "merge state MR", "origin/carja/loop/slice");
     G(forge, "push", "-q", "origin", "master");
     G(repo, "fetch", "-q", "origin");
 
@@ -195,25 +195,25 @@ test("F22: a squash-merged loop worktree is removed when the forge reports its M
     const ahead = loopWorktree(repo, "ahead");
     const gone = loopWorktree(repo, "gone");
     const heads = {
-      "conductor/loop/squashed": G(repo, "rev-parse", "conductor/loop/squashed"),
-      "conductor/loop/ahead": G(repo, "rev-parse", "conductor/loop/ahead"),
+      "carja/loop/squashed": G(repo, "rev-parse", "carja/loop/squashed"),
+      "carja/loop/ahead": G(repo, "rev-parse", "carja/loop/ahead"),
     };
-    squashOnForge(base, "conductor/loop/squashed");
+    squashOnForge(base, "carja/loop/squashed");
     // A commit made after the MR merged: never lost.
     writeFileSync(join(ahead, "later.txt"), "later\n");
     G(ahead, "add", "-A");
     G(ahead, "commit", "-qm", "later");
     // The remote branch is gone but no MR was merged: not a merge.
-    G(repo, "push", "-q", "origin", "--delete", "conductor/loop/gone");
+    G(repo, "push", "-q", "origin", "--delete", "carja/loop/gone");
     G(repo, "fetch", "-q", "--prune", "origin");
 
     const forgeMerged = async (branch) => heads[branch] ?? null;
     const pruned = await pruneMergedLoopWorktrees({ git: git(repo), forgeMerged });
-    assert.deepEqual(pruned.removed.map((w) => w.branch), ["conductor/loop/squashed"]);
-    assert.deepEqual(pruned.kept.map((w) => w.branch), ["conductor/loop/ahead"]);
+    assert.deepEqual(pruned.removed.map((w) => w.branch), ["carja/loop/squashed"]);
+    assert.deepEqual(pruned.kept.map((w) => w.branch), ["carja/loop/ahead"]);
     assert.match(pruned.kept[0].reason, /commits after its merged MR/);
     assert.equal(existsSync(squashed), false);
-    assert.equal(G(repo, "branch", "--list", "conductor/loop/squashed"), "", "the squashed local branch is deleted");
+    assert.equal(G(repo, "branch", "--list", "carja/loop/squashed"), "", "the squashed local branch is deleted");
     assert.equal(existsSync(ahead), true);
     assert.equal(existsSync(gone), true, "a deleted remote branch alone is not a merge");
 
@@ -234,14 +234,14 @@ test("F22: the post-merge hook asks the forge about a squash-merged loop branch"
     execFileSync("chmod", ["+x", join(hooks, "post-merge")]);
     const squashed = loopWorktree(repo, "squashed");
     const open = loopWorktree(repo, "open");
-    const head = G(repo, "rev-parse", "conductor/loop/squashed");
-    squashOnForge(base, "conductor/loop/squashed");
+    const head = G(repo, "rev-parse", "carja/loop/squashed");
+    squashOnForge(base, "carja/loop/squashed");
     // A stub glab: the GitLab API answers for the squashed branch only.
     const bin = join(base, "bin");
     execFileSync("mkdir", ["-p", bin]);
     writeFileSync(
       join(bin, "glab"),
-      `#!/bin/sh\ncase "$*" in *source_branch=conductor%2Floop%2Fsquashed*) printf '[{"iid":7,"merge_commit_sha":null,"sha":"${head}","state":"merged"}]' ;; *) printf '[]' ;; esac\n`
+      `#!/bin/sh\ncase "$*" in *source_branch=carja%2Floop%2Fsquashed*) printf '[{"iid":7,"merge_commit_sha":null,"sha":"${head}","state":"merged"}]' ;; *) printf '[]' ;; esac\n`
     );
     execFileSync("chmod", ["+x", join(bin, "glab")]);
     G(repo, "remote", "set-url", "origin", join(base, "origin.git"));
@@ -263,7 +263,7 @@ test("F22: the post-merge hook asks the forge about a squash-merged loop branch"
 // checkout of a repository, so one loop sees the other's.
 function freshLoopWorktree(repo, name) {
   const path = join(repo, ".agents/.worktrees", name);
-  G(repo, "worktree", "add", "-q", "-b", `conductor/loop/${name}`, path, "origin/master");
+  G(repo, "worktree", "add", "-q", "-b", `carja/loop/${name}`, path, "origin/master");
   return path;
 }
 
@@ -276,7 +276,7 @@ test("a fresh loop worktree (no commit of its own yet) is not merged, and is nev
     const pruned = await pruneMergedLoopWorktrees({ git: git(repo) });
     assert.deepEqual(pruned.removed, []);
     assert.equal(existsSync(fresh), true, "a live run's fresh worktree survives another loop's cleanup");
-    assert.notEqual(G(repo, "branch", "--list", "conductor/loop/fresh"), "");
+    assert.notEqual(G(repo, "branch", "--list", "carja/loop/fresh"), "");
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
@@ -286,7 +286,7 @@ test("a merged loop worktree that a live run holds is kept", async () => {
   const { base, repo } = setup();
   try {
     const held = loopWorktree(repo, "held");
-    G(repo, "merge", "-q", "--no-ff", "-m", "merge", "conductor/loop/held");
+    G(repo, "merge", "-q", "--no-ff", "-m", "merge", "carja/loop/held");
     G(repo, "push", "-q", "origin", "master");
     G(repo, "fetch", "-q", "origin");
     const { markWorktreeHeld } = await import("../src/loop/reconcile.js");
@@ -298,7 +298,7 @@ test("a merged loop worktree that a live run holds is kept", async () => {
     // Once its holder is gone, the merged worktree goes.
     await markWorktreeHeld({ git: git(held), pid: 2 ** 22 + 12345 });
     const again = await pruneMergedLoopWorktrees({ git: git(repo) });
-    assert.deepEqual(again.removed.map((w) => w.branch), ["conductor/loop/held"]);
+    assert.deepEqual(again.removed.map((w) => w.branch), ["carja/loop/held"]);
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
@@ -313,7 +313,7 @@ test("the post-merge hook leaves a fresh loop worktree and a held one alone", ()
     execFileSync("chmod", ["+x", join(hooks, "post-merge")]);
     const fresh = freshLoopWorktree(repo, "fresh");
     const held = loopWorktree(repo, "held");
-    writeFileSync(join(G(held, "rev-parse", "--path-format=absolute", "--git-dir"), "conductor-holder"), `${JSON.stringify({ pid: process.pid, at: "now" })}\n`);
+    writeFileSync(join(G(held, "rev-parse", "--path-format=absolute", "--git-dir"), "carja-holder"), `${JSON.stringify({ pid: process.pid, at: "now" })}\n`);
     const forge = join(base, "forge");
     execFileSync("git", ["clone", "-q", join(base, "origin.git"), forge], { stdio: "pipe" });
     G(forge, "config", "user.email", "t@t");
@@ -321,7 +321,7 @@ test("the post-merge hook leaves a fresh loop worktree and a held one alone", ()
     writeFileSync(join(forge, "b.txt"), "b\n");
     G(forge, "add", "-A");
     G(forge, "commit", "-qm", "someone else's work");
-    G(forge, "merge", "-q", "--no-ff", "-m", "merge MR", "origin/conductor/loop/held");
+    G(forge, "merge", "-q", "--no-ff", "-m", "merge MR", "origin/carja/loop/held");
     G(forge, "push", "-q", "origin", "master");
     G(repo, "config", "core.hooksPath", ".agents/hooks");
     execFileSync("git", ["pull", "-q", "--no-rebase", "origin", "master"], { cwd: repo, stdio: "pipe" });
@@ -332,7 +332,7 @@ test("the post-merge hook leaves a fresh loop worktree and a held one alone", ()
   }
 });
 
-test("conductor loop <project> removes the clean worktrees it held at the end, keeps uncommitted work, and leaves other runs alone", async () => {
+test("carja loop <project> removes the clean worktrees it held at the end, keeps uncommitted work, and leaves other runs alone", async () => {
   const { base, repo } = setup();
   try {
     const { markWorktreeHeld, removeHeldWorktrees } = await import("../src/loop/reconcile.js");
@@ -348,14 +348,14 @@ test("conductor loop <project> removes the clean worktrees it held at the end, k
     await markWorktreeHeld({ git: git(other), pid: process.pid + 1 });
 
     const r = await removeHeldWorktrees({ git: git(repo), pid: process.pid });
-    assert.deepEqual(r.removed.map((w) => w.branch).sort(), ["conductor/loop/local", "conductor/loop/pushed"]);
-    assert.deepEqual(r.kept.map((w) => w.branch), ["conductor/loop/dirty"]);
+    assert.deepEqual(r.removed.map((w) => w.branch).sort(), ["carja/loop/local", "carja/loop/pushed"]);
+    assert.deepEqual(r.kept.map((w) => w.branch), ["carja/loop/dirty"]);
     assert.equal(existsSync(pushed), false);
     assert.equal(existsSync(local), false);
     assert.equal(existsSync(dirty), true, "uncommitted work is kept");
     assert.equal(existsSync(other), true, "another run's worktree is not ours to remove");
-    assert.equal(G(repo, "branch", "--list", "conductor/loop/pushed"), "", "a pushed branch is deleted with its worktree");
-    assert.notEqual(G(repo, "branch", "--list", "conductor/loop/local"), "", "an unpushed branch keeps its commits");
+    assert.equal(G(repo, "branch", "--list", "carja/loop/pushed"), "", "a pushed branch is deleted with its worktree");
+    assert.notEqual(G(repo, "branch", "--list", "carja/loop/local"), "", "an unpushed branch keeps its commits");
   } finally {
     rmSync(base, { recursive: true, force: true });
   }

@@ -3,7 +3,7 @@
 // The stacked run (owner, 2026-10-22): "I run the Discovery, up to the Technical
 // Vision. Then I run the loop on the result and it executes all the steps and
 // workflows the framework defines, and ships the thing I asked to ship." One
-// `conductor loop <project>` builds the Carve and every slice without waiting
+// `carja loop <project>` builds the Carve and every slice without waiting
 // for a merge. Each item starts from the branch of the item below it, and each
 // MR targets that branch, in both repositories. The owner merges the stack in
 // order at the end; the forge moves each MR to the default branch when the one
@@ -20,7 +20,7 @@
 // Pure except where a function takes injected IO.
 
 export const STACK_FILE = "stack.json";
-export const REPORT_REL = (project) => `conductor/1-workbench/loop-report-${project}.md`;
+export const REPORT_REL = (project) => `carja/1-workbench/loop-report-${project}.md`;
 
 /**
  * The latest MR whose source branch is `branch`, from the forge.
@@ -159,17 +159,17 @@ const money = (n) => `$${(Math.round((Number(n) || 0) * 100) / 100).toFixed(2)}`
  * @param {{project: string, entries: object[], stop: {status: string, reason?: string, item?: string, round?: string}|null, notes?: string[], now?: string}} input
  */
 export function renderStackReport({ project, entries, stop = null, notes = [], now = new Date().toISOString() }) {
-  const lines = [`# Loop report: ${project}`, "", `_${now.slice(0, 16).replace("T", " ")}. Written by \`conductor loop ${project}\`; the next run rewrites it._`, ""];
+  const lines = [`# Loop report: ${project}`, "", `_${now.slice(0, 16).replace("T", " ")}. Written by \`carja loop ${project}\`; the next run rewrites it._`, ""];
   const open = entries.filter((e) => !e.merged);
   const total = entries.reduce((s, e) => s + (Number(e.cost_usd) || 0), 0);
   if (!open.length) lines.push("No MR waits for you.", "");
   else {
     lines.push(`## Merge these MRs in this order (${open.length} item${open.length === 1 ? "" : "s"})`, "");
-    lines.push("Merge each one without squashing, and let its source branch be deleted: the MR above it then moves to the default branch. In each item, merge the code MR first, then the Conductor state MR.", "");
+    lines.push("Merge each one without squashing, and let its source branch be deleted: the MR above it then moves to the default branch. In each item, merge the code MR first, then the Carja state MR.", "");
     open.forEach((e, i) => {
       lines.push(`### ${i + 1}. ${e.title}`, "");
       if (e.code?.url) lines.push(`- Code MR: ${e.code.url}`);
-      lines.push(`- ${e.code?.url ? "Conductor state MR" : "MR"}: ${e.outer.url ?? "(not opened)"}`);
+      lines.push(`- ${e.code?.url ? "Carja state MR" : "MR"}: ${e.outer.url ?? "(not opened)"}`);
       if (e.summary) lines.push(`- What it does: ${e.summary}`);
       if (e.adopted) lines.push("- Built by an earlier run, taken into this stack as it was.");
       if (e.changed) lines.push("- You changed this MR: your version is kept.");
@@ -186,7 +186,7 @@ export function renderStackReport({ project, entries, stop = null, notes = [], n
         for (const a of actions) lines.push(`  - ${a}`);
       } else lines.push("- Owner actions: none.");
       // I3: documents the loop merged from both sides.
-      if (e.docsMerged?.length) lines.push(`- Conductor documents merged from both sides, read them before you merge: ${e.docsMerged.map((f) => `\`${f}\``).join(", ")}.`);
+      if (e.docsMerged?.length) lines.push(`- Carja documents merged from both sides, read them before you merge: ${e.docsMerged.map((f) => `\`${f}\``).join(", ")}.`);
       const decided = (e.rulings ?? []).filter((r) => r && (r.decision || r.text));
       if (decided.length) {
         lines.push("- Decided for you (overrule in the MR):");
@@ -200,8 +200,8 @@ export function renderStackReport({ project, entries, stop = null, notes = [], n
   lines.push("## Where the run stopped", "");
   if (!stop || stop.status === "done") lines.push("Every item of the project is built. Nothing is left to build until you merge or reject an MR.");
   else if (stop.status === "awaiting_answers")
-    lines.push(`${stop.item ?? "An item"} needs your decision on a one-way door. Answer each question in \`${stop.round ?? "conductor/1-workbench/questions/"}\` with an option number, then run \`conductor loop ${project}\` again. Nothing was built above it.`);
-  else lines.push(`${stop.item ?? "The run"} stopped: ${stop.status}${stop.reason ? `. ${stop.reason}` : ""}. Read conductor/1-workbench/loop-messages.md, then run \`conductor loop ${project}\` again: it continues from there.`);
+    lines.push(`${stop.item ?? "An item"} needs your decision on a one-way door. Answer each question in \`${stop.round ?? "carja/1-workbench/questions/"}\` with an option number, then run \`carja loop ${project}\` again. Nothing was built above it.`);
+  else lines.push(`${stop.item ?? "The run"} stopped: ${stop.status}${stop.reason ? `. ${stop.reason}` : ""}. Read carja/1-workbench/loop-messages.md, then run \`carja loop ${project}\` again: it continues from there.`);
   lines.push("", `Total cost of the open items: ≈ ${money(total)} at list price.`, "");
   return lines.join("\n");
 }

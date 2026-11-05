@@ -31,7 +31,7 @@ import { join } from "node:path";
 const ROOT = new URL("..", import.meta.url).pathname;
 const SHIP = readFileSync(join(ROOT, "templates", ".agents", "workflows", "ship.md"), "utf8");
 const SHIP_LOG = readFileSync(
-  join(ROOT, "templates", "conductor", "0-compass", "ship-log.md"),
+  join(ROOT, "templates", "carja", "0-compass", "ship-log.md"),
   "utf8",
 );
 
@@ -49,7 +49,7 @@ describe("O1 — Ship's bookkeeping precedes the MR step", () => {
   });
 
   test("the ship-log entry is written before the MR is created", () => {
-    const shipLog = SHIP.indexOf("conductor/0-compass/ship-log.md");
+    const shipLog = SHIP.indexOf("carja/0-compass/ship-log.md");
     assert.ok(shipLog >= 0, "ship.md never mentions the ship-log");
     assert.ok(
       shipLog < MR_CREATE,
@@ -58,8 +58,8 @@ describe("O1 — Ship's bookkeeping precedes the MR step", () => {
   });
 
   test("the product-area update and the archive move are before the MR is created", () => {
-    const productArea = SHIP.indexOf("conductor/3-product-areas/");
-    const archive = SHIP.indexOf("conductor/6-archive/completed-implementations/");
+    const productArea = SHIP.indexOf("carja/3-product-areas/");
+    const archive = SHIP.indexOf("carja/6-archive/completed-implementations/");
     assert.ok(productArea >= 0 && archive >= 0, "product-area or archive step is missing");
     assert.ok(productArea < MR_CREATE, "product-area update sits after MR creation");
     assert.ok(archive < MR_CREATE, "archive move sits after MR creation");

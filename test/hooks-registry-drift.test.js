@@ -73,13 +73,13 @@ describe("F3 — the hook registry cannot drift", () => {
     // drift, every upgrade asks for a waiver again — and nothing else says so.
     const { createHash } = require("node:crypto");
     const actual = createHash("sha256").update(readFileSync(join(HOOKS, "pre-commit"))).digest("hex");
-    const m = read(join(HOOKS, "pre-push")).match(/^CONDUCTOR_OFFICIAL_PRECOMMIT_SHA256="([0-9a-f]{64})"$/m);
-    assert.ok(m, "pre-push declares no CONDUCTOR_OFFICIAL_PRECOMMIT_SHA256");
+    const m = read(join(HOOKS, "pre-push")).match(/^CARJA_OFFICIAL_PRECOMMIT_SHA256="([0-9a-f]{64})"$/m);
+    assert.ok(m, "pre-push declares no CARJA_OFFICIAL_PRECOMMIT_SHA256");
     assert.equal(
       m[1],
       actual,
       `pre-commit changed but pre-push still fingerprints the old one. Update it:\n` +
-        `  sed -i 's/^CONDUCTOR_OFFICIAL_PRECOMMIT_SHA256=.*/CONDUCTOR_OFFICIAL_PRECOMMIT_SHA256="${actual}"/' templates/.agents/hooks/pre-push`,
+        `  sed -i 's/^CARJA_OFFICIAL_PRECOMMIT_SHA256=.*/CARJA_OFFICIAL_PRECOMMIT_SHA256="${actual}"/' templates/.agents/hooks/pre-push`,
     );
   });
 
@@ -101,7 +101,7 @@ describe("F3 — every gate's waiver is implemented and documented", () => {
     .join("\n");
 
   const envVars = (text) =>
-    [...text.matchAll(/CONDUCTOR_(?:NO|SKIP)_[A-Z_]+/g)]
+    [...text.matchAll(/CARJA_(?:NO|SKIP)_[A-Z_]+/g)]
       .map((m) => m[0])
       .filter((v, i, a) => a.indexOf(v) === i)
       .sort();
@@ -140,16 +140,16 @@ describe("F3 — every gate's waiver is implemented and documented", () => {
     //   (a) a guard `if|elif [ -n "${X:-}" ]; then` whose branch calls the
     //       log writer in CODE (not in a comment), or
     //   (b) the waiver's value or name being logged or echoed back.
-    // A bare reference such as `printenv CONDUCTOR_SKIP_EVAL && exit 0` is
+    // A bare reference such as `printenv CARJA_SKIP_EVAL && exit 0` is
     // neither, and fails.
     //
     // The two PreToolUse hooks are not scanned: they accept no waivers, and
     // their mentions are message strings inside an embedded node script.
     const SOURCES = ["pre-commit", "pre-push", "verification-stop-hook.sh"];
-    const REFERENCE = /\b(CONDUCTOR_(?:NO|SKIP)_[A-Z_]+)\b/;
-    const GUARD = /^(\s*)(?:if|elif) \[ -n "\$\{(CONDUCTOR_(?:NO|SKIP)_[A-Z_]+):-\}" \]; then\s*$/;
-    const REPORTING = /^\s*(?:conductor_log_waiver(?:_fallback)?|echo)\b/;
-    const LOGS = /^\s*conductor_log_waiver(?:_fallback)?\b/;
+    const REFERENCE = /\b(CARJA_(?:NO|SKIP)_[A-Z_]+)\b/;
+    const GUARD = /^(\s*)(?:if|elif) \[ -n "\$\{(CARJA_(?:NO|SKIP)_[A-Z_]+):-\}" \]; then\s*$/;
+    const REPORTING = /^\s*(?:carja_log_waiver(?:_fallback)?|echo)\b/;
+    const LOGS = /^\s*carja_log_waiver(?:_fallback)?\b/;
     const isComment = (l) => /^\s*#/.test(l);
 
     const problems = [];

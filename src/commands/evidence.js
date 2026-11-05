@@ -1,10 +1,10 @@
 // src/commands/evidence.js
 //
-// `conductor evidence` — the CLI over the evidence ledger (E2).
+// `carja evidence` — the CLI over the evidence ledger (E2).
 //
-//   conductor evidence run --label tests [--stable-tree] -- npm test
-//   conductor evidence check --label tests [--expect-cmd "npm test"] [--max-age 24]
-//   conductor evidence list [--label tests]
+//   carja evidence run --label tests [--stable-tree] -- npm test
+//   carja evidence check --label tests [--expect-cmd "npm test"] [--max-age 24]
+//   carja evidence list [--label tests]
 //
 // `run` is a TRANSPARENT wrapper: output streams through, and the child's exit
 // code is this command's exit code. With `--stable-tree`, a green run that
@@ -53,8 +53,8 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
     const command = sep !== -1 ? args.slice(sep + 1).join(" ") : null;
     if (!label || !command) {
       stderr.write(
-        "usage: conductor evidence run --label <name> [--stable-tree] -- <command...>\n" +
-          '  e.g. conductor evidence run --label tests -- npm test\n',
+        "usage: carja evidence run --label <name> [--stable-tree] -- <command...>\n" +
+          '  e.g. carja evidence run --label tests -- npm test\n',
       );
       return 1;
     }
@@ -76,7 +76,7 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
     const labels = collectLabels(args);
     if (labels.length === 0) {
       stderr.write(
-        "usage: conductor evidence check --label <name> [--expect-cmd <cmd>] [--max-age <hours>] [--allow-paths a,b]\n" +
+        "usage: carja evidence check --label <name> [--expect-cmd <cmd>] [--max-age <hours>] [--allow-paths a,b]\n" +
           "  Name every lane you expect: the ledger cannot prove that a lane which never ran was supposed to.\n",
       );
       return 1;
@@ -99,7 +99,7 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
     if (!res.ok) {
       stdout.write(
         "\nNot every lane is FRESH. Re-run it wrapped so the result is recorded:\n" +
-          `  conductor evidence run --label <name> -- <command>\n`,
+          `  carja evidence run --label <name> -- <command>\n`,
       );
     }
     return res.ok ? 0 : 1;
@@ -134,7 +134,7 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
   }
 
   stderr.write(
-    "usage: conductor evidence <run|check|list>\n\n" +
+    "usage: carja evidence <run|check|list>\n\n" +
       "  run    --label <name> [--stable-tree] -- <command...>   run it and record the result\n" +
       "         (--stable-tree: fail a green run that changed files while it ran)\n" +
       "  check  --label <name> [--expect-cmd <cmd>] [--max-age <hours>] [--allow-paths a,b/]\n" +

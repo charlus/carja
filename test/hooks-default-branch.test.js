@@ -3,8 +3,8 @@
 // The owner's folder stays on the default branch, and code reaches it only
 // through a merged MR (owner, 2026-10-22). Enforced in code: pre-commit refuses
 // a commit of code on the default branch of a repository that has a remote, in
-// the main checkout and in a nested code repository. Conductor's own files
-// (conductor/, .agents/, AGENTS.md, conductor.config.json, .gitattributes) may
+// the main checkout and in a nested code repository. Carja's own files
+// (carja/, .agents/, AGENTS.md, carja.config.json, .gitattributes) may
 // still be committed there: the inbox, the loop state, an upgrade without a
 // remote. A waiver is logged. Real git, real hooks.
 
@@ -33,11 +33,11 @@ function project({ remote = true } = {}) {
   G(root, "config", "user.name", "t");
   mkdirSync(join(root, ".agents"), { recursive: true });
   cpSync(HOOKS, join(root, ".agents/hooks"), { recursive: true });
-  mkdirSync(join(root, "conductor/0-compass"), { recursive: true });
-  writeFileSync(join(root, "conductor/0-compass/ship-log.md"), "# Ship log\n");
-  writeFileSync(join(root, "conductor.config.json"), '{ "verify": "none" }\n');
+  mkdirSync(join(root, "carja/0-compass"), { recursive: true });
+  writeFileSync(join(root, "carja/0-compass/ship-log.md"), "# Ship log\n");
+  writeFileSync(join(root, "carja.config.json"), '{ "verify": "none" }\n');
   G(root, "add", "-A");
-  execFileSync("git", ["commit", "-qm", "init"], { cwd: root, env: { ...process.env, CONDUCTOR_HOOKS: "off" } });
+  execFileSync("git", ["commit", "-qm", "init"], { cwd: root, env: { ...process.env, CARJA_HOOKS: "off" } });
   if (remote) {
     G(root, "push", "-q", "-u", "origin", "main");
     G(root, "remote", "set-head", "origin", "main");
@@ -61,7 +61,7 @@ test("a commit of code on the default branch is refused, and names the item work
     const r = commit(root);
     assert.notEqual(r.status, 0, "code on main went through");
     assert.match(r.stdout + r.stderr, /default branch/);
-    assert.match(r.stdout + r.stderr, /conductor work/);
+    assert.match(r.stdout + r.stderr, /carja work/);
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
@@ -70,7 +70,7 @@ test("a commit of code on the default branch is refused, and names the item work
 test("the same code on an item branch goes through", () => {
   const { base, root } = project();
   try {
-    G(root, "checkout", "-q", "-b", "conductor/work/a");
+    G(root, "checkout", "-q", "-b", "carja/work/a");
     stageCode(root);
     const r = commit(root);
     assert.equal(r.status, 0, r.stdout + r.stderr);
@@ -79,12 +79,12 @@ test("the same code on an item branch goes through", () => {
   }
 });
 
-test("Conductor's own files may still be committed on the default branch", () => {
+test("Carja's own files may still be committed on the default branch", () => {
   const { base, root } = project();
   try {
-    writeFileSync(join(root, "conductor/0-compass/ship-log.md"), "# Ship log\n\n- note\n");
-    mkdirSync(join(root, "conductor/1-workbench"), { recursive: true });
-    writeFileSync(join(root, "conductor/1-workbench/inbox.md"), "- idea\n");
+    writeFileSync(join(root, "carja/0-compass/ship-log.md"), "# Ship log\n\n- note\n");
+    mkdirSync(join(root, "carja/1-workbench"), { recursive: true });
+    writeFileSync(join(root, "carja/1-workbench/inbox.md"), "- idea\n");
     writeFileSync(join(root, "AGENTS.md"), "card\n");
     G(root, "add", "-A");
     const r = commit(root);
@@ -109,9 +109,9 @@ test("a waiver lets it through and is logged in the ship-log", () => {
   const { base, root } = project();
   try {
     stageCode(root);
-    const r = commit(root, { CONDUCTOR_ON_DEFAULT: "hotfix agreed with the team" });
+    const r = commit(root, { CARJA_ON_DEFAULT: "hotfix agreed with the team" });
     assert.equal(r.status, 0, r.stdout + r.stderr);
-    assert.match(readFileSync(join(root, "conductor/0-compass/ship-log.md"), "utf8"), /hotfix agreed with the team/);
+    assert.match(readFileSync(join(root, "carja/0-compass/ship-log.md"), "utf8"), /hotfix agreed with the team/);
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
@@ -138,7 +138,7 @@ test("in a nested code repository, any commit on its default branch is refused",
     const r = commit(app);
     assert.notEqual(r.status, 0, "code on the code repository's main went through");
     assert.match(r.stdout + r.stderr, /default branch/);
-    G(app, "checkout", "-q", "-b", "conductor/work/x");
+    G(app, "checkout", "-q", "-b", "carja/work/x");
     assert.equal(commit(app).status, 0);
   } finally {
     rmSync(base, { recursive: true, force: true });

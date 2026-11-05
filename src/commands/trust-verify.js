@@ -1,14 +1,14 @@
 // src/commands/trust-verify.js
 //
-// `conductor trust-verify` — record the operator's consent for this repo's
+// `carja trust-verify` — record the operator's consent for this repo's
 // declared verification command (E4).
 //
 // WHY THIS EXISTS. The Stop hook (`.agents/hooks/verification-stop-hook.sh`)
 // runs the project's verification command, and git hooks BYPASS the agent's
 // permission system: nothing prompts, nothing asks. The command itself is read
-// from a file inside the repo (`conductor.config.json` → `verify`, else the
+// from a file inside the repo (`carja.config.json` → `verify`, else the
 // `test` npm script), so a cloned, forked or contributed repo can name any
-// command it likes. Installing Conductor's hooks would otherwise mean granting
+// command it likes. Installing Carja's hooks would otherwise mean granting
 // silent execution to a string somebody else controls.
 //
 // So the stop gate stays inactive until the operator has looked at the command
@@ -25,16 +25,16 @@ import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join, dirname } from "node:path";
-import { homedir } from "node:os";
 import { configPath as configPathOf } from "../names.js";
+import { machineHome } from "../names.js";
 
 const execFileAsync = promisify(execFile);
 
 const TAB = "\t";
 
-/** Where the trust store lives. Mirrors lib.sh's `conductor_trust_store`. */
+/** Where the trust store lives. Mirrors lib.sh's `carja_trust_store`. */
 export function trustStorePath(env = process.env) {
-  const home = env.CONDUCTOR_HOME || join(env.HOME || homedir(), ".conductor");
+  const home = machineHome(env);
   return join(home, "verify-trust");
 }
 
@@ -44,7 +44,7 @@ export function commandHash(cmd) {
 
 /**
  * Resolve the repo's declared verification command, using the same precedence
- * as `conductor_verify_cmd` in lib.sh: conductor.config.json `verify`, then a
+ * as `carja_verify_cmd` in lib.sh: carja.config.json `verify`, then a
  * package.json `test` script.
  * @returns {Promise<{cmd: string|null, from: string|null}>}
  */
@@ -52,7 +52,7 @@ export async function resolveDeclaredVerify(root) {
   try {
     const raw = JSON.parse(await readFile(configPathOf(root), "utf8"));
     if (typeof raw.verify === "string" && raw.verify.trim()) {
-      return { cmd: raw.verify.trim(), from: "conductor.config.json (verify)" };
+      return { cmd: raw.verify.trim(), from: "carja.config.json (verify)" };
     }
   } catch {
     /* absent or unparseable → fall through */
@@ -116,10 +116,10 @@ export async function trustVerifyCommand(argv, context) {
     const { stdout: out } = await execFileAsync("git", ["rev-parse", "--show-toplevel"], { cwd });
     root = out.trim();
   } catch {
-    stderr.write("conductor trust-verify: not inside a git repository.\n");
+    stderr.write("carja trust-verify: not inside a git repository.\n");
     return 1;
   }
-  // Symlink-stable key, matching lib.sh's `conductor_trust_key` (pwd -P).
+  // Symlink-stable key, matching lib.sh's `carja_trust_key` (pwd -P).
   const realRoot = await execFileAsync("sh", ["-c", "pwd -P"], { cwd: root })
     .then(({ stdout: o }) => o.trim())
     .catch(() => root);
@@ -139,15 +139,15 @@ export async function trustVerifyCommand(argv, context) {
   const { cmd, from } = await resolveDeclaredVerify(root);
   if (cmd === "none") {
     stderr.write(
-      "conductor trust-verify: this repo declares it has nothing to verify.\n" +
-        '  There is no command to trust. Give it one:  conductor verify --set "<command>"\n',
+      "carja trust-verify: this repo declares it has nothing to verify.\n" +
+        '  There is no command to trust. Give it one:  carja verify --set "<command>"\n',
     );
     return 1;
   }
   if (!cmd) {
     stderr.write(
-      "conductor trust-verify: this repo declares no verification command.\n" +
-        '  Set one first:  conductor verify --set "<command>"\n',
+      "carja trust-verify: this repo declares no verification command.\n" +
+        '  Set one first:  carja verify --set "<command>"\n',
     );
     return 1;
   }

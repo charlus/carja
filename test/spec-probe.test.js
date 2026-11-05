@@ -39,7 +39,7 @@ const SPEC_IT = wf("spec-it.md");
 const CARVE = wf("carve.md");
 const RETRO = wf("retrospective.md");
 const FEATURE_SPEC = readFileSync(
-  join(ROOT, "templates", "conductor", "5-templates", "carve-workflow", "feature-spec.md"),
+  join(ROOT, "templates", "carja", "5-templates", "carve-workflow", "feature-spec.md"),
   "utf8",
 );
 

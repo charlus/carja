@@ -1,21 +1,21 @@
-# Conductor Enforcement Hooks
+# Carja Enforcement Hooks
 
-> **Why this exists:** the field consensus (Anthropic, Böckeler, Huntley, obra) is blunt — *prose rules are advisory; only code enforces.* Conductor's two headline laws were prose-only. These hooks make them **deterministic** at the git boundary, so they hold even when an agent ignores the prose. See `docs/adr/0001-enforcement-and-autonomy-rebalance.md` (D1). The prose rules stay as the guidance layer; these are the backstop.
+> **Why this exists:** the field consensus (Anthropic, Böckeler, Huntley, obra) is blunt — *prose rules are advisory; only code enforces.* Carja's two headline laws were prose-only. These hooks make them **deterministic** at the git boundary, so they hold even when an agent ignores the prose. See `docs/adr/0001-enforcement-and-autonomy-rebalance.md` (D1). The prose rules stay as the guidance layer; these are the backstop.
 
 ## What's here
 
 | Hook | Law | When it fires | Blocks when… |
 |---|---|---|---|
 | `pre-commit` | **Test-Driven Law** | `git commit` | implementation code is staged with no test change |
-| `pre-commit` | **Eval-Driven Law** | `git commit` | code that calls an LLM provider is staged with no eval alongside (waiver: `CONDUCTOR_NO_EVAL="reason"`). See `skills/writing-evals/`. The two gates are independent — waiving one never skips the other. |
-| `pre-commit` | **Goodhart boundary** | `git commit` | a test file is deleted, a test is disabled (`.skip`/`.only`/`@pytest.mark.skip`/`#[ignore]`/`t.Skip`/`@Disabled`…), or the staged tests net-lose assertions (waiver: `CONDUCTOR_NO_BOUNDARY="reason"`) |
-| `pre-commit` | **Default branch** | `git commit` | code is committed on the default branch of a repository that has a remote (`origin`), in the project or a nested code repository. Conductor's own files (`conductor/`, `.agents/`, `AGENTS.md`, `conductor.config.json`, `.gitattributes`) may be. Work in the item's worktree (`conductor work <item>`) instead (waiver: `CONDUCTOR_ON_DEFAULT="reason"`) |
-| `pre-commit` | **Protected paths** | `git commit` | the change edits `.agents/hooks/`, `.agents/rules/`, `.agents/sandbox/` or the reviewer brief (waiver: `CONDUCTOR_NO_PROTECTED="reason"`) |
+| `pre-commit` | **Eval-Driven Law** | `git commit` | code that calls an LLM provider is staged with no eval alongside (waiver: `CARJA_NO_EVAL="reason"`). See `skills/writing-evals/`. The two gates are independent — waiving one never skips the other. |
+| `pre-commit` | **Goodhart boundary** | `git commit` | a test file is deleted, a test is disabled (`.skip`/`.only`/`@pytest.mark.skip`/`#[ignore]`/`t.Skip`/`@Disabled`…), or the staged tests net-lose assertions (waiver: `CARJA_NO_BOUNDARY="reason"`) |
+| `pre-commit` | **Default branch** | `git commit` | code is committed on the default branch of a repository that has a remote (`origin`), in the project or a nested code repository. Carja's own files (`carja/`, `.agents/`, `AGENTS.md`, `carja.config.json`, `.gitattributes`) may be. Work in the item's worktree (`carja work <item>`) instead (waiver: `CARJA_ON_DEFAULT="reason"`) |
+| `pre-commit` | **Protected paths** | `git commit` | the change edits `.agents/hooks/`, `.agents/rules/`, `.agents/sandbox/` or the reviewer brief (waiver: `CARJA_NO_PROTECTED="reason"`) |
 | `pre-push` | **Verification Iron Law** | `git push` | the configured verification command exits non-zero |
-| `post-merge` | cleanup, not a gate | `git pull` (a merge) | never: it removes `conductor loop` and `conductor work` worktrees and local branches already merged into the default branch, and keeps any worktree with uncommitted changes |
+| `post-merge` | cleanup, not a gate | `git pull` (a merge) | never: it removes `carja loop` and `carja work` worktrees and local branches already merged into the default branch, and keeps any worktree with uncommitted changes |
 | `verification-stop-hook.sh` | Verification Iron Law (interactive) | Claude Code `Stop` | **opt-in** — code changed since HEAD and verify is red |
 | `pretooluse-no-bypass.sh` | every gate above | Claude Code `PreToolUse` | **opt-in** — a Bash call tries to skip the git hooks (`--no-verify`, `-n`, `-c core.hooksPath=`) |
-| `pretooluse-fact-gate.sh` | investigate before you write | Claude Code `PreToolUse` | **opt-in** — the first edit/creation of a file, and the first run of each destructive command, until the facts are stated (off: `CONDUCTOR_FACT_GATE=off`) |
+| `pretooluse-fact-gate.sh` | investigate before you write | Claude Code `PreToolUse` | **opt-in** — the first edit/creation of a file, and the first run of each destructive command, until the facts are stated (off: `CARJA_FACT_GATE=off`) |
 | `lib.sh` | — | sourced by the others | shared helpers |
 
 ### Why the boundary gate exists
@@ -26,7 +26,7 @@ deleted one — `--diff-filter=ACM` never sees a deletion, and staging `.skip(`
 failing test, skip the failing test — both satisfied it, and gutting the
 assertions satisfied it too. A done-criterion needs a boundary beside it: what
 the change must **not** do. That is this gate, and it is why the gate is
-independent of `CONDUCTOR_NO_TEST` (that waiver says "this change has no test
+independent of `CARJA_NO_TEST` (that waiver says "this change has no test
 surface", which is not a licence to remove proof that already exists).
 
 It is deliberately syntactic. A hook cannot judge whether removing a test was
@@ -42,9 +42,9 @@ not get to edit what decides whether it passes. Workflows, skills and your
 project knowledge stay freely editable — freezing those would make the gate a
 tax rather than a boundary.
 
-A `conductor upgrade` legitimately rewrites these paths, and handles that
+A `carja upgrade` legitimately rewrites these paths, and handles that
 itself: it commits exactly the framework files it wrote, with
-`CONDUCTOR_NO_PROTECTED` set so the waiver is still logged, and never sweeps in
+`CARJA_NO_PROTECTED` set so the waiver is still logged, and never sweeps in
 your own work. Then push as usual — `pre-push` carries the fingerprint of the
 official `pre-commit` and lets that exact file through. If you had uncommitted
 edits in those files, a merge was in progress, or you passed `--no-commit`, it
@@ -60,7 +60,7 @@ which let one deleted file disable every gate at once.
 **Disabling `pre-commit` is caught at the push.** git runs `pre-commit` from
 the working tree, so a commit that deletes, renames, un-chmods or *edits* it is
 judged by the altered copy — which may judge nothing. `pre-push` refuses a range
-that does any of those unless the push carries `CONDUCTOR_NO_PROTECTED="why"`.
+that does any of those unless the push carries `CARJA_NO_PROTECTED="why"`.
 The reverse holds too: an edit to `pre-push` is a protected-path change that
 `pre-commit`, still running the committed library, blocks at commit.
 
@@ -68,53 +68,53 @@ The reverse holds too: an edit to `pre-push` is a protected-path change that
 themselves from the working tree, so a change that rewrites *both entry
 scripts* runs the rewritten versions. That is a property of client-side hooks,
 not a gap in these ones. The backstop is server-side — the PR gate and branch
-protection — and, for `conductor loop`, the independent Checker, which reviews
+protection — and, for `carja loop`, the independent Checker, which reviews
 the diff that reached the branch rather than trusting the hooks that ran on it.
 
 ## Enabling the git hooks
 
-Automatic during `conductor init` / `conductor upgrade` when the target is a git repo (they point `core.hooksPath` at this directory). To (re)install or repair manually:
+Automatic during `carja init` / `carja upgrade` when the target is a git repo (they point `core.hooksPath` at this directory). To (re)install or repair manually:
 
 ```bash
-conductor install-hooks           # sets core.hooksPath → .agents/hooks
-conductor install-hooks --uninstall
+carja install-hooks           # sets core.hooksPath → .agents/hooks
+carja install-hooks --uninstall
 ```
 
 If you already use a custom `core.hooksPath`, install-hooks won't override it — wire these in yourself.
 
-Each hook appends a heartbeat line (`<time> pre-commit` or `<time> pre-push`) to `.git/conductor-heartbeat`, and install-hooks appends `<time> installed`. `conductor status` compares these with the reflog and names the local commits and pushes that skipped the hooks. Nothing is committed.
+Each hook appends a heartbeat line (`<time> pre-commit` or `<time> pre-push`) to `.git/carja-heartbeat`, and install-hooks appends `<time> installed`. `carja status` compares these with the reflog and names the local commits and pushes that skipped the hooks. Nothing is committed.
 
-**Outer layout** (Conductor in an outer folder, the team's code in a gitignored nested repository): install-hooks also sets each nested repository's `core.hooksPath` to this folder by absolute path, in local git config only. The gates then judge the code commits. The library, the config and the ship-log come from the outer repository, and the library from its *committed* copy, which no commit in the code repository can change. Each code repository has its own push check, in `conductor.config.json`:
+**Outer layout** (Carja in an outer folder, the team's code in a gitignored nested repository): install-hooks also sets each nested repository's `core.hooksPath` to this folder by absolute path, in local git config only. The gates then judge the code commits. The library, the config and the ship-log come from the outer repository, and the library from its *committed* copy, which no commit in the code repository can change. Each code repository has its own push check, in `carja.config.json`:
 
 ```json
 { "verify": "none", "repos": { "website-cms": { "verify": "npm test", "eval": "npm run eval" } } }
 ```
 
-Set it with `conductor verify --repo website-cms --set "npm test"`. A nested repository that already has a `core.hooksPath` or live files in `.git/hooks` is left alone and reported, and `conductor status` says which code is not gated. The path is absolute: run `conductor install-hooks` again after moving the folder.
+Set it with `carja verify --repo website-cms --set "npm test"`. A nested repository that already has a `core.hooksPath` or live files in `.git/hooks` is left alone and reported, and `carja status` says which code is not gated. The path is absolute: run `carja install-hooks` again after moving the folder.
 
 ## Configuring verification
 
 `pre-push` (and the optional Stop hook) run your **verification command**. One command reads and sets it:
 
 ```bash
-conductor verify                          # what does `git push` run here, and how do I change it?
-conductor verify --set "npm test"         # runs it once; only writes it if it passes
-conductor verify --detect                 # derive it from the files that are here
-conductor verify --none                   # this repo has nothing to verify (docs, state, wrapper)
+carja verify                          # what does `git push` run here, and how do I change it?
+carja verify --set "npm test"         # runs it once; only writes it if it passes
+carja verify --detect                 # derive it from the files that are here
+carja verify --none                   # this repo has nothing to verify (docs, state, wrapper)
 ```
 
 It is resolved in this order:
 
-1. `"verify"` in `conductor.config.json` — e.g. `"verify": "npm test && npm run lint"`
+1. `"verify"` in `carja.config.json` — e.g. `"verify": "npm test && npm run lint"`
 2. `npm test`, if `package.json` defines a `test` script
 3. nothing → the push hook prints a notice and allows the push
 
 `--set` runs the command before writing it because a gate that cannot pass is worse than no gate: it
-blocks every push and teaches you to reach for `CONDUCTOR_SKIP_VERIFY`. Use `--no-run` to write one
+blocks every push and teaches you to reach for `CARJA_SKIP_VERIFY`. Use `--no-run` to write one
 that cannot pass here (CI-only, for instance).
 
 **A repo with nothing to verify** — a state repo, a docs repo, a wrapper whose code lives elsewhere —
-should say so with `conductor verify --none`, which records `"verify": "none"`. The hook then stays
+should say so with `carja verify --none`, which records `"verify": "none"`. The hook then stays
 silent instead of warning at every push. An unconfigured gate and a declared-off gate look the same to
 `git`, but only one of them is a decision, and a warning that can never be cleared is how a safety
 message gets ignored.
@@ -123,7 +123,7 @@ message gets ignored.
 
 If the repo has evalsets (an `evals/` file or `*.eval.*`), `pre-push` also runs your **eval command** — presence is gated at commit, *passing* is gated here. Resolved in this order:
 
-1. `"eval"` in `conductor.config.json` — e.g. `"eval": "npm run eval"`
+1. `"eval"` in `carja.config.json` — e.g. `"eval": "npm run eval"`
 2. `npm run eval`, if `package.json` defines an `eval` script
 3. nothing → the push hook notes that evalsets exist but no command is set, and allows the push (a gap to close, not a hard block)
 
@@ -138,21 +138,21 @@ Non-LLM projects (no eval files) never see this gate.
 Determinism can over-block legitimate config/doc work, so every gate has a logged bypass:
 
 ```bash
-CONDUCTOR_NO_TEST="config-only change"  git commit …     # TDD gate (pre-commit)
-CONDUCTOR_NO_EVAL="stub, no eval surface" git commit …   # Eval presence gate (pre-commit)
-CONDUCTOR_NO_BRIEF="pre-A5 spec" git commit …            # brief check (pre-commit)
-CONDUCTOR_NO_REPORT="editing an old entry" git commit …  # report shape (pre-commit)
-CONDUCTOR_NO_BOUNDARY="feature removed" git commit …     # Goodhart boundary (pre-commit)
-CONDUCTOR_NO_PROTECTED="conductor upgrade" git commit …  # protected paths (pre-commit)
-CONDUCTOR_ON_DEFAULT="hotfix agreed" git commit …        # code on the default branch (pre-commit)
-CONDUCTOR_SKIP_VERIFY="hotfix, tests offline" git push … # verify gate (pre-push)
-CONDUCTOR_SKIP_EVAL="eval infra down" git push …         # Eval run-gate (pre-push)
-CONDUCTOR_HOOKS=off git commit …                         # disable all Conductor hooks
+CARJA_NO_TEST="config-only change"  git commit …     # TDD gate (pre-commit)
+CARJA_NO_EVAL="stub, no eval surface" git commit …   # Eval presence gate (pre-commit)
+CARJA_NO_BRIEF="pre-A5 spec" git commit …            # brief check (pre-commit)
+CARJA_NO_REPORT="editing an old entry" git commit …  # report shape (pre-commit)
+CARJA_NO_BOUNDARY="feature removed" git commit …     # Goodhart boundary (pre-commit)
+CARJA_NO_PROTECTED="carja upgrade" git commit …  # protected paths (pre-commit)
+CARJA_ON_DEFAULT="hotfix agreed" git commit …        # code on the default branch (pre-commit)
+CARJA_SKIP_VERIFY="hotfix, tests offline" git push … # verify gate (pre-push)
+CARJA_SKIP_EVAL="eval infra down" git push …         # Eval run-gate (pre-push)
+CARJA_HOOKS=off git commit …                         # disable all Carja hooks
 ```
 
-Every named reason is appended to `conductor/0-compass/ship-log.md`, so a bypass stays auditable. The rule is not *never bypass* — it is *every bypass is logged*. A commit carries its own waiver line, and any line a push waiver left behind, so a waiver needs no extra commit. The hook stages the ship-log only when waiver lines are its sole change, and never in a partial commit (`git commit -- <paths>`).
+Every named reason is appended to `carja/0-compass/ship-log.md`, so a bypass stays auditable. The rule is not *never bypass* — it is *every bypass is logged*. A commit carries its own waiver line, and any line a push waiver left behind, so a waiver needs no extra commit. The hook stages the ship-log only when waiver lines are its sole change, and never in a partial commit (`git commit -- <paths>`).
 
-**What is not code.** Files under `conductor/` are project state: the TDD and eval presence gates ignore them, and a push that changes only `conductor/` runs neither the verify command nor the evals. Prefer these over `git commit --no-verify`, which silently skips **every** hook and leaves no trail.
+**What is not code.** Files under `carja/` are project state: the TDD and eval presence gates ignore them, and a push that changes only `carja/` runs neither the verify command nor the evals. Prefer these over `git commit --no-verify`, which silently skips **every** hook and leaves no trail.
 
 ## Optional: the fact gate (Claude Code)
 
@@ -199,9 +199,9 @@ After three denials in a session the message condenses to a single line carrying
 its ordinal. Identical repeated denials are what push a model into a repetition
 loop, so the gate keeps denying but stops repeating itself.
 
-Turn it off with `CONDUCTOR_FACT_GATE=off`, or everything with
-`CONDUCTOR_HOOKS=off`. Both `PreToolUse` hooks bound themselves with `timeout`
-(`CONDUCTOR_HOOK_TIMEOUT`, default 5s) and fail **open** on expiry: a hook in
+Turn it off with `CARJA_FACT_GATE=off`, or everything with
+`CARJA_HOOKS=off`. Both `PreToolUse` hooks bound themselves with `timeout`
+(`CARJA_HOOK_TIMEOUT`, default 5s) and fail **open** on expiry: a hook in
 front of every tool call must never be able to wedge the session.
 
 ## Optional: blocking the unlogged bypass (Claude Code)
@@ -218,9 +218,9 @@ front of every tool call must never be able to wedge the session.
 }
 ```
 
-It denies `git commit --no-verify`, the `-n` shorthand, `git push --no-verify`, `-c core.hooksPath=` overrides and an inline `CONDUCTOR_HOOKS=off`, and the denial names the logged waiver to use instead. It fails **open** on anything unexpected — no node, unparseable input, an unknown shape — because a hook that blocks on its own errors would wedge every Bash call in the session. A quoted mention (`git commit -m "document --no-verify"`) is not a use, and is allowed.
+It denies `git commit --no-verify`, the `-n` shorthand, `git push --no-verify`, `-c core.hooksPath=` overrides and an inline `CARJA_HOOKS=off`, and the denial names the logged waiver to use instead. It fails **open** on anything unexpected — no node, unparseable input, an unknown shape — because a hook that blocks on its own errors would wedge every Bash call in the session. A quoted mention (`git commit -m "document --no-verify"`) is not a use, and is allowed.
 
-**Reach.** `PreToolUse` is a Claude Code mechanism, so this guards that harness only. On Codex and Antigravity the protection is after the fact, not before: `conductor loop` records a hook-bypassed commit and the improver surfaces the pattern across runs. Detection, not prevention — worth knowing which one you have.
+**Reach.** `PreToolUse` is a Claude Code mechanism, so this guards that harness only. On Codex and Antigravity the protection is after the fact, not before: `carja loop` records a hook-bypassed commit and the improver surfaces the pattern across runs. Detection, not prevention — worth knowing which one you have.
 
 ## Optional: interactive Verification hook (Claude Code)
 
@@ -236,19 +236,19 @@ Off by default. To make Claude Code refuse to end a session "done" while your co
 }
 ```
 
-It only engages when tracked implementation files differ from HEAD, so it won't nag on doc-only or exploratory sessions. Disable anytime with `CONDUCTOR_HOOKS=off` or by removing the entry.
+It only engages when tracked implementation files differ from HEAD, so it won't nag on doc-only or exploratory sessions. Disable anytime with `CARJA_HOOKS=off` or by removing the entry.
 
 ### The stop hook needs your consent once
 
-Hooks **bypass the permission system** — nothing prompts before this one runs your verification command. That command is read from a file *inside the repo* (`conductor.config.json` → `verify`, else the `test` npm script), so a cloned, forked, or contributed repo could name anything. The gate therefore stays inactive until you have read the command and recorded it:
+Hooks **bypass the permission system** — nothing prompts before this one runs your verification command. That command is read from a file *inside the repo* (`carja.config.json` → `verify`, else the `test` npm script), so a cloned, forked, or contributed repo could name anything. The gate therefore stays inactive until you have read the command and recorded it:
 
 ```bash
-conductor trust-verify            # shows the command, then records consent
-conductor trust-verify --list     # what is trusted, on this machine
-conductor trust-verify --revoke   # withdraw it for this repo
+carja trust-verify            # shows the command, then records consent
+carja trust-verify --list     # what is trusted, on this machine
+carja trust-verify --revoke   # withdraw it for this repo
 ```
 
-Trust is keyed on `realpath(repo root)` + `sha256(command)`, stored `0600` at `${CONDUCTOR_HOME:-~/.conductor}/verify-trust`, and every grant is appended to `verify-trust-grants.log`. **Edit the command and it must be trusted again.** Until then the stop hook allows the session to end with a one-line note, and never executes the command.
+Trust is keyed on `realpath(repo root)` + `sha256(command)`, stored `0600` at `$CARJA_HOME/verify-trust` (default `~/.carja`, or `~/.conductor` on a machine set up under 6.x), and every grant is appended to `verify-trust-grants.log`. **Edit the command and it must be trusted again.** Until then the stop hook allows the session to end with a one-line note, and never executes the command.
 
 `pre-commit` and `pre-push` are deliberately *not* gated this way: there you typed `git commit` / `git push`, so a human action is already in the chain.
 

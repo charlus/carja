@@ -22,7 +22,7 @@ const read = (...p) => readFileSync(join(T, ...p), "utf8");
 
 describe("A1 — the UX brief specifies experience, not only function", () => {
   const wf = read(".agents", "workflows", "ux-ui-design-brief.md");
-  const tpl = read("conductor", "5-templates", "blueprint-workflows", "ux-ui-design-brief.md");
+  const tpl = read("carja", "5-templates", "blueprint-workflows", "ux-ui-design-brief.md");
   const phase3 = wf.slice(wf.indexOf("**Phase 3"), wf.indexOf("**Phase 4"));
 
   test("Phase 3 asks each screen for hierarchy, states, unknown values and a screen to match", () => {

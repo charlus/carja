@@ -1,6 +1,6 @@
 // test/claude-instructions.test.js
 //
-// D9: Conductor's instructions now live in the root AGENTS.md. Claude Code reads
+// D9: Carja's instructions now live in the root AGENTS.md. Claude Code reads
 // it only from v2.1.277, and only when no CLAUDE.md or CLAUDE.local.md sits in
 // the working folder. Each of those makes Claude silently skip the framework,
 // so init, upgrade, status and the loop warn about them.
@@ -38,7 +38,7 @@ test("instructionWarnings: CLAUDE.md and CLAUDE.local.md each switch AGENTS.md o
   assert.match(w[1], /CLAUDE\.local\.md/);
 });
 
-test("conductor status shows the warning when a CLAUDE.md would hide AGENTS.md", async () => {
+test("carja status shows the warning when a CLAUDE.md would hide AGENTS.md", async () => {
   const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");

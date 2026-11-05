@@ -33,7 +33,7 @@ function harness(overrides = {}) {
     runChecker: overrides.runChecker,
     merge: overrides.merge ?? (async () => {
       mergeCalls++;
-      return { ok: true, branch: "conductor/loop/goal", prUrl: "http://pr/1" };
+      return { ok: true, branch: "carja/loop/goal", prUrl: "http://pr/1" };
     }),
     gitHead: async () => `sha-${head++}`,
     now: () => (clock += 1000),
@@ -169,7 +169,7 @@ test("openPullRequest: no forge → clean failure, no push attempted", async () 
 
 test("openPullRequest: push + gh returns the PR url", async () => {
   const res = await openPullRequest({
-    branch: "conductor/loop/x",
+    branch: "carja/loop/x",
     title: "t",
     git: async (args) => ({ ok: args[0] === "push", stdout: "" }),
     run: async () => ({ ok: true, stdout: "https://github.com/o/r/pull/7\n" }),
@@ -194,12 +194,12 @@ test("openPullRequest: failed push aborts before opening a PR", async () => {
 });
 
 // Regression (live-run finding): a stale same-named loop branch from a prior run
-// (divergent history) rejects a plain push; the loop owns conductor/loop/* so it
+// (divergent history) rejects a plain push; the loop owns carja/loop/* so it
 // falls back to --force-with-lease, then opens the PR.
 test("openPullRequest: plain push rejected → force-with-lease fallback, then PR", async () => {
   const pushes = [];
   const res = await openPullRequest({
-    branch: "conductor/loop/x",
+    branch: "carja/loop/x",
     title: "t",
     git: async (args) => {
       if (args[0] === "push") {
@@ -222,7 +222,7 @@ test("openPullRequest: plain push rejected → force-with-lease fallback, then P
 // merge failure — probe for an existing PR and reuse it.
 test("openPullRequest: create fails but a PR already exists → reuse it (no false-negative)", async () => {
   const res = await openPullRequest({
-    branch: "conductor/loop/x",
+    branch: "carja/loop/x",
     title: "t",
     git: async (args) => ({ ok: args[0] === "push", stdout: "" }),
     run: async (_cmd, argv) => {
@@ -239,7 +239,7 @@ test("openPullRequest: create fails but a PR already exists → reuse it (no fal
 
 test("openPullRequest: create fails and no PR exists → genuine failure", async () => {
   const res = await openPullRequest({
-    branch: "conductor/loop/x",
+    branch: "carja/loop/x",
     title: "t",
     git: async (args) => ({ ok: args[0] === "push", stdout: "" }),
     run: async (_cmd, argv) => {
@@ -258,7 +258,7 @@ test("openPullRequest: create fails and no PR exists → genuine failure", async
 test("F4: openPullRequest with forge glab pushes then opens the MR with glab", async () => {
   const calls = [];
   const res = await openPullRequest({
-    branch: "conductor/loop/x",
+    branch: "carja/loop/x",
     title: "t",
     git: async (args) => (calls.push(["git", ...args]), { ok: true, stdout: "" }),
     run: async (cmd, argv) => (calls.push([cmd, ...argv]), { ok: true, stdout: "https://code.example/g/p/-/merge_requests/7" }),

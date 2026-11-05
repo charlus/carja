@@ -32,7 +32,7 @@ test("classifyMessage recognises each failure kind (and ignores success)", () =>
   assert.equal(classifyMessage("pre-flight halt: halted_sandbox_required — needs a sandbox").kind, "halt");
   assert.equal(classifyMessage("beat 1: auto-captured uncommitted maker changes (commit hook bypassed)").kind, "hook-bypass");
   assert.equal(classifyMessage("shipped task:foo — done (PR http://x)"), null);
-  assert.equal(classifyMessage("harvested 3 work item(s) from conductor/"), null);
+  assert.equal(classifyMessage("harvested 3 work item(s) from carja/"), null);
 });
 
 test("normalizeReason generalises run-specific specifics", () => {

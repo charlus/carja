@@ -3,8 +3,8 @@
 // DESIGN.md: the one file that keeps a product's UI coherent. Pure: no IO.
 //
 // The canonical sections are shared by the greenfield template
-// (conductor/5-templates/design-md.md, pinned by test) and by the migration,
-// which maps each H2 section of the old conductor/4-context/design/ files to
+// (carja/5-templates/design-md.md, pinned by test) and by the migration,
+// which maps each H2 section of the old carja/4-context/design/ files to
 // the first canonical section whose words its title contains.
 
 export const DESIGN_SECTIONS = [
@@ -116,7 +116,7 @@ export function buildDesignMd(files, { legacy = {}, source, date = new Date().to
     "",
   ];
   if (migrated.length || placed["Brand Assets"].length) {
-    out.push(`<!-- Migrated from ${source}/ by \`conductor design migrate\` on ${date}. -->`, "");
+    out.push(`<!-- Migrated from ${source}/ by \`carja design migrate\` on ${date}. -->`, "");
   }
   for (const { title } of DESIGN_SECTIONS) {
     out.push(`## ${title}`, "");

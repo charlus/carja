@@ -167,18 +167,18 @@ export async function initCommand(args, { cwd, stdout, stderr }) {
     await generateClaudeCommands(targetDir, { stdout });
     await generateClaudeSkills(targetDir, { stdout });
 
-    // Copy conductor/ (project state folders)
+    // Copy carja/ (project state folders)
     if (!parsed.agentOnly) {
-      const conductorDir = join(targetDir, "conductor");
-      const conductorExists = await exists(conductorDir);
-      if (conductorExists && !parsed.force) {
-        stdout.write("⏭️  Skipped conductor/ (already exists)\n");
+      const carjaDir = join(targetDir, "carja");
+      const carjaExists = await exists(carjaDir);
+      if (carjaExists && !parsed.force) {
+        stdout.write("⏭️  Skipped carja/ (already exists)\n");
       } else {
-        if (conductorExists && parsed.force) {
-          await rm(conductorDir, { recursive: true, force: true });
+        if (carjaExists && parsed.force) {
+          await rm(carjaDir, { recursive: true, force: true });
         }
-        await cp(join(templateDir, "conductor"), conductorDir, { recursive: true });
-        stdout.write("✅ Installed conductor/ (project state folders)\n");
+        await cp(join(templateDir, "carja"), carjaDir, { recursive: true });
+        stdout.write("✅ Installed carja/ (project state folders)\n");
       }
 
       // Copy platform stubs and config
@@ -192,10 +192,10 @@ export async function initCommand(args, { cwd, stdout, stderr }) {
         renderRootAgentsMd(hadAgentsMd ? await readFile(agentsMdPath, "utf8") : null, await buildFrameworkBlock(agentsDir)),
         "utf8",
       );
-      stdout.write(`✅ ${hadAgentsMd ? "Added the Conductor framework block to your AGENTS.md" : "Created AGENTS.md"}\n`);
+      stdout.write(`✅ ${hadAgentsMd ? "Added the Carja framework block to your AGENTS.md" : "Created AGENTS.md"}\n`);
       for (const w of await instructionWarningsFor(targetDir)) stdout.write(`⚠️  ${w}\n`);
 
-      for (const stub of ["CHANGELOG.md", "conductor.config.json"]) {
+      for (const stub of ["CHANGELOG.md", "carja.config.json"]) {
         const stubTarget = join(targetDir, stub);
         if (!(await exists(stubTarget))) {
           await cp(join(templateDir, stub), stubTarget);
@@ -207,7 +207,7 @@ export async function initCommand(args, { cwd, stdout, stderr }) {
       // from the project's files, or warn in words that name the fix.
       await ensureVerifyCommand(targetDir, stdout);
 
-      stdout.write(`\n🎼 Conductor Framework v${packageVersion()} initialized!\n`);
+      stdout.write(`\n🎼 Carja Framework v${packageVersion()} initialized!\n`);
 
       // Deterministic enforcement (ADR-0001 D1): wire git hooks when in a repo.
       if (await exists(join(targetDir, ".git"))) {
@@ -226,15 +226,15 @@ export async function initCommand(args, { cwd, stdout, stderr }) {
 
       stdout.write(
         "\nNext steps:\n" +
-          "  1. Set the push gate:  conductor verify      (what `git push` must pass here)\n" +
+          "  1. Set the push gate:  carja verify      (what `git push` must pass here)\n" +
           "  2. Write the project card: ask your agent to run the agents-md workflow (/agents-md)\n" +
-          "  3. Run the self-test:  bash .agents/tests/check-conductor.sh\n" +
+          "  3. Run the self-test:  bash .agents/tests/check-carja.sh\n" +
           '  4. Start building:     Tell your AI "Let\'s go"\n' +
           "\nRun the autonomous loop (no git clone needed):\n" +
-          "  • Zero-install:  npx github:charlus/conductor-framework loop --dry-run\n" +
-          "  • Persistent:    npm i -g github:charlus/conductor-framework   then:   conductor loop --dry-run\n" +
-          "  • Fleet:         conductor loop --from-conductor --dry-run   (drain your ./conductor/ backlog)\n" +
-          "  Guide: https://github.com/charlus/conductor-framework/blob/master/docs/Running-The-Loop.md\n" +
+          "  • Zero-install:  npx github:charlus/carja loop --dry-run\n" +
+          "  • Persistent:    npm i -g github:charlus/carja   then:   carja loop --dry-run\n" +
+          "  • Fleet:         carja loop --from-carja --dry-run   (drain your ./carja/ backlog)\n" +
+          "  Guide: https://github.com/charlus/carja/blob/master/docs/Running-The-Loop.md\n" +
           "\nDocs: AGENTS.md (always loaded), .agents/how-it-works.md (full reference)\n"
       );
     }
@@ -266,7 +266,7 @@ async function suggestRegistrySkills(projectDir, detectedTech, stdout) {
         const matched = skill.techStack.filter((t) => detectedTech.includes(t));
         stdout.write(`   • ${skill.name} — ${skill.description}\n     matches: ${matched.join(", ")}\n`);
       }
-      stdout.write(`\n   Install with: conductor add <skill-name>\n`);
+      stdout.write(`\n   Install with: carja add <skill-name>\n`);
     }
   } catch {}
 }

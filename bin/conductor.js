@@ -1,17 +1,7 @@
 #!/usr/bin/env node
 
-import { runCli } from "../src/cli.js";
-import { mirrorEnv } from "../src/names.js";
+// The 6.x command name, kept through 7.x (removed in 8.0). Same CLI, one notice.
+import { main } from "../src/main.js";
 
-// CARJA_* settings reach every CONDUCTOR_* reader, here and in child processes.
-mirrorEnv(process.env);
-
-runCli(process.argv.slice(2))
-  .then((exitCode) => {
-    process.exitCode = exitCode;
-  })
-  .catch((error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`${message}\n`);
-    process.exitCode = 1;
-  });
+process.stderr.write("Note: `conductor` is now `carja`. This alias is removed in 8.0.\n");
+main(process.argv.slice(2));

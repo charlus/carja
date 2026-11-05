@@ -2,7 +2,7 @@
 //
 // O6 — the push gate is configured, or it is loud about not being.
 //
-// Measured 2026-09-15: `conductor.config.json` carried a `verify` command in
+// Measured 2026-09-15: `carja.config.json` carried a `verify` command in
 // ONE of the maintainer's five live projects. Everywhere else `pre-push`
 // printed "no verification command configured … Skipping verify." and the
 // Verification Iron Law — the framework's central enforcement bet — was not
@@ -15,7 +15,7 @@
 //     a .venv, go.mod, Cargo.toml, a two-package backend/frontend layout).
 //     Deterministic, no model call, and it mirrors `lib.sh`'s own `npm test`
 //     fallback so the CLI and the hook never disagree.
-//   * `init` writes the suggestion into conductor.config.json and says so;
+//   * `init` writes the suggestion into carja.config.json and says so;
 //     when nothing can be derived it warns in words that name the key.
 //   * `upgrade` warns the same way on an install that still has no command,
 //     and `pre-push`'s message tells the reader exactly what to add.
@@ -39,7 +39,7 @@ function sink() {
   let out = "";
   return { write: (s) => { out += s; }, get text() { return out; } };
 }
-const dir = () => mkdtempSync(join(tmpdir(), "conductor-verify-"));
+const dir = () => mkdtempSync(join(tmpdir(), "carja-verify-"));
 const write = (root, rel, content) => {
   mkdirSync(join(root, rel, ".."), { recursive: true });
   writeFileSync(join(root, rel), content);
@@ -116,12 +116,12 @@ describe("init — writes the verify command, or warns in words that name the ke
     return { code, out: stdout.text + stderr.text };
   }
 
-  test("a node project gets verify = npm test in conductor.config.json", async () => {
+  test("a node project gets verify = npm test in carja.config.json", async () => {
     const d = dir();
     write(d, "package.json", JSON.stringify({ name: "x", scripts: { test: "node --test" } }));
     const { code, out } = await runInit(d);
     assert.equal(code, 0, out);
-    const cfg = JSON.parse(readFileSync(join(d, "conductor.config.json"), "utf8"));
+    const cfg = JSON.parse(readFileSync(join(d, "carja.config.json"), "utf8"));
     assert.equal(cfg.verify, "npm test");
     assert.match(out, /verify/i);
     assert.match(out, /npm test/);
@@ -131,23 +131,23 @@ describe("init — writes the verify command, or warns in words that name the ke
     const d = dir();
     const { code, out } = await runInit(d);
     assert.equal(code, 0, out);
-    const cfg = JSON.parse(readFileSync(join(d, "conductor.config.json"), "utf8"));
+    const cfg = JSON.parse(readFileSync(join(d, "carja.config.json"), "utf8"));
     assert.equal(cfg.verify, "");
     // Naming the key and the file was the FIRST fix, and it was measured
     // unactionable (2026-09-16). The warning now hands over the two commands
     // that end the decision, one way or the other.
     assert.match(out, /Push gate OFF/i);
-    assert.match(out, /conductor verify --set /);
-    assert.match(out, /conductor verify --none/);
+    assert.match(out, /carja verify --set /);
+    assert.match(out, /carja verify --none/);
     assert.match(out, /Iron Law/, "and say what is NOT enforced until it is set");
   });
 
   test("an existing config with a verify command is left alone", async () => {
     const d = dir();
     write(d, "package.json", JSON.stringify({ scripts: { test: "node --test" } }));
-    write(d, "conductor.config.json", JSON.stringify({ registry: "r", verify: "make check" }));
+    write(d, "carja.config.json", JSON.stringify({ registry: "r", verify: "make check" }));
     await runInit(d);
-    const cfg = JSON.parse(readFileSync(join(d, "conductor.config.json"), "utf8"));
+    const cfg = JSON.parse(readFileSync(join(d, "carja.config.json"), "utf8"));
     assert.equal(cfg.verify, "make check");
     assert.equal(cfg.registry, "r");
   });
@@ -158,15 +158,15 @@ describe("upgrade — an install with no verify command is warned, not silently 
     const d = dir();
     // A minimal current install: templates copied, config with an empty verify.
     cpSync(join(TEMPLATES, ".agents"), join(d, ".agents"), { recursive: true });
-    cpSync(join(TEMPLATES, "conductor"), join(d, "conductor"), { recursive: true });
-    write(d, "conductor.config.json", JSON.stringify({ registry: "r", verify: "" }));
+    cpSync(join(TEMPLATES, "carja"), join(d, "carja"), { recursive: true });
+    write(d, "carja.config.json", JSON.stringify({ registry: "r", verify: "" }));
     const stdout = sink();
     const stderr = sink();
     const code = await upgradeCommand([d], { cwd: tmpdir(), stdout, stderr });
     const out = stdout.text + stderr.text;
     assert.equal(code, 0, out);
     assert.match(out, /Push gate OFF/i);
-    assert.match(out, /conductor verify --set /);
+    assert.match(out, /carja verify --set /);
   });
 });
 
@@ -176,7 +176,7 @@ describe("pre-push — the message tells the reader exactly what to run", () => 
     assert.ok(branch, "pre-push lost its no-verify message");
     // Assert on what the shell prints, not on the source's backslash-escaped quotes.
     const shown = branch.replace(/\\(["`])/g, "$1");
-    assert.match(shown, /conductor verify --set /, "the fix must be runnable from the message");
+    assert.match(shown, /carja verify --set /, "the fix must be runnable from the message");
     assert.match(shown, /npm test|pytest/, "give a concrete example value");
     assert.match(shown, /OFF/, "say plainly that the gate is not enforcing");
     assert.doesNotMatch(shown, /Skipping verify\.$/, "'Skipping verify.' alone told the maintainer nothing");

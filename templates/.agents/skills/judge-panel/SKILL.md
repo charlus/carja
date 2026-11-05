@@ -57,7 +57,7 @@ Aggregate the scores (mean per candidate; note where judges *disagree* — diver
 
 ## Calibration — who watches the watchers
 
-Conductor leans on LLM judges — this panel, the loop **Checker** (`workflows/loop-checker.md`), `independent-review`, `behavior-validator`. An LLM judge is itself fallible, and *"an eval without a clear rubric measures nothing"* cuts both ways: a rubric can be miscalibrated, and a judge that rubber-stamps is a false safety signal. So the same eval discipline Conductor demands of the apps it builds (`skills/writing-evals`) applies to Conductor's own judges:
+Carja leans on LLM judges — this panel, the loop **Checker** (`workflows/loop-checker.md`), `independent-review`, `behavior-validator`. An LLM judge is itself fallible, and *"an eval without a clear rubric measures nothing"* cuts both ways: a rubric can be miscalibrated, and a judge that rubber-stamps is a false safety signal. So the same eval discipline Carja demands of the apps it builds (`skills/writing-evals`) applies to Carja's own judges:
 
 - **Version the rubric.** Every judge surface carries a `Rubric vN` stamp. Changing the criteria bumps it — a rubric change is a config change that alters every downstream verdict, and should be reviewed as one, not slipped in.
 - **Spot-check against human judgment.** On a handful of cases, compare the judge's verdict to what a human reviewer concludes. Persistent divergence means the rubric is miscalibrated — fix the rubric, don't trust the judge. A judge that *never* rejects is broken; look for the case it should have caught.

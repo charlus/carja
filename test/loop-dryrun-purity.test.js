@@ -20,8 +20,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loopCommand } from "../src/commands/loop.js";
 
-const STATE_REL = "conductor/1-workbench/loop-state.json";
-const LOCK_REL = "conductor/1-workbench/loop.lock";
+const STATE_REL = "carja/1-workbench/loop-state.json";
+const LOCK_REL = "carja/1-workbench/loop.lock";
 
 function sink() {
   let text = "";
@@ -33,9 +33,9 @@ async function fileExists(p) {
 }
 
 test("--dry-run leaves an interrupted loop-state.json byte-identical (no persist)", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "conductor-dryrun-"));
+  const dir = await mkdtemp(join(tmpdir(), "carja-dryrun-"));
   try {
-    await mkdir(join(dir, "conductor/1-workbench"), { recursive: true });
+    await mkdir(join(dir, "carja/1-workbench"), { recursive: true });
     const statePath = join(dir, STATE_REL);
 
     // An INTERRUPTED state: a swarm task mid-beat (`in_progress`) and a running

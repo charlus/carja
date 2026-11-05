@@ -7,7 +7,7 @@ description: Core git workflow conventions — commit messages, branch naming, P
 
 ## Purpose
 
-Standard git conventions for all projects using the Conductor Framework. Ensures consistent commit history, meaningful branch names, and structured PR/MR descriptions.
+Standard git conventions for all projects using the Carja Framework. Ensures consistent commit history, meaningful branch names, and structured PR/MR descriptions.
 
 ---
 
@@ -78,7 +78,7 @@ chore: upgrade dependencies to latest versions
 
 ### Parallel sessions
 
-Never switch the branch of a shared checkout: another session may be working in it, and its next commit lands on your branch. A new branch gets its own worktree (`.agents/skills/git-worktrees/SKILL.md`). The append-only logs (ship-log, inbox, review-log) merge with `merge=union` (set by `conductor init` and `upgrade`), so parallel entries do not conflict.
+Never switch the branch of a shared checkout: another session may be working in it, and its next commit lands on your branch. A new branch gets its own worktree (`.agents/skills/git-worktrees/SKILL.md`). The append-only logs (ship-log, inbox, review-log) merge with `merge=union` (set by `carja init` and `upgrade`), so parallel entries do not conflict.
 
 ## PR / MR Description Template
 

@@ -254,7 +254,7 @@ async function readJson(path) {
  * present. Deterministic, no model call.
  *
  * WHY. `pre-push` enforces the Verification Iron Law only when
- * `conductor.config.json` carries a `verify` command (or `package.json` has a
+ * `carja.config.json` carries a `verify` command (or `package.json` has a
  * `test` script — the hook's own fallback, mirrored here as the first rule so
  * the CLI and the hook never disagree). Measured 2026-09-15: one of five live
  * installs had one; the other four were skipping the gate silently. Nothing

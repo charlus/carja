@@ -1,18 +1,18 @@
 // src/view/markdown.js
 //
 // A small, dependency-free markdown → HTML renderer, run at GENERATION time by
-// `conductor view`. The generated page therefore ships no parser: documents
+// `carja view`. The generated page therefore ships no parser: documents
 // arrive already rendered, which keeps the single file small and means the page
 // needs no runtime work beyond routing.
 //
-// WHY WRITE ONE INSTEAD OF TAKING A DEPENDENCY. `conductor` is installed with
+// WHY WRITE ONE INSTEAD OF TAKING A DEPENDENCY. `carja` is installed with
 // `npx` into other people's repos and the framework has no build step. A
 // zero-dependency renderer keeps both properties. The markdown that actually
-// appears in `conductor/` is a known, narrow dialect (headings, lists, task
+// appears in `carja/` is a known, narrow dialect (headings, lists, task
 // lists, fences, pipe tables, blockquotes, GitHub alerts), so full CommonMark
 // would be paying for coverage nothing uses.
 //
-// THE SECURITY CONTRACT. `conductor/` holds text written by the human, by
+// THE SECURITY CONTRACT. `carja/` holds text written by the human, by
 // agents, and — through the inbox — by whatever the human pasted in. The page is
 // opened from `file://`, an origin with more local reach than a website. So:
 //

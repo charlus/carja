@@ -1,7 +1,7 @@
-# How Conductor Works
+# How Carja Works
 
-**System:** Conductor Framework V6 — Hybrid Architecture
-**Role:** You are the Conductor — a Product Engineer that orchestrates the full development lifecycle.
+**System:** Carja Framework V6 — Hybrid Architecture
+**Role:** You are the Carja — a Product Engineer that orchestrates the full development lifecycle.
 
 > This is the full reference. The root `AGENTS.md` is what every session loads: the framework block (generated from `.agents/AGENTS.md` and the inline rules) and the project card. Read this file when you need folder purposes, the complete workflow/skill/persona registries, or the reasoning behind a rule.
 
@@ -20,10 +20,10 @@ your-project/
 │   ├── skills/                    # Atomic capabilities that EXECUTE discrete actions
 │   ├── personas/                  # Judgment partners that embody ways of THINKING
 │   ├── references/                # On-demand reference docs (not skills)
-│   ├── hooks/                     # Git + Claude Code hooks that enforce the laws (wired by `conductor install-hooks`)
-│   ├── sandbox/                   # Sandbox profile for `conductor loop` (sandbox: cli-native)
-│   └── tests/                     # Framework self-test (check-conductor.sh)
-├── conductor/                     # The Dashboard — project state (your collaborative workspace)
+│   ├── hooks/                     # Git + Claude Code hooks that enforce the laws (wired by `carja install-hooks`)
+│   ├── sandbox/                   # Sandbox profile for `carja loop` (sandbox: cli-native)
+│   └── tests/                     # Framework self-test (check-carja.sh)
+├── carja/                     # The Dashboard — project state (your collaborative workspace)
 │   ├── 0-compass/                 # North Star & Ship Log
 │   ├── 1-workbench/               # Active work area
 │   ├── 2-backlog/                 # Queue for ready work
@@ -39,7 +39,7 @@ your-project/
 │   │   └── meta/                    # Decision Log, Glossary
 │   ├── 5-templates/               # Standard structures for creating artifacts
 │   └── 6-archive/                 # Completed work
-├── conductor.config.json          # Project settings: `verify` and `eval` commands, the `loop` block, skill registry URL
+├── carja.config.json          # Project settings: `verify` and `eval` commands, the `loop` block, skill registry URL
 ├── AGENTS.md                      # The one instruction file every harness loads: framework block (generated) + project card + your notes
 ├── .claude/commands/, .claude/skills/  # Generated Claude Code shims for workflows, CLI commands and skills
 └── CHANGELOG.md                   # Framework version history for this install
@@ -96,13 +96,13 @@ Where completed work goes — `completed-implementations/` and `completed-projec
 We don't update status fields. We move folders. `2-backlog/` = queued, `1-workbench/` = active, `6-archive/` = done.
 
 ### Context First. Plan Second. Build Third.
-Never rush to a solution. Read `conductor/4-context/` and `conductor/3-product-areas/` before acting. See `.agents/rules/prime-directive.md`.
+Never rush to a solution. Read `carja/4-context/` and `carja/3-product-areas/` before acting. See `.agents/rules/prime-directive.md`.
 
 ### Verification Iron Law
 No completion claims without fresh verification evidence. Applies to every workflow and skill, globally. See `.agents/rules/verification-iron-law.md`.
 
 ### Live State Law
-`conductor/` is history. MR, pipeline, deploy and branch status are live: the human changes them outside the conversation. Check them when you state them (`conductor status --live`, which runs the project's `deployCheck`), or say "not checked" and ask. See `.agents/rules/live-state-law.md`.
+`carja/` is history. MR, pipeline, deploy and branch status are live: the human changes them outside the conversation. Check them when you state them (`carja status --live`, which runs the project's `deployCheck`), or say "not checked" and ask. See `.agents/rules/live-state-law.md`.
 
 ### Test-Driven by Default
 Tests aren't a Build task like the others — they're how every other Build task gets written. There are three layers, and they don't overlap:
@@ -116,17 +116,17 @@ Tests aren't a Build task like the others — they're how every other Build task
 The middle layer is a `rules/` file, not a skill you have to remember to reach for — see `.agents/rules/test-driven-law.md`. It's as non-negotiable as the Verification Iron Law, by design.
 
 ### Eval-Driven Law (for the apps you build)
-Tests verify the **deterministic** parts; **evals** verify the **non-deterministic** LLM-output surface of the app you're building. If a feature calls an LLM provider, a passing unit test is not enough — it needs an evalset. Enforced in two stages, mirroring TDD + Verification: `pre-commit` gates **presence** (provider-calling code staged without an eval — an `evals/` file or `*.eval.*` — is blocked, like TDD blocks impl-without-test), and `pre-push` gates **passing** (if the repo has evalsets, the configured `eval` command must pass — set `"eval"` in `conductor.config.json`). The gates are independent; waiving one (`CONDUCTOR_NO_EVAL` / `CONDUCTOR_SKIP_EVAL`, both logged) never skips the other. The *how* — three grading modes (rubric/LM-judge, property/assertion, reference) — lives in the on-demand `skills/writing-evals/` skill, loaded by Build when a task touches LLM-feature code. It is **not** an always-on rule: evals matter only to LLM-feature projects, so the enforcement is the (silent-when-irrelevant) hook, not static-context prose. Design: [Eval-Driven-Law](https://github.com/charlus/conductor-framework/blob/master/docs/roadmap/Eval-Driven-Law.md).
+Tests verify the **deterministic** parts; **evals** verify the **non-deterministic** LLM-output surface of the app you're building. If a feature calls an LLM provider, a passing unit test is not enough — it needs an evalset. Enforced in two stages, mirroring TDD + Verification: `pre-commit` gates **presence** (provider-calling code staged without an eval — an `evals/` file or `*.eval.*` — is blocked, like TDD blocks impl-without-test), and `pre-push` gates **passing** (if the repo has evalsets, the configured `eval` command must pass — set `"eval"` in `carja.config.json`). The gates are independent; waiving one (`CARJA_NO_EVAL` / `CARJA_SKIP_EVAL`, both logged) never skips the other. The *how* — three grading modes (rubric/LM-judge, property/assertion, reference) — lives in the on-demand `skills/writing-evals/` skill, loaded by Build when a task touches LLM-feature code. It is **not** an always-on rule: evals matter only to LLM-feature projects, so the enforcement is the (silent-when-irrelevant) hook, not static-context prose. Design: [Eval-Driven-Law](https://github.com/charlus/carja/blob/master/docs/roadmap/Eval-Driven-Law.md).
 
 ### The ship-contract (deterministic + semantic)
 A change ships only if it satisfies the project's **ship-contract**, which has two complementary halves:
-- **Deterministic half** — facts a command decides, enforced by git hooks/CI: the **Test-Driven Law** (a test exists), the **Eval-Driven Law** (an eval exists and passes for LLM features), the **Goodhart boundary** (no test deleted, skipped or stripped of assertions), **protected paths** (`.agents/hooks/`, `.agents/rules/`, `.agents/sandbox/` and the reviewer brief are not edited by the change they judge), and any architecture-checklist item that carries a `check:` shell command. Each gate has one logged waiver (`CONDUCTOR_NO_BOUNDARY`, `CONDUCTOR_NO_PROTECTED`, …) and never a silent one. `conductor install-hooks` wires them, in the nested code repositories of an outer layout too; `conductor status` shows whether they are armed, per repository. Two opt-in Claude Code `PreToolUse` hooks act earlier: `pretooluse-no-bypass.sh` denies commands that skip the git hooks, and `pretooluse-fact-gate.sh` asks for the facts before a first edit or a destructive command. Details: `.agents/hooks/README.md`.
+- **Deterministic half** — facts a command decides, enforced by git hooks/CI: the **Test-Driven Law** (a test exists), the **Eval-Driven Law** (an eval exists and passes for LLM features), the **Goodhart boundary** (no test deleted, skipped or stripped of assertions), **protected paths** (`.agents/hooks/`, `.agents/rules/`, `.agents/sandbox/` and the reviewer brief are not edited by the change they judge), and any architecture-checklist item that carries a `check:` shell command. Each gate has one logged waiver (`CARJA_NO_BOUNDARY`, `CARJA_NO_PROTECTED`, …) and never a silent one. `carja install-hooks` wires them, in the nested code repositories of an outer layout too; `carja status` shows whether they are armed, per repository. Two opt-in Claude Code `PreToolUse` hooks act earlier: `pretooluse-no-bypass.sh` denies commands that skip the git hooks, and `pretooluse-fact-gate.sh` asks for the facts before a first edit or a destructive command. Details: `.agents/hooks/README.md`.
 - **Semantic half** — judgments only a reader can make, enforced by the **Checker** (`workflows/loop-checker.md`) and `independent-review`: does the diff honor the intended architecture and boundaries in spirit.
 
-The bridge between them is `conductor/0-compass/architecture-checklist.md` (`skills/architecture-checklist/`): `technical-vision`/`carve` distill each enforceable architecture decision into a checkable item — deterministic (a `check:`) where grep-able, semantic otherwise — and the Checker verifies the diff against every item, citing any it fails. This turns "follow the architecture" from a vibe into a contract, the same way the hooks turned the two Laws from prose into code.
+The bridge between them is `carja/0-compass/architecture-checklist.md` (`skills/architecture-checklist/`): `technical-vision`/`carve` distill each enforceable architecture decision into a checkable item — deterministic (a `check:`) where grep-able, semantic otherwise — and the Checker verifies the diff against every item, citing any it fails. This turns "follow the architecture" from a vibe into a contract, the same way the hooks turned the two Laws from prose into code.
 
 ### Naming Convention: kebab-case
-All framework files use **kebab-case**: workflows (`grand-prd.md`, `quick-path.md`), skills (`code-review/`, `task-tracker/`), personas (`product-manager.md`, `conductor-assistant.md`), `conductor/` folders and files alike. `conductor upgrade` auto-renames older Title-Case installs.
+All framework files use **kebab-case**: workflows (`grand-prd.md`, `quick-path.md`), skills (`code-review/`, `task-tracker/`), personas (`product-manager.md`, `carja-assistant.md`), `carja/` folders and files alike. `carja upgrade` auto-renames older Title-Case installs.
 
 ---
 
@@ -164,7 +164,7 @@ task-backlog.md → Do it → ship-log.md
 | "Storyboard", "Shape the experience" | Experience Design | → `workflows/storyboard.md` |
 | "Grand PRD", "Create PRD" | Blueprint | → `workflows/grand-prd.md` → `ux-ui-design-brief.md` → `technical-vision.md` |
 | "Carve", "Break it down" | Slicing | → `workflows/carve.md` |
-| "I inherited this codebase", "Onboard this existing product", "What is this thing" | Brownfield Onboarding | → `workflows/survey.md` (facts from `conductor survey`, the why from the human) |
+| "I inherited this codebase", "Onboard this existing product", "What is this thing" | Brownfield Onboarding | → `workflows/survey.md` (facts from `carja survey`, the why from the human) |
 | "Deepen", "Improve codebase architecture", "Find shallow modules", "Reshape for agents" | Brownfield Architecture | → `workflows/deepen.md` (Code Archaeologist; the brownfield counterpart to `technical-vision`) |
 | "Spec it", "Write the spec" | Specification | → `workflows/spec-it.md` |
 | "Build it", "Let's code" | Execution | → `workflows/build.md` |
@@ -172,15 +172,15 @@ task-backlog.md → Do it → ship-log.md
 | "Quick path", "Just build this" | Fast Track | → `workflows/quick-path.md` (skips discovery) |
 | "Let's reflect", "Retro" | Learning | → `workflows/retrospective.md` |
 | "Loop", "Unattended", "Autonomous", "Loop-ready" | Autonomous Loop | → `workflows/unattended-loop.md` |
-| "Merge the loop's MRs", "/merge-stack <project>", "Guide me through the loop report" | Merge Stack | → `workflows/merge-stack.md` (reads `conductor/1-workbench/loop-report-<project>.md`, checks each MR live, walks the owner through the merges and the manual steps; never merges itself) |
-| "Update the project card", "Refresh AGENTS.md" | Project card | → `workflows/agents-md.md` (also when `conductor status` says the card is a draft or stale) |
+| "Merge the loop's MRs", "/merge-stack <project>", "Guide me through the loop report" | Merge Stack | → `workflows/merge-stack.md` (reads `carja/1-workbench/loop-report-<project>.md`, checks each MR live, walks the owner through the merges and the manual steps; never merges itself) |
+| "Update the project card", "Refresh AGENTS.md" | Project card | → `workflows/agents-md.md` (also when `carja status` says the card is a draft or stale) |
 | "Brain dump", "Refine my ideas" | Skill | → `skills/brain-dump-to-epics/` |
 | "CTO mode", "Designer mode", "PM mode", etc. | Thinking Partner | → load matching persona from `personas/` |
-| "How does this framework work?" | Navigation | → load `conductor-assistant` persona |
-| "Inbox: X", "Add to inbox: X" | Capture | → `conductor inbox add "X"`, else append verbatim to `conductor/1-workbench/inbox.md`, no workflow |
-| "Scratchpad: X" | Capture | → append verbatim to `conductor/1-workbench/scratchpad.md`, no workflow |
-| "What's on our plate", "status" | Status | → `conductor status`; show its output verbatim. `--live` for MR or deploy status |
-| Small fix, bug, quick task (already well-scoped) | Task | → add to `conductor/2-backlog/task-backlog.md` |
+| "How does this framework work?" | Navigation | → load `carja-assistant` persona |
+| "Inbox: X", "Add to inbox: X" | Capture | → `carja inbox add "X"`, else append verbatim to `carja/1-workbench/inbox.md`, no workflow |
+| "Scratchpad: X" | Capture | → append verbatim to `carja/1-workbench/scratchpad.md`, no workflow |
+| "What's on our plate", "status" | Status | → `carja status`; show its output verbatim. `--live` for MR or deploy status |
+| Small fix, bug, quick task (already well-scoped) | Task | → add to `carja/2-backlog/task-backlog.md` |
 
 **Not sure what you need?**
 - *"I'm starting a brand new app"* or *"a major new feature area"* → **Genesis**. New problem space = needs discovery.
@@ -197,11 +197,11 @@ Some platforms this framework runs on (Claude Code, Antigravity 2.0) have no fil
 
 The convention:
 
-- **`Inbox: <thought>`** or **`Add to inbox: <thought>`** → append `<thought>` verbatim as a new bullet in `conductor/1-workbench/inbox.md`
-- **`Scratchpad: <thought>`** → same, into `conductor/1-workbench/scratchpad.md`
+- **`Inbox: <thought>`** or **`Add to inbox: <thought>`** → append `<thought>` verbatim as a new bullet in `carja/1-workbench/inbox.md`
+- **`Scratchpad: <thought>`** → same, into `carja/1-workbench/scratchpad.md`
 - Multiple items in one message (one per line, or semicolon-separated) → each becomes its own bullet
 
-Prefer the CLI when it is available — `conductor inbox add "<thought>"`, or the generated `/inbox` slash command. A command cannot be forgotten or reworded the way a prose rule can; the chat convention above is the fallback for platforms without the CLI on PATH.
+Prefer the CLI when it is available — `carja inbox add "<thought>"`, or the generated `/inbox` slash command. A command cannot be forgotten or reworded the way a prose rule can; the chat convention above is the fallback for platforms without the CLI on PATH.
 
 **Rules, deliberately narrow:**
 1. No workflow triggers. No discussion. No clarifying questions.
@@ -214,35 +214,35 @@ Mechanics live in `.agents/skills/context-engineering/SKILL.md`.
 
 ---
 
-## Human Surfaces (reading and writing `conductor/` from a terminal)
+## Human Surfaces (reading and writing `carja/` from a terminal)
 
-`conductor help <command>` lists every option and the settings a command reads; `conductor` on its own, in a project, names the next command. When the human asks how to run something, answer with that command.
+`carja help <command>` lists every option and the settings a command reads; `carja` on its own, in a project, names the next command. When the human asks how to run something, answer with that command.
 
-`conductor/` is one source of truth with several renderers. The files stay markdown — that is what makes the autonomous loop, the evidence ledger and PR review work — and these commands are projections of them for a human working from a CLI, where the IDE's file tree and rendered preview are gone.
+`carja/` is one source of truth with several renderers. The files stay markdown — that is what makes the autonomous loop, the evidence ledger and PR review work — and these commands are projections of them for a human working from a CLI, where the IDE's file tree and rendered preview are gone.
 
 | Command | What it is for |
 |---|---|
-| `conductor status` | The daily question, answered in one screen: inbox depth, open tasks per priority, the work queue in the order the loop would drain it, stale documents, loop state, and whether the gates are armed (push command, git hooks wired, opt-in agent guards, waivers in the last 30 days, and the local commits and pushes that skipped the hooks). Costs no tokens and no context — never ask an agent to summarise state instead. `--live` adds each recent MR's state from `glab`/`gh`, flags a ship-log entry a merge has contradicted, and runs `deployCheck` from `conductor.config.json` (none: ask the human). |
-| `conductor inbox add "…"` / `conductor inbox list` | Deterministic quick capture and read-back. |
-| `conductor review <file.md>` | Hands one document to the human for sign-off: rendered in the browser, text-anchored comments, **Approve** / **Request changes**. Exit `0` approved, `2` changes requested, `1` no verdict; stdout is JSON. Run it in the background and read the JSON when it exits. |
-| `conductor survey [dir] [--out <file>]` | Facts about an existing codebase: languages, coverage by area (untested first), entry points, routes, config keys, dependencies. Used by `workflows/survey.md`. An area marked untested is a place to check, not a proven gap. |
-| `conductor view [--open]` | Renders every document in `conductor/` into ONE self-contained HTML file at `conductor/.views/index.html`: rendered tables, search across all documents, per-document outlines, and **backlinks** — which documents reference this one. Read loop: `conductor view`, then refresh the browser tab. |
+| `carja status` | The daily question, answered in one screen: inbox depth, open tasks per priority, the work queue in the order the loop would drain it, stale documents, loop state, and whether the gates are armed (push command, git hooks wired, opt-in agent guards, waivers in the last 30 days, and the local commits and pushes that skipped the hooks). Costs no tokens and no context — never ask an agent to summarise state instead. `--live` adds each recent MR's state from `glab`/`gh`, flags a ship-log entry a merge has contradicted, and runs `deployCheck` from `carja.config.json` (none: ask the human). |
+| `carja inbox add "…"` / `carja inbox list` | Deterministic quick capture and read-back. |
+| `carja review <file.md>` | Hands one document to the human for sign-off: rendered in the browser, text-anchored comments, **Approve** / **Request changes**. Exit `0` approved, `2` changes requested, `1` no verdict; stdout is JSON. Run it in the background and read the JSON when it exits. |
+| `carja survey [dir] [--out <file>]` | Facts about an existing codebase: languages, coverage by area (untested first), entry points, routes, config keys, dependencies. Used by `workflows/survey.md`. An area marked untested is a place to check, not a proven gap. |
+| `carja view [--open]` | Renders every document in `carja/` into ONE self-contained HTML file at `carja/.views/index.html`: rendered tables, search across all documents, per-document outlines, and **backlinks** — which documents reference this one. Read loop: `carja view`, then refresh the browser tab. |
 
 The other commands, for setup, gates and measurement:
 
 | Command | What it is for |
 |---|---|
-| `conductor init` / `conductor upgrade` | Install the framework / move an install to the latest version (replaces `.agents/`, never touches your `conductor/` knowledge; backs up first) |
-| `conductor install-hooks` | Wire the git hooks in `.agents/hooks/` (TDD and eval presence, Goodhart boundary, protected paths on commit; verify and evals on push) |
-| `conductor verify [--set <cmd>]` | Show or set the command `git push` must pass |
-| `conductor evidence run\|check\|list` | Run the verify command and record the result against the exact working tree; `pre-push` and the loop driver accept fresh evidence instead of re-running, and fails a run that changed files while it ran (`--stable-tree`) |
-| `conductor review-log append\|summary` | Record review findings and how each was handled, in 13 fixed classes. A class dismissed more than half the time is a rubric defect |
-| `conductor context-bill` | What the framework costs every session before an agent reads project code (always-on vs on-demand bytes) |
-| `conductor agents-md facts\|write\|check` | The project card in `AGENTS.md`: print the facts the code states, refresh them in the card, check the card (exit 0 = complete and current, then stamped) |
-| `conductor trust-verify` | Record your consent to this repo's verify command. The opt-in Claude Code Stop hook runs it only after that, because the command comes from a file anyone can edit |
-| `conductor loop` | The unattended loop driver. See *Running the loop* below and `conductor loop --help` |
+| `carja init` / `carja upgrade` | Install the framework / move an install to the latest version (replaces `.agents/`, never touches your `carja/` knowledge; backs up first) |
+| `carja install-hooks` | Wire the git hooks in `.agents/hooks/` (TDD and eval presence, Goodhart boundary, protected paths on commit; verify and evals on push) |
+| `carja verify [--set <cmd>]` | Show or set the command `git push` must pass |
+| `carja evidence run\|check\|list` | Run the verify command and record the result against the exact working tree; `pre-push` and the loop driver accept fresh evidence instead of re-running, and fails a run that changed files while it ran (`--stable-tree`) |
+| `carja review-log append\|summary` | Record review findings and how each was handled, in 13 fixed classes. A class dismissed more than half the time is a rubric defect |
+| `carja context-bill` | What the framework costs every session before an agent reads project code (always-on vs on-demand bytes) |
+| `carja agents-md facts\|write\|check` | The project card in `AGENTS.md`: print the facts the code states, refresh them in the card, check the card (exit 0 = complete and current, then stamped) |
+| `carja trust-verify` | Record your consent to this repo's verify command. The opt-in Claude Code Stop hook runs it only after that, because the command comes from a file anyone can edit |
+| `carja loop` | The unattended loop driver. See *Running the loop* below and `carja loop --help` |
 
-Three rules for `conductor view`:
+Three rules for `carja view`:
 
 1. **The output is derived.** It is written to a gitignored folder and must never be committed or hand-edited. To change what it shows, change the markdown it is generated from.
 2. **It is one file on purpose.** The page is opened over `file://`, where the browser blocks runtime loading, so nav, search index and every rendered document are stamped in at generation time. One file is also one bookmark — there is no "which file do I open next".
@@ -250,25 +250,25 @@ Three rules for `conductor view`:
 
 ### Claude Code slash commands
 
-`init`/`upgrade` generate `.claude/commands/` shims of two kinds. Do not hand-edit either — change the source and re-run `conductor upgrade` to regenerate them.
+`init`/`upgrade` generate `.claude/commands/` shims of two kinds. Do not hand-edit either — change the source and re-run `carja upgrade` to regenerate them.
 
-**Workflow shims** — one per Conductor workflow (`/build`, `/carve`, `/spec-it`, `/ship`, …). Each loads and runs the matching `.agents/workflows/<name>.md`, so the workflow file stays the single source of truth.
+**Workflow shims** — one per Carja workflow (`/build`, `/carve`, `/spec-it`, `/ship`, …). Each loads and runs the matching `.agents/workflows/<name>.md`, so the workflow file stays the single source of truth.
 
-**CLI shims** — these front a `conductor` command rather than a workflow, because capture and status must not depend on the model remembering a prose rule:
+**CLI shims** — these front a `carja` command rather than a workflow, because capture and status must not depend on the model remembering a prose rule:
 
 | Command | Runs | For |
 |---|---|---|
-| `/status` | `conductor status` | Inbox depth, backlog by priority, what's next, loop state — one screen |
-| `/inbox` | `conductor inbox add "…"` | Capture a thought verbatim. No workflow, no triage |
-| `/view` | `conductor view --open` | Every `conductor/` document rendered into one HTML page — tables, search, backlinks |
-| `/verify` | `conductor verify` | Show or set the command `git push` must pass (the push gate) |
+| `/status` | `carja status` | Inbox depth, backlog by priority, what's next, loop state — one screen |
+| `/inbox` | `carja inbox add "…"` | Capture a thought verbatim. No workflow, no triage |
+| `/view` | `carja view --open` | Every `carja/` document rendered into one HTML page — tables, search, backlinks |
+| `/verify` | `carja verify` | Show or set the command `git push` must pass (the push gate) |
 
 **Skill shims:** `init`/`upgrade` also generate one `.claude/skills/<name>/SKILL.md` per skill in `.agents/skills/`, so Claude Code can find and load each skill by its description (`/handoff`, for example). Each shim redirects to the real `.agents/skills/<name>/SKILL.md`. A skill of your own in `.claude/skills/` is never overwritten, and shims for removed skills are deleted. Do not hand-edit the shims.
 
 `/view` prints a `file://` URL; use the one the command emits verbatim. It is resolved for the platform your **browser** runs on, which is not always the one the agent runs on — under WSL a hand-made `file:///home/...` link looks right and silently does nothing.
-<!-- conductor:managed:end -->
+<!-- carja:managed:end -->
 
-<!-- Add your project-specific instructions below this line; they are preserved across `conductor upgrade`. -->
+<!-- Add your project-specific instructions below this line; they are preserved across `carja upgrade`. -->
 
 ---
 
@@ -300,7 +300,7 @@ Three rules for `conductor view`:
 ### Brownfield & Maintenance
 | Workflow | Trigger | Produces | Next |
 |---|---|---|---|
-| **Survey** | "I inherited this codebase", "Onboard this existing product" | `conductor survey` facts, then `3-product-areas/`, `4-context/technical/` and `0-compass/` from an interview; unestablished claims marked `TBD` | Grand PRD / Deepen |
+| **Survey** | "I inherited this codebase", "Onboard this existing product" | `carja survey` facts, then `3-product-areas/`, `4-context/technical/` and `0-compass/` from an interview; unestablished claims marked `TBD` | Grand PRD / Deepen |
 | **Deepen** | "Deepen", "Improve codebase architecture", "Find shallow modules" | Ranked deepening report; characterization-test-first + Strangler-Fig plan for reshaping shallow/scattered modules into deep ones | Carve / Build |
 
 > **Deepen** is the brownfield counterpart to **Technical Vision**: Technical Vision designs deep modules *before* code exists; Deepen finds and safely reshapes shallow ones *after*. It's driven by the **Code Archaeologist** persona and pins behavior with a characterization test before any structure moves.
@@ -312,47 +312,47 @@ Three rules for `conductor view`:
 | **Agentic-Flow** | Any workflow designing human-AI interaction | Designing agent-facing UX |
 | **Unattended-Loop** | Headless orchestrator | Recursively executes any and all lifecycle phases unattended |
 | **Loop-Checker** | Unattended-Loop (independent Checker process) | Skeptical verification of the Maker's work; verdict via `checker-verdict.json`, fail-safe reject |
-| **Agents-MD** | After `upgrade`, or when `conductor status` flags the card | Keeps the project card in the root `AGENTS.md` true: facts from `conductor agents-md write`, summaries by the agent, `conductor agents-md check` as the gate |
+| **Agents-MD** | After `upgrade`, or when `carja status` flags the card | Keeps the project card in the root `AGENTS.md` true: facts from `carja agents-md write`, summaries by the agent, `carja agents-md check` as the gate |
 
 > **Interview & drafting primitives:** Genesis, Storyboard, Grand PRD, and the UX/UI Design Brief supply their *agenda* and load the `grilling` + `collaborative-drafting` skills for the *how*. Spec-It synthesizes from blueprint context rather than re-interviewing; Quick-Path, Retrospective, Technical Vision, and Carve reference the primitives too.
 
 ### The Four Loop Types
 
-A maturity ladder for autonomy (Anthropic's *Loop Engineering* taxonomy), and the Conductor primitive that serves each rung. Climb it as the work earns it — a single well-scoped prompt still handles most daily work.
+A maturity ladder for autonomy (Anthropic's *Loop Engineering* taxonomy), and the Carja primitive that serves each rung. Climb it as the work earns it — a single well-scoped prompt still handles most daily work.
 
-| # | Loop | When | Conductor primitive |
+| # | Loop | When | Carja primitive |
 |---|------|------|---------------------|
-| 1 | **Turn-based** | Exploring, deciding, work you want to see step by step | You prompt; the agent self-checks. Conductor makes the check **deterministic** — TDD `pre-commit` + verify `pre-push` **git hooks**, not just a `SKILL.md`. This is one rung *stronger* than "encode verification in a prompt": a hook is code the agent cannot reason around. |
-| 2 | **Goal-based** | A measurable exit condition (tests green, zero failing checks) | `conductor loop` — the deterministic driver *is* a goal loop: `goal_description` + a beat cap (the lower of `iterations.max_allowed` and `budget.max_beats`) + wall-clock budget + Evidence Rule (verify exit code) + a multi-vote adversarial **Checker** (the "evaluator") in a fresh process. |
-| 3 | **Time-based** | Recurring work, same task, changing inputs | **Ignition contract** — drive `conductor loop --goal "…"` from Claude Code's native `/schedule` or host `cron`. Conductor does **not** ship its own scheduler; it rides the platform's. |
-| 4 | **Proactive** | Event-driven, run unattended until every item is handled | `conductor loop --event payload.json` (a webhook/CI shim writes the payload), or `conductor loop --from-conductor` to drain the inbox and backlog, + autonomy **L3** + worktree isolation + `judge-panel` (explore N solutions, judge adversarially) + PR-gated merge. |
+| 1 | **Turn-based** | Exploring, deciding, work you want to see step by step | You prompt; the agent self-checks. Carja makes the check **deterministic** — TDD `pre-commit` + verify `pre-push` **git hooks**, not just a `SKILL.md`. This is one rung *stronger* than "encode verification in a prompt": a hook is code the agent cannot reason around. |
+| 2 | **Goal-based** | A measurable exit condition (tests green, zero failing checks) | `carja loop` — the deterministic driver *is* a goal loop: `goal_description` + a beat cap (the lower of `iterations.max_allowed` and `budget.max_beats`) + wall-clock budget + Evidence Rule (verify exit code) + a multi-vote adversarial **Checker** (the "evaluator") in a fresh process. |
+| 3 | **Time-based** | Recurring work, same task, changing inputs | **Ignition contract** — drive `carja loop --goal "…"` from Claude Code's native `/schedule` or host `cron`. Carja does **not** ship its own scheduler; it rides the platform's. |
+| 4 | **Proactive** | Event-driven, run unattended until every item is handled | `carja loop --event payload.json` (a webhook/CI shim writes the payload), or `carja loop --from-carja` to drain the inbox and backlog, + autonomy **L3** + worktree isolation + `judge-panel` (explore N solutions, judge adversarially) + PR-gated merge. |
 
-> **The ignition contract (rungs 3–4).** A trigger seeds the run's goal but is **clamped to the operator's autonomy ceiling** in `loop-state.json` — a payload (which may come from an untrusted Slack/GitHub source) can *de-escalate* but never *escalate*. The seeded brief lands in `conductor/1-workbench/loop-trigger.md`; the deterministic driver still owns every guardrail. Design: [Loop-Engineering-Alignment](https://github.com/charlus/conductor-framework/blob/master/docs/roadmap/Loop-Engineering-Alignment.md).
+> **The ignition contract (rungs 3–4).** A trigger seeds the run's goal but is **clamped to the operator's autonomy ceiling** in `loop-state.json` — a payload (which may come from an untrusted Slack/GitHub source) can *de-escalate* but never *escalate*. The seeded brief lands in `carja/1-workbench/loop-trigger.md`; the deterministic driver still owns every guardrail. Design: [Loop-Engineering-Alignment](https://github.com/charlus/carja/blob/master/docs/roadmap/Loop-Engineering-Alignment.md).
 
 ### Running the loop
 
-Facts an agent needs when it works on, or inside, a `conductor loop` run. Full guide: [Running-The-Loop](https://github.com/charlus/conductor-framework/blob/master/docs/Running-The-Loop.md).
+Facts an agent needs when it works on, or inside, a `carja loop` run. Full guide: [Running-The-Loop](https://github.com/charlus/carja/blob/master/docs/Running-The-Loop.md).
 
-- **One repository, or the outer layout.** The loop works on the repository it starts in, in an isolated git worktree per goal or task. With `loop.code_dir` (an outer `conductor/` repo with the code nested inside), each item also gets a code worktree at `<code_dir>/` from the code repository's default branch: commit code there and Conductor documents in the outer worktree. It opens two MRs, code first. Any other gitignored nested repository stops it, unless `loop.allow_nested_repo` is set.
-- **Per-project settings** live in the `loop` block of `conductor.config.json`, read from the main checkout only: `setup` (run once per new worktree), `allowed_domains` (sandbox network), `forge` (`gh` / `glab`, default from the origin host), `require_ready`, `priorities`, `inbox`, `profile` (`quality` or `balanced`, set with `conductor loop profile`), `models` (one role's model over the profile, claude engine: `maker`, `maker_escalation`, `checker`, `spec`, `blueprint`, `ship`), `cost_aware` (only then does `budget.max_cost_usd` stop a run), `slices` (the projects whose carved slices are loop work), `blueprint` (the projects whose Blueprint, after Discovery, is loop work), `code_dir` (the nested code repository, in the outer layout), `blank_env` (provider API keys set empty in every beat; default the common ones, never the engine's own, `[]` turns it off).
-- **Task selection** (`--from-conductor`): open backlog items and inbox lines. Items marked `BLOCKED` or `NEEDS_DECISION` are never taken; with `require_ready`, only items given with `conductor loop take "<item>"` (kept in `.git/conductor-loop-ready.json`, so no tracked file changes) or tagged `loop-ready`. The lines indented under an item reach the agent as its details. An item whose `conductor/loop/<item>` branch is on the remote is claimed (in progress or in review) and skipped; nothing marks it in the file. Merged loop worktrees are removed on `git pull` (the `post-merge` hook) and at the start of a run.
+- **One repository, or the outer layout.** The loop works on the repository it starts in, in an isolated git worktree per goal or task. With `loop.code_dir` (an outer `carja/` repo with the code nested inside), each item also gets a code worktree at `<code_dir>/` from the code repository's default branch: commit code there and Carja documents in the outer worktree. It opens two MRs, code first. Any other gitignored nested repository stops it, unless `loop.allow_nested_repo` is set.
+- **Per-project settings** live in the `loop` block of `carja.config.json`, read from the main checkout only: `setup` (run once per new worktree), `allowed_domains` (sandbox network), `forge` (`gh` / `glab`, default from the origin host), `require_ready`, `priorities`, `inbox`, `profile` (`quality` or `balanced`, set with `carja loop profile`), `models` (one role's model over the profile, claude engine: `maker`, `maker_escalation`, `checker`, `spec`, `blueprint`, `ship`), `cost_aware` (only then does `budget.max_cost_usd` stop a run), `slices` (the projects whose carved slices are loop work), `blueprint` (the projects whose Blueprint, after Discovery, is loop work), `code_dir` (the nested code repository, in the outer layout), `blank_env` (provider API keys set empty in every beat; default the common ones, never the engine's own, `[]` turns it off).
+- **Task selection** (`--from-carja`): open backlog items and inbox lines. Items marked `BLOCKED` or `NEEDS_DECISION` are never taken; with `require_ready`, only items given with `carja loop take "<item>"` (kept in `.git/carja-loop-ready.json`, so no tracked file changes) or tagged `loop-ready`. The lines indented under an item reach the agent as its details. An item whose `carja/loop/<item>` branch is on the remote is claimed (in progress or in review) and skipped; nothing marks it in the file. Merged loop worktrees are removed on `git pull` (the `post-merge` hook) and at the start of a run.
 - **State.** The driver owns `loop-state.json` and copies the live one into each worktree before every beat; do not edit it, and never commit it, `maker-signal.json` or `checker-verdict.json`. A run that starts after a finished one resets its beat counter, clock and status; an interrupted one resumes.
-- **One project per run, stacked.** `conductor loop <project>` builds that project only, after the owner's approved Technical Vision: the Carve, then every slice, each on the branch of the item below it, never the backlog or the inbox, without the `slices`/`blueprint` settings. A one-way question stops the run at that item. The owner merges the MRs in order at the end (`conductor/1-workbench/loop-report-<project>.md`); a closed MR is built again with everything above it, a changed one is kept and everything above it rebuilt. Its state and lock live in `.git/conductor-loop-logs/runs/<project>/`, so a second terminal in the same folder can build another project; the same project twice, or a project run beside a `--from-conductor` run, is refused. At the end, and on Ctrl+C, it removes each worktree it held that has no uncommitted change. A worktree a live run holds (`conductor-holder` in the worktree's git directory) and a loop branch with no commit of its own are never removed by another run's cleanup or the `post-merge` hook. The driver commits only in the worktree it expects, on a loop branch; otherwise the run stops as `halted_isolation` and commits nothing.
-- **Turning it on.** `conductor loop on <project>` writes these settings for a project after listing each change and asking once; `off` takes it out. When the human asks to turn the loop on, run it with `--dry-run`, show them the list, then run it with `--yes`.
+- **One project per run, stacked.** `carja loop <project>` builds that project only, after the owner's approved Technical Vision: the Carve, then every slice, each on the branch of the item below it, never the backlog or the inbox, without the `slices`/`blueprint` settings. A one-way question stops the run at that item. The owner merges the MRs in order at the end (`carja/1-workbench/loop-report-<project>.md`); a closed MR is built again with everything above it, a changed one is kept and everything above it rebuilt. Its state and lock live in `.git/carja-loop-logs/runs/<project>/`, so a second terminal in the same folder can build another project; the same project twice, or a project run beside a `--from-carja` run, is refused. At the end, and on Ctrl+C, it removes each worktree it held that has no uncommitted change. A worktree a live run holds (`carja-holder` in the worktree's git directory) and a loop branch with no commit of its own are never removed by another run's cleanup or the `post-merge` hook. The driver commits only in the worktree it expects, on a loop branch; otherwise the run stops as `halted_isolation` and commits nothing.
+- **Turning it on.** `carja loop on <project>` writes these settings for a project after listing each change and asking once; `off` takes it out. When the human asks to turn the loop on, run it with `--dry-run`, show them the list, then run it with `--yes`.
 - **Blueprint.** With `loop.blueprint`, a project after Discovery runs Grand PRD, UX/UI Brief, Technical Vision and Carve, each a fresh beat (the stage's workflow plus the `## Blueprint beat` section of `unattended-loop.md`) reviewed by a fresh Checker with its lens. One MR carries all four; merging it is the owner's sign-off, and the slices are built only after it.
-- **Questions.** A one-way door (cannot be undone cheaply, contradicts an earlier decision, changes running cost) is not decided alone: the beat writes one numbered round to `conductor/1-workbench/questions/<item>.md` and signals `{ "questions": true }`. A fresh Checker confirms each question, the item waits as `awaiting_answers`, and the next run resumes it once every `Answer:` holds an option number or `your pick`. `conductor status` lists the waiting rounds and how often the owner takes the recommendation.
+- **Questions.** A one-way door (cannot be undone cheaply, contradicts an earlier decision, changes running cost) is not decided alone: the beat writes one numbered round to `carja/1-workbench/questions/<item>.md` and signals `{ "questions": true }`. A fresh Checker confirms each question, the item waits as `awaiting_answers`, and the next run resumes it once every `Answer:` holds an option number or `your pick`. `carja status` lists the waiting rounds and how often the owner takes the recommendation.
 - **Blocked or rejected.** A Maker that cannot go on without a human writes `{ "escalate": true, "reason": "…" }` to `maker-signal.json`: the run ends as `escalated` and the reason goes to the inbox. After a rejection, the next beat's prompt carries the verify output and the Checker's reasons (the last 3 attempts), and after 2 rejections a beat uses `loop.models.maker_escalation` when it is set.
 - **Merge.** A PR/MR is opened only at L3 in the execution phase, in pair and swarm mode alike. Below that, branches are kept for human review.
 - **Slices.** With `loop.slices`, a project's lowest open slice runs Spec beat (`spec-it.md` plus the `## Spec beat` section of `unattended-loop.md`), a spec review by the Checker, Build until ship-ready, then Ship: one MR per slice.
 - **Ship before the MR.** At L3 a task's Ship beat runs `ship.md` Phases 1–5 in its worktree (the `## Ship beat` section of `unattended-loop.md` says what the driver does instead of Phases 4 and 6). The bookkeeping rides in the MR; the driver opens it with the body the Ship beat wrote.
-- **Decisions made alone.** The Maker logs each decision the spec did not settle in `conductor/1-workbench/rulings.md` (`- [YYYY-MM-DD HH:MM] <task id> · <decision> · why: … · if wrong: low|medium|high · …`). The PR lists every ruling on its branch, a `high` one goes to the inbox while the run continues, and the Checker reviews them against the spec.
-- **Before a run.** `conductor loop doctor [dir] [--beat]` checks the setup, the verify command in a fresh worktree, the sandbox profile and the forge login, and prints each fix.
-- **Following a run.** `conductor watch` (from the event log `.git/conductor-loop-logs/events.ndjson`): per project, the item and its place in the stack, the step in progress and since when, minutes per item, the expected end, a wait for the usage limit, the last stop in words, and each item's last recorded fact.
+- **Decisions made alone.** The Maker logs each decision the spec did not settle in `carja/1-workbench/rulings.md` (`- [YYYY-MM-DD HH:MM] <task id> · <decision> · why: … · if wrong: low|medium|high · …`). The PR lists every ruling on its branch, a `high` one goes to the inbox while the run continues, and the Checker reviews them against the spec.
+- **Before a run.** `carja loop doctor [dir] [--beat]` checks the setup, the verify command in a fresh worktree, the sandbox profile and the forge login, and prints each fix.
+- **Following a run.** `carja watch` (from the event log `.git/carja-loop-logs/events.ndjson`): per project, the item and its place in the stack, the step in progress and since when, minutes per item, the expected end, a wait for the usage limit, the last stop in words, and each item's last recorded fact.
 - **The usage limit.** A beat that hits the agent CLI's limit waits for the reset the CLI announces, then runs again, up to `loop.quota_max_wait_min` (default 330); beyond, or with no reset time, the run stops.
 - **Dependencies.** No beat reaches a package registry. After a Build or Ship beat the driver reads the manifests it changed (npm, PyPI, Go, Cargo, Maven/Gradle, RubyGems, Composer, NuGet): a dependency the Technical Vision names is checked on its registry and in OSV (exists, pinned, at least `loop.dependency_min_age_days` old, not yanked, no known vulnerability) and installed with `loop.install`; any other is a question round; a failed check or an unreachable registry stops the item.
-- **Conflicts.** An MR that would conflict only in Conductor documents is not a stop: the loop takes what it lands on, keeps both sides, verifies again and names the documents in the report. A code conflict stops the item.
+- **Conflicts.** An MR that would conflict only in Carja documents is not a stop: the loop takes what it lands on, keeps both sides, verifies again and names the documents in the report. A code conflict stops the item.
 - **Merging.** `/merge-stack <project>` (`workflows/merge-stack.md`) walks the owner through the report's MRs in order, each checked live, with each item's Owner actions. The loop's messages, reports and waiting rounds are hidden from git, so the owner's folder stays clean.
-- **Evidence after a run.** The run's cost by role in `conductor status`, escalations in `conductor/1-workbench/loop-messages.md` (not tracked by git; `conductor status` names the newest), the trail in `0-compass/ship-log.md`, and each beat's full agent output in `.git/conductor-loop-logs/`.
+- **Evidence after a run.** The run's cost by role in `carja status`, escalations in `carja/1-workbench/loop-messages.md` (not tracked by git; `carja status` names the newest), the trail in `0-compass/ship-log.md`, and each beat's full agent output in `.git/carja-loop-logs/`.
 
 ---
 
@@ -397,7 +397,7 @@ The reusable "how" that discovery/blueprint/spec workflows load instead of re-im
 | `behavior-validator` | Source-blind, black-box validation of the *running* artifact with adversarial anti-cheat probes — the dynamic complement to `verification-gate` (author-run) and `independent-review` (static). Used at Ship / loop execution when a change has a runtime surface |
 | `context-updater` | Updates Product Areas + Context after Build/Retrospective |
 | `trace-documentation` | Links backlog items to the code that implemented them |
-| `context-engineering` | Reading/writing `conductor/` state and the task backlog correctly |
+| `context-engineering` | Reading/writing `carja/` state and the task backlog correctly |
 | `architecture-checklist` | Turns enforceable architecture decisions into checkable items in `0-compass/architecture-checklist.md` — a `check:` command where grep-able, semantic otherwise — that the Checker verifies every diff against |
 | `writing-evals` | The how of the Eval-Driven Law: evalsets for LLM-output features, three grading modes (rubric/LM-judge, property, reference) |
 
@@ -406,9 +406,9 @@ The reusable "how" that discovery/blueprint/spec workflows load instead of re-im
 |---|---|
 | `systematic-debugging` | 4-phase root-cause debugging — build a command that goes red on *this* bug first, then rank falsifiable hypotheses |
 | `frontend-design` | Design thinking for web UI |
-| `design-system` | Create, extract or maintain `DESIGN.md` at the code repository root (`conductor design migrate` moves an old `4-context/design/` folder into it) |
+| `design-system` | Create, extract or maintain `DESIGN.md` at the code repository root (`carja design migrate` moves an old `4-context/design/` folder into it) |
 | `i18n-localization` | Internationalization and translation management |
-| `git-worktrees` | The item's own hidden worktree (`conductor work <item>`): the owner's folder stays on its default branch, merged worktrees go on `git pull` |
+| `git-worktrees` | The item's own hidden worktree (`carja work <item>`): the owner's folder stays on its default branch, merged worktrees go on `git pull` |
 | `architecture-patterns` | Architectural trade-off analysis and ADRs |
 | `lint-and-validate` | Static analysis after every modification |
 | `subagent-isolation` | Scout pattern — delegate read-heavy discovery, parallelize, isolate mutating work in worktrees |
@@ -430,7 +430,7 @@ The reusable "how" that discovery/blueprint/spec workflows load instead of re-im
 | `ux-reviewer` | UX feedback against `DESIGN.md`; the visual review of rendered screens, run only on request |
 | `system-janitor` | Scans for misplaced files, recommends reorganization |
 | `handoff` | Compact the conversation into a self-contained handoff doc before leaving the ~120k-token "smart zone"; used to pass work between sessions and loop iterations |
-| `skill-registry` | Manages `conductor add/remove/list/search` against your configured registry |
+| `skill-registry` | Manages `carja add/remove/list/search` against your configured registry |
 
 ### Reference Library
 Not skills — on-demand reference docs in `.agents/references/`. They carry advice or templates, not an owned workflow / tool boundary / evidence contract, so they were demoted out of the skill catalog. Read the relevant one when its topic comes up; a skill is for *doing*, a reference is for *looking up*.
@@ -457,9 +457,9 @@ Not skills — on-demand reference docs in `.agents/references/`. They carry adv
 | **Database Architect** | "Database mode", "Design the schema" | Schema design, query optimization, migrations |
 | **Performance Optimizer** | "Performance mode", "Make it faster" | Core Web Vitals, profiling, bundle size |
 | **Checker** | "Checker mode" | Independent skeptical audits, programmatic testing, anti-reward hacking |
-| **Conductor Assistant** | "How does this work?" | Framework navigation, workflow selection, process guidance |
+| **Carja Assistant** | "How does this work?" | Framework navigation, workflow selection, process guidance |
 
-**Domain personas load themselves.** `conductor personas [paths…]` maps the files a change touches to the Architect, Designer, Security Auditor, Database Architect and Performance Optimizer, and prints each one's Review Lens. Build loads them per task, the reviewer in Build, Ship and the loop Checker gets the Review Lens lines. A project changes the path rules under `personas` in `conductor.config.json` (`{"designer": {"extensions": [...], "words": [...]}}`, or `false` to switch one off).
+**Domain personas load themselves.** `carja personas [paths…]` maps the files a change touches to the Architect, Designer, Security Auditor, Database Architect and Performance Optimizer, and prints each one's Review Lens. Build loads them per task, the reviewer in Build, Ship and the loop Checker gets the Review Lens lines. A project changes the path rules under `personas` in `carja.config.json` (`{"designer": {"extensions": [...], "words": [...]}}`, or `false` to switch one off).
 
 ---
 
@@ -468,13 +468,13 @@ Not skills — on-demand reference docs in `.agents/references/`. They carry adv
 Beyond the skills bundled in `.agents/skills/`, more can be pulled from a registry you configure:
 
 ```bash
-conductor list [--remote]        # local or registry skills
-conductor search <query>         # search the registry
-conductor add <skill-name>       # install a skill
-conductor remove <skill-name>    # uninstall a skill
+carja list [--remote]        # local or registry skills
+carja search <query>         # search the registry
+carja add <skill-name>       # install a skill
+carja remove <skill-name>    # uninstall a skill
 ```
 
-Requires `conductor.config.json` at the project root pointing at your registry. `conductor init` runs tech-stack detection and suggests relevant skills to add automatically.
+Requires `carja.config.json` at the project root pointing at your registry. `carja init` runs tech-stack detection and suggests relevant skills to add automatically.
 
 ---
 
@@ -499,7 +499,7 @@ Good for: new products, major feature areas, high-velocity AI-assisted developme
 ## Self-Test
 
 ```bash
-bash .agents/tests/check-conductor.sh
+bash .agents/tests/check-carja.sh
 ```
 
 Validates structure, naming, and that no stale paths have crept back in.

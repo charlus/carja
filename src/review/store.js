@@ -14,16 +14,16 @@
 //
 // SAFETY NET, NOT MECHANISM. Every function here swallows its errors: losing
 // the queue costs the queue, but throwing would cost the review. The store
-// lives under CONDUCTOR_HOME, never in the repo — a queued comment is a
+// lives under CARJA_HOME, never in the repo — a queued comment is a
 // machine-local intermediate, not a document.
 
 import { readFile, appendFile, mkdir, rm } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { homedir } from "node:os";
 import { join, dirname } from "node:path";
+import { machineHome } from "../names.js";
 
 function storeRoot(home) {
-  return join(home || process.env.CONDUCTOR_HOME || join(homedir(), ".conductor"), "review");
+  return join(home || machineHome(process.env), "review");
 }
 
 /** One queue file per artifact, keyed by its absolute path. */

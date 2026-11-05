@@ -11,11 +11,11 @@ be better" — that is true of all code and has no answer.
 ## Your inputs, in this order
 
 1. **The definition of done.** The acceptance criteria from the spec, or
-   `goal_description` from `conductor/1-workbench/loop-state.json` for a loop beat.
+   `goal_description` from `carja/1-workbench/loop-state.json` for a loop beat.
    Walk it as a checklist and tick each item against the diff. **This is what the
    change is judged against.** Without it you cannot tell a defect from a wish — say
    so and stop rather than inventing a standard.
-2. **`conductor/0-compass/architecture-checklist.md`**, if it exists. Every item is
+2. **`carja/0-compass/architecture-checklist.md`**, if it exists. Every item is
    part of the definition of done. Run each item's `check:` command; read the diff for
    the semantic ones.
 3. **The diff.** `git diff <merge-base>...HEAD`. Read all of it before writing a
@@ -94,7 +94,7 @@ More instances of a class you already named are the same finding, not new scope.
 - Anything **already addressed** elsewhere in the diff you are reading.
 - Anything the **linter, formatter, or type checker** enforces. That is tooling's job,
   and duplicating it is noise.
-- **Process artefacts:** anything under `conductor/`, the ship-log, PR/MR bodies,
+- **Process artefacts:** anything under `carja/`, the ship-log, PR/MR bodies,
   handover notes, this review. They record how the work was done; they are not what
   ships. If one is broken badly enough to hide evidence you need, say so in one line.
 - **Test structure opinions:** "this assertion could be tighter", "these guards should

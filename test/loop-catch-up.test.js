@@ -124,7 +124,7 @@ test("an up-to-date checkout reports current", async () => {
 // run must name that one document, and only it, as missing.
 const MERGED = ["genesis/problem-solar-system.md", "genesis/world-transformation.md", "genesis/functional-animator.md", "storyboard/main-character.md", "storyboard/storyboard.md", "blueprint/grand-prd.md", "blueprint/ux-ui-design-brief.md"];
 
-test("conductor loop <project> sees what was merged on the remote since the last run", () => {
+test("carja loop <project> sees what was merged on the remote since the last run", () => {
   const base = mkdtempSync(join(tmpdir(), "catch-up-cli-"));
   try {
     const root = join(base, "app");
@@ -133,22 +133,22 @@ test("conductor loop <project> sees what was merged on the remote since the last
     mkdirSync(bin);
     writeFileSync(join(bin, "claude"), readFileSync(join(REPO, "test/fixtures/stub-engine/claude")), { mode: 0o755 });
     writeFileSync(join(bin, "gh"), '#!/bin/sh\n[ "$1" = auth ] && exit 0\n[ "$1" = pr ] && [ "$2" = list ] && exit 0\necho https://example.invalid/pr/1\n', { mode: 0o755 });
-    execFileSync("node", [join(REPO, "bin/conductor.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
+    execFileSync("node", [join(REPO, "bin/carja.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
     G(root, "init", "-q", "-b", "master");
     G(root, "config", "user.email", "t@t");
     G(root, "config", "user.name", "t");
     writeFileSync(join(root, "package.json"), '{ "name": "app", "type": "module", "scripts": { "test": "true" } }\n');
-    mkdirSync(join(root, "conductor/2-backlog/project-backlog/notes"), { recursive: true });
-    writeFileSync(join(root, "conductor/2-backlog/project-backlog/notes/README.md"), "# notes\n");
-    const cfg = JSON.parse(readFileSync(join(root, "conductor.config.json"), "utf8"));
+    mkdirSync(join(root, "carja/2-backlog/project-backlog/notes"), { recursive: true });
+    writeFileSync(join(root, "carja/2-backlog/project-backlog/notes/README.md"), "# notes\n");
+    const cfg = JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8"));
     cfg.verify = "true";
     cfg.loop = { forge: "gh" };
-    writeFileSync(join(root, "conductor.config.json"), JSON.stringify(cfg, null, 2));
-    const st = JSON.parse(readFileSync(join(root, "conductor/1-workbench/loop-state.json"), "utf8"));
+    writeFileSync(join(root, "carja.config.json"), JSON.stringify(cfg, null, 2));
+    const st = JSON.parse(readFileSync(join(root, "carja/1-workbench/loop-state.json"), "utf8"));
     Object.assign(st, { phase: "execution", autonomy_level: "L3", sandbox: "cli-native", platform: "claude", concurrency: 1 });
     st.budget = { max_beats: 30, max_wall_clock_min: 10 };
     st.iterations = { current: 0, max_allowed: 30 };
-    writeFileSync(join(root, "conductor/1-workbench/loop-state.json"), JSON.stringify(st, null, 2));
+    writeFileSync(join(root, "carja/1-workbench/loop-state.json"), JSON.stringify(st, null, 2));
     G(root, "add", "-A");
     G(root, "commit", "-qm", "init");
     G(base, "init", "-q", "--bare", "-b", "master", "origin.git");
@@ -160,7 +160,7 @@ test("conductor loop <project> sees what was merged on the remote since the last
     G(other, "config", "user.email", "t@t");
     G(other, "config", "user.name", "t");
     for (const rel of MERGED) {
-      const p = join(other, "conductor/2-backlog/project-backlog/notes", rel);
+      const p = join(other, "carja/2-backlog/project-backlog/notes", rel);
       mkdirSync(join(p, ".."), { recursive: true });
       writeFileSync(p, `# ${rel}\n\nnotes: writers keep notes.\n`);
     }
@@ -168,8 +168,8 @@ test("conductor loop <project> sees what was merged on the remote since the last
     G(other, "commit", "-qm", "Discovery and Blueprint");
     G(other, "push", "-q", "origin", "master");
 
-    const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, STUB_LOG_DIR: join(base, "log"), CONDUCTOR_HOME: join(base, "home") };
-    const r = spawnSync("node", [join(REPO, "bin/conductor.js"), "loop", "notes"], { cwd: root, encoding: "utf8", env, timeout: 120000 });
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, STUB_LOG_DIR: join(base, "log"), CARJA_HOME: join(base, "home") };
+    const r = spawnSync("node", [join(REPO, "bin/carja.js"), "loop", "notes"], { cwd: root, encoding: "utf8", env, timeout: 120000 });
     assert.match(r.stdout, /updated to origin\/master \(1 new commit\)/, r.stdout + r.stderr);
     assert.match(r.stdout + r.stderr, /does not have the Technical Vision yet/, "the merged Grand PRD and UX/UI Brief are seen");
     assert.equal(G(root, "rev-parse", "master"), G(root, "rev-parse", "origin/master"), "the owner's checkout is the merged master");

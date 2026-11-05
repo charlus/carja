@@ -14,7 +14,7 @@ import { checkShipEvidence, shipBeatSection } from "../src/loop/ship.js";
 import { renderAssignment } from "../src/loop/harvester.js";
 import { parseLoopConfig } from "../src/loop/config.js";
 
-const TEMPLATE = readFileSync(new URL("../templates/conductor/5-templates/carve-workflow/feature-spec.md", import.meta.url), "utf8");
+const TEMPLATE = readFileSync(new URL("../templates/carja/5-templates/carve-workflow/feature-spec.md", import.meta.url), "utf8");
 const FILLED = "# Feature Spec: Export CSV\n\n**Implementation:** 02-export-csv\n**Status:** Specced\n\n## Brief check\n\n- **C1 contradicts an earlier decision:** None found.\n- **C2 breaks existing users:** None found.\n- **C3 cost or duration mismatch:** None found.\n- **C4 missing data, access or rights:** None found.\n\n**Shared understanding:** Managers export their team's evaluations as CSV.\n\n## User stories\n- As a manager I can download a CSV.\n";
 
 test("a carved, untouched spec is blank; a written one is not", () => {
@@ -43,7 +43,7 @@ test("harvestSlices takes the lowest open slice of each opted-in project, and re
   assert.equal(items[0].spec_ready, true, "a spec on the default branch is the owner's: no spec stage");
   assert.equal(items[1].spec_ready, false);
   assert.equal(items[1].source.kind, "slice");
-  assert.equal(items[1].source.path, "conductor/2-backlog/project-backlog/billing/implementations/03-invoices");
+  assert.equal(items[1].source.path, "carja/2-backlog/project-backlog/billing/implementations/03-invoices");
 });
 
 test("loop.slices opts projects in: a list, or true for all", () => {
@@ -64,7 +64,7 @@ test("specEvidence: both files written, and the Brief check answered", () => {
 });
 
 test("the slice assignment routes Build to the slice folder and asks for done only when ship-ready", () => {
-  const t = renderAssignment({ id: "slice:evals/02-x", type: "slice", title: "02-x", source: { kind: "slice", path: "conductor/2-backlog/project-backlog/evals/implementations/02-x" } });
+  const t = renderAssignment({ id: "slice:evals/02-x", type: "slice", title: "02-x", source: { kind: "slice", path: "carja/2-backlog/project-backlog/evals/implementations/02-x" } });
   assert.match(t, /build\.md/);
   assert.match(t, /implementations\/02-x/);
   assert.match(t, /ship-ready/);

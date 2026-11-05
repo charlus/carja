@@ -2,7 +2,7 @@
 //
 // A5 — the framework challenges the brief, not only the code.
 //
-// Every gate Conductor owns is inward: TDD, the Eval-Driven Law, the evidence
+// Every gate Carja owns is inward: TDD, the Eval-Driven Law, the evidence
 // ledger, independent-review, the Checker. All prove the code does what the
 // spec says; none check whether the spec was worth building. A PO running
 // several products against an agent fleet gets no challenge from anyone with a
@@ -31,7 +31,7 @@ const QUICK = agents("workflows", "quick-path.md");
 const SPEC = agents("workflows", "spec-it.md");
 const GENESIS = agents("workflows", "genesis.md");
 const SPEC_TPL = readFileSync(
-  join(ROOT, "templates", "conductor", "5-templates", "carve-workflow", "feature-spec.md"), "utf8");
+  join(ROOT, "templates", "carja", "5-templates", "carve-workflow", "feature-spec.md"), "utf8");
 const LIB = agents("hooks", "lib.sh");
 const PRECOMMIT = agents("hooks", "pre-commit");
 
@@ -83,13 +83,13 @@ describe("A5 — entry-point workflows run the brief check", () => {
 
 describe("A5 — D1: presence is enforced in code, not prose", () => {
   test("lib.sh can identify a brief doc and detect the section", () => {
-    assert.match(LIB, /conductor_is_brief_doc\(\)/, "no conductor_is_brief_doc helper");
-    assert.match(LIB, /conductor_has_brief_check\(\)/, "no conductor_has_brief_check helper");
+    assert.match(LIB, /carja_is_brief_doc\(\)/, "no carja_is_brief_doc helper");
+    assert.match(LIB, /carja_has_brief_check\(\)/, "no carja_has_brief_check helper");
   });
 
   test("pre-commit gates on it and offers a logged waiver", () => {
-    assert.match(PRECOMMIT, /conductor_is_brief_doc/, "pre-commit does not use the brief-doc helper");
-    assert.match(PRECOMMIT, /CONDUCTOR_NO_BRIEF/, "no waiver escape hatch for the brief gate");
-    assert.match(PRECOMMIT, /conductor_log_waiver "\$(PROJECT_)?ROOT" "Brief"/, "the brief waiver is not logged");
+    assert.match(PRECOMMIT, /carja_is_brief_doc/, "pre-commit does not use the brief-doc helper");
+    assert.match(PRECOMMIT, /CARJA_NO_BRIEF/, "no waiver escape hatch for the brief gate");
+    assert.match(PRECOMMIT, /carja_log_waiver "\$(PROJECT_)?ROOT" "Brief"/, "the brief waiver is not logged");
   });
 });

@@ -1,11 +1,11 @@
 ---
 name: system-janitor
-description: Use this skill when the user asks to scan the Conductor Framework for misplaced files and recommend reorganization.
+description: Use this skill when the user asks to scan the Carja Framework for misplaced files and recommend reorganization.
 ---
 
 # System-Janitor
 
-**Goal:** Scan the Conductor Framework for misplaced files and recommend reorganization.
+**Goal:** Scan the Carja Framework for misplaced files and recommend reorganization.
 
 **Trigger:** "Clean up", "Organize files", "System check"
 
@@ -13,7 +13,7 @@ description: Use this skill when the user asks to scan the Conductor Framework f
 
 ## Input
 
-The Conductor Framework folder structure.
+The Carja Framework folder structure.
 
 ---
 
@@ -30,7 +30,7 @@ Then: A prompt asking if you want the files moved.
 
 ## Protocol
 
-1. **Scan the framework** - Review all folders in the Conductor Framework structure.
+1. **Scan the framework** - Review all folders in the Carja Framework structure.
 2. **Check against expected structure** - Compare to the standard folder purposes defined in `how-it-works.md`.
 3. **Identify misplaced files** - Find files that don't belong where they are (e.g., implementation docs in Workbench after shipping, orphan files, wrong folder).
 4. **Report findings** - List each misplaced file with current location and recommended location.

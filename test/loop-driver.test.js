@@ -62,7 +62,7 @@ test("statusAfterVerify: red exit forces reject, green is eligible to pass", () 
   assert.equal(statusAfterVerify(0), "passed_by_checker");
 });
 
-test("resolveVerifyCommand mirrors conductor_verify_cmd order", () => {
+test("resolveVerifyCommand mirrors carja_verify_cmd order", () => {
   assert.equal(resolveVerifyCommand({ stateCommand: "pytest", configVerify: "x", hasNpmTestScript: true }), "pytest");
   assert.equal(resolveVerifyCommand({ stateCommand: "", configVerify: "make check", hasNpmTestScript: true }), "make check");
   assert.equal(resolveVerifyCommand({ stateCommand: "", configVerify: "", hasNpmTestScript: true }), "npm test");

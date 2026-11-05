@@ -15,10 +15,10 @@ no() { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 fresh_repo() {
   local d; d="$(mktemp -d)"
-  mkdir -p "$d/.agents/hooks" "$d/conductor/0-compass"
+  mkdir -p "$d/.agents/hooks" "$d/carja/0-compass"
   cp "$REPO_ROOT/templates/.agents/hooks/"* "$d/.agents/hooks/"
   chmod +x "$d/.agents/hooks/pre-commit" "$d/.agents/hooks/pre-push" 2>/dev/null
-  : > "$d/conductor/0-compass/ship-log.md"
+  : > "$d/carja/0-compass/ship-log.md"
   git -C "$d" init -q
   git -C "$d" config user.email t@t.local
   git -C "$d" config user.name t
@@ -65,20 +65,20 @@ else
 fi
 rm -rf "$D"
 
-# ---- T4: LLM file + test, no eval, CONDUCTOR_NO_EVAL waiver → COMMITS -----
+# ---- T4: LLM file + test, no eval, CARJA_NO_EVAL waiver → COMMITS -----
 D="$(fresh_repo)"
 printf 'from anthropic import Anthropic\nc = Anthropic()\n' > "$D/agent.py"
 printf 'def test_x(): pass\n' > "$D/test_agent.py"
 git -C "$D" add -A >/dev/null 2>&1
-if CONDUCTOR_NO_EVAL="prototype, not shipping" git -C "$D" commit -q -m "waived" >/tmp/t4.out 2>&1; then
-  ok "T4: CONDUCTOR_NO_EVAL waiver lets the commit through"
-  if grep -qi "eval" "$D/conductor/0-compass/ship-log.md"; then
+if CARJA_NO_EVAL="prototype, not shipping" git -C "$D" commit -q -m "waived" >/tmp/t4.out 2>&1; then
+  ok "T4: CARJA_NO_EVAL waiver lets the commit through"
+  if grep -qi "eval" "$D/carja/0-compass/ship-log.md"; then
     ok "T4: the waiver was logged to the ship-log (auditable, not silent)"
   else
     no "T4: waiver was not logged to the ship-log"
   fi
 else
-  no "T4: CONDUCTOR_NO_EVAL waiver did not unblock the commit"; cat /tmp/t4.out | sed 's/^/      /'
+  no "T4: CARJA_NO_EVAL waiver did not unblock the commit"; cat /tmp/t4.out | sed 's/^/      /'
 fi
 rm -rf "$D"
 
@@ -104,7 +104,7 @@ printf 'PROVIDERS="openai anthropic ollama"\n' > "$D/setup.sh"
 cp "$REPO_ROOT/templates/.agents/hooks/lib.sh" "$D/lib.sh"   # the real regex string
 t5=0
 for f in notes.md setup.sh lib.sh; do
-  if conductor_is_llm_feature_file "$D/$f"; then no "T5: '$f' (only mentions a provider) was wrongly flagged as an LLM feature"; t5=1; fi
+  if carja_is_llm_feature_file "$D/$f"; then no "T5: '$f' (only mentions a provider) was wrongly flagged as an LLM feature"; t5=1; fi
 done
 [ "$t5" = "0" ] && ok "T5: shell/docs/config that only mention a provider are NOT flagged (impl-only)"
 rm -rf "$D"
@@ -121,9 +121,9 @@ echo "Eval-Driven Law — pre-push run-gate:"
 run_repo() {  # $1 = eval command (config value, may be empty)
   local d; d="$(fresh_repo)"
   printf 'export const evalset=[{input:"hi",rubric:"greets"}];\n' > "$d/answer.eval.ts"
-  if [ -n "$1" ]; then printf '{"eval": "%s"}\n' "$1" > "$d/conductor.config.json"; fi
+  if [ -n "$1" ]; then printf '{"eval": "%s"}\n' "$1" > "$d/carja.config.json"; fi
   git -C "$d" add -A >/dev/null 2>&1
-  CONDUCTOR_NO_EVAL=setup CONDUCTOR_NO_TEST=setup git -C "$d" commit -q -m seed >/dev/null 2>&1
+  CARJA_NO_EVAL=setup CARJA_NO_TEST=setup git -C "$d" commit -q -m seed >/dev/null 2>&1
   printf '%s' "$d"
 }
 run_prepush() { ( cd "$1" && bash .agents/hooks/pre-push </dev/null >/tmp/pp.out 2>&1 ); }  # returns exit code
@@ -149,16 +149,16 @@ rm -rf "$D"
 
 # R4: NO eval files → run-gate silent (exit 0)
 D="$(fresh_repo)"; printf 'x\n' > "$D/readme.txt"; git -C "$D" add -A >/dev/null 2>&1
-CONDUCTOR_NO_TEST=x git -C "$D" commit -q -m seed >/dev/null 2>&1
+CARJA_NO_TEST=x git -C "$D" commit -q -m seed >/dev/null 2>&1
 run_prepush "$D"
 [ "$?" -eq 0 ] && ! grep -qi "running evals" /tmp/pp.out && ok "R4: no evalsets → run-gate silent" || no "R4: run-gate fired with no evalsets"
 rm -rf "$D"
 
-# R5: failing evals + CONDUCTOR_SKIP_EVAL waiver → allowed (exit 0) + logged
+# R5: failing evals + CARJA_SKIP_EVAL waiver → allowed (exit 0) + logged
 D="$(run_repo 'false')"
-( cd "$D" && CONDUCTOR_SKIP_EVAL="prototype" bash .agents/hooks/pre-push </dev/null >/tmp/pp.out 2>&1 )
-if [ "$?" -eq 0 ] && grep -qi "eval" "$D/conductor/0-compass/ship-log.md"; then
-  ok "R5: CONDUCTOR_SKIP_EVAL waiver unblocks + is logged"
+( cd "$D" && CARJA_SKIP_EVAL="prototype" bash .agents/hooks/pre-push </dev/null >/tmp/pp.out 2>&1 )
+if [ "$?" -eq 0 ] && grep -qi "eval" "$D/carja/0-compass/ship-log.md"; then
+  ok "R5: CARJA_SKIP_EVAL waiver unblocks + is logged"
 else
   no "R5: eval run-gate waiver did not unblock/log"; sed 's/^/      /' /tmp/pp.out
 fi

@@ -1,4 +1,4 @@
-// `conductor personas` — which domain personas a change needs.
+// `carja personas` — which domain personas a change needs.
 //
 // The personas sat unused because nothing loaded them: a prose "persona
 // selector" in the loop, and a trigger phrase the human had to remember. Build
@@ -76,7 +76,7 @@ describe("matching", () => {
 });
 
 describe("project override", () => {
-  test("conductor.config.json replaces one persona's rules and leaves the others", () => {
+  test("carja.config.json replaces one persona's rules and leaves the others", () => {
     const rules = resolveRules({ personas: { designer: { extensions: ["erb"], words: [] } } });
     assert.deepEqual(names(matchPersonas(["app/views/home.html.erb"], rules)), ["designer"]);
     assert.deepEqual(matchPersonas(["src/components/Button.tsx"], rules), []);
@@ -178,7 +178,7 @@ describe("the command", () => {
   });
 
   test("no paths, outer layout: reads each nested code repository's diff too (F6)", async () => {
-    // website, 2026-10: `conductor personas` at Ship printed "No domain persona
+    // website, 2026-10: `carja personas` at Ship printed "No domain persona
     // for these 0 path(s)" because the change lived in a nested repository.
     const root = await repo();
     const git = (cwd, ...a) => execFileSync("git", a, { cwd, stdio: "pipe" });

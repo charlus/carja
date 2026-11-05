@@ -28,7 +28,7 @@ export const BLUEPRINT_STAGES = Object.freeze([
   { key: "carve", workflow: stage("carve").workflows[0], doc: "blueprint/implementation-overview.md", lens: "Carve slicing" },
 ]);
 
-/** The template each document is compared with, relative to `conductor/5-templates/`. */
+/** The template each document is compared with, relative to `carja/5-templates/`. */
 export const TEMPLATE_FOR = Object.freeze({
   "genesis/problem-solar-system.md": "genesis-workflow/problem-solar-system-template.md",
   "genesis/world-transformation.md": "genesis-workflow/world-transformation-template.md",
@@ -57,7 +57,7 @@ export const OWNER_DOCS = Object.freeze([
 ]);
 
 /**
- * S8, the starting gate of `conductor loop <project>`: the owner's phase ends
+ * S8, the starting gate of `carja loop <project>`: the owner's phase ends
  * with the approved Technical Vision. Approved means written on the default
  * branch (merged), the way the Blueprint stages are read. A carved project is
  * past the gate. Returns the documents still missing, in order, by plain name.

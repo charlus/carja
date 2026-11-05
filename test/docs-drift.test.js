@@ -42,12 +42,12 @@ describe("README counts what ships", () => {
 
 describe("every CLI command is documented", () => {
   test("in README", () => {
-    const missing = commands.filter((c) => !new RegExp(`conductor(-framework)? ${c}\\b`).test(README));
+    const missing = commands.filter((c) => !new RegExp(`carja(-framework)? ${c}\\b`).test(README));
     assert.deepEqual(missing, [], `README never shows: ${missing.join(", ")}`);
   });
 
   test("in CLAUDE.md", () => {
-    const missing = commands.filter((c) => !new RegExp(`conductor ${c}\\b|\\b${c}\\.js\\b`).test(CLAUDE));
+    const missing = commands.filter((c) => !new RegExp(`carja ${c}\\b|\\b${c}\\.js\\b`).test(CLAUDE));
     assert.deepEqual(missing, [], `CLAUDE.md never names: ${missing.join(", ")}`);
   });
 });

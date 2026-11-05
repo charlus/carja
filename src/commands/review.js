@@ -1,12 +1,12 @@
 // src/commands/review.js
 //
-// `conductor review <artifact>` — hand a document to the human and block on
+// `carja review <artifact>` — hand a document to the human and block on
 // their verdict (F4, slice 1).
 //
-// THE PROBLEM IT SOLVES. Conductor's human is a product owner, and on Claude
+// THE PROBLEM IT SOLVES. Carja's human is a product owner, and on Claude
 // Code there is no file browser: chat is the only way in and out. So a plan
 // gets reviewed by pasting it into the terminal, and "change the second phase"
-// has to be typed rather than pointed at. `conductor view` fixed the reading
+// has to be typed rather than pointed at. `carja view` fixed the reading
 // half. This is the return path — the human reads the real rendered document
 // and presses Approve or Request changes, and that decision lands back in the
 // agent's hands as JSON.
@@ -27,7 +27,7 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { basename, resolve } from "node:path";
 import { createReviewServer } from "../review/server.js";
-import { openerFor } from "../conductor-state.js";
+import { openerFor } from "../carja-state.js";
 import { documentTitle } from "../view/markdown.js";
 
 const DEFAULT_TIMEOUT_MIN = 60;
@@ -60,7 +60,7 @@ export async function reviewCommand(args, { cwd, stdout, stderr }) {
   const opts = parseArgs(args);
   if (!opts.path) {
     stderr.write(
-      "Usage: conductor review <file.md> [--no-open] [--timeout <minutes>]\n\n" +
+      "Usage: carja review <file.md> [--no-open] [--timeout <minutes>]\n\n" +
         "  Renders the document in your browser and waits for Approve / Request changes.\n" +
         "  Exit: 0 approved, 2 changes requested, 1 no verdict.\n",
     );

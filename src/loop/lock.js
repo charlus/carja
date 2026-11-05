@@ -1,10 +1,10 @@
 // src/loop/lock.js
 //
-// A single-holder run lock for a Conductor target. Independent `conductor loop`
+// A single-holder run lock for a Carja target. Independent `carja loop`
 // PROCESSES are not concurrency-safe with each other: they race on the shared
-// worktree, branch, PR, and the conductor/ → source-of-truth write-back (the
+// worktree, branch, PR, and the carja/ → source-of-truth write-back (the
 // in-process swarm merge queue is serialized; separate processes are not). One
-// loop per target. The lock lives at conductor/1-workbench/loop.lock and holds
+// loop per target. The lock lives at carja/1-workbench/loop.lock and holds
 // the owner pid; a lock whose owner is dead is stale and may be stolen (a crash
 // must never strand the target forever).
 //

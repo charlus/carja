@@ -43,7 +43,7 @@ for (const [step, next] of CHAIN) {
     assert.ok(existsSync(join(AGENTS, "workflows", `${next}.md`)), `${next} is a real workflow`);
     const done = section(wf(step), /\n## Completion/);
     assert.match(done, /`\/clear`/);
-    assert.match(done, new RegExp("`/" + next + " conductor/2-backlog/project-backlog/\\[ProjectName\\]"));
+    assert.match(done, new RegExp("`/" + next + " carja/2-backlog/project-backlog/\\[ProjectName\\]"));
     assert.match(done, /handoff\.md/);
   });
 }
@@ -77,10 +77,10 @@ test("Genesis metaphor terms appear only in the note for older documents", () =>
     ".agents/workflows/genesis.md", ".agents/workflows/storyboard.md", ".agents/workflows/grand-prd.md",
     ".agents/workflows/technical-vision.md", ".agents/workflows/carve.md", ".agents/how-it-works.md",
     ".agents/skills/independent-review/SKILL.md",
-    "conductor/5-templates/genesis-workflow/problem-solar-system-template.md",
-    "conductor/5-templates/genesis-workflow/world-transformation-template.md",
-    "conductor/5-templates/genesis-workflow/functional-animator-template.md",
-    "conductor/5-templates/blueprint-workflows/grand-prd.md",
+    "carja/5-templates/genesis-workflow/problem-solar-system-template.md",
+    "carja/5-templates/genesis-workflow/world-transformation-template.md",
+    "carja/5-templates/genesis-workflow/functional-animator-template.md",
+    "carja/5-templates/blueprint-workflows/grand-prd.md",
   ];
   const TERMS = /\bSun\b|Satellite|[Oo]rbit|Solar System|Functional Animator|World Transformation|Holy Trinity/;
   for (const rel of files) {

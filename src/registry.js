@@ -14,7 +14,7 @@ import { configPath as configPathOf } from "./names.js";
 
 const exec = promisify(execFile);
 
-// No hardcoded defaults — registry must be configured via conductor.config.json
+// No hardcoded defaults — registry must be configured via carja.config.json
 
 /**
  * Check if glab CLI is installed and authenticated for the target hostname.
@@ -38,7 +38,7 @@ export async function checkGlabAuth(hostname = DEFAULT_HOSTNAME) {
 }
 
 /**
- * Resolve registry settings from conductor.config.json.
+ * Resolve registry settings from carja.config.json.
  * Throws if no config is found — registry must be explicitly configured.
  * @param {string} projectDir - The project root directory
  * @returns {{ project: string, hostname: string }}
@@ -50,7 +50,7 @@ export async function resolveRegistry(projectDir) {
     raw = await readFile(configPath, "utf-8");
   } catch {
     throw new Error(
-      "No conductor.config.json found.\n" +
+      "No carja.config.json found.\n" +
       "Create one with your registry URL:\n\n" +
       '  { "registry": "https://your-gitlab.com/group/skills-registry" }\n'
     );
@@ -59,7 +59,7 @@ export async function resolveRegistry(projectDir) {
   const config = JSON.parse(raw);
   if (!config.registry) {
     throw new Error(
-      'conductor.config.json is missing the "registry" field.\n' +
+      'carja.config.json is missing the "registry" field.\n' +
       "Add your registry URL:\n\n" +
       '  { "registry": "https://your-gitlab.com/group/skills-registry" }\n'
     );
@@ -92,7 +92,7 @@ export async function fetchRegistryIndex(hostname, project) {
  * Download a single skill folder from the registry.
  * Uses GitLab's Tree API to list files, then downloads each via raw file endpoint.
  * @param {string} hostname - GitLab hostname
- * @param {string} project - Project path (e.g., "conductor/skills-registry")
+ * @param {string} project - Project path (e.g., "carja/skills-registry")
  * @param {string} skillName - Skill directory name in the registry
  * @param {string} targetDir - Where to extract (e.g., ".agents/skills")
  * @returns {string} Path to the installed skill

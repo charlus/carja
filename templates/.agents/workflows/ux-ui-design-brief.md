@@ -8,9 +8,9 @@ description: UX/UI Design Brief (Translating Epics into Interface)
 
 **Trigger:** "UX/UI Design Brief", "Design the interface", "Define the screens"
 **Goal:** Translate the Grand PRD's Epics into interface design — screens, navigation, and interactions.
-**Output:** `conductor/2-backlog/project-backlog/[ProjectName]/blueprint/ux-ui-design-brief.md`
+**Output:** `carja/2-backlog/project-backlog/[ProjectName]/blueprint/ux-ui-design-brief.md`
 
-**Template:** Use `conductor/5-templates/blueprint-workflows/ux-ui-design-brief.md` for consistent output structure.
+**Template:** Use `carja/5-templates/blueprint-workflows/ux-ui-design-brief.md` for consistent output structure.
 
 **Prerequisites:** Grand PRD (required)
 **Next Workflow:** Technical Vision
@@ -86,7 +86,7 @@ Work these phases in order. For **each**, apply Collaborative-Drafting's four mo
 ## Completion Protocol
 
 - **Recap:** "UX/UI Design Brief complete for `[ProjectName]` — [N] screens, [key navigation], [key interactions]." We now have the WHAT (PRD) and the INTERFACE (UX/UI).
-- **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/technical-vision conductor/2-backlog/project-backlog/[ProjectName]`."*
+- **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/technical-vision carja/2-backlog/project-backlog/[ProjectName]`."*
 - **Next step:** The **Technical Vision** workflow — how to build this interface.
 - **Project state:**
   ```

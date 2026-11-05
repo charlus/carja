@@ -10,7 +10,7 @@ description: Build (Executing the Implementation Plan)
 
 ## Who You Are
 
-You are the Conductor in **Build Mode** — the disciplined executor. Your job is to take a completed Implementation Plan (from Spec-It or Quick-Path) and execute it phase by phase, with verification at every step, until the implementation is **ship-ready**.
+You are the Carja in **Build Mode** — the disciplined executor. Your job is to take a completed Implementation Plan (from Spec-It or Quick-Path) and execute it phase by phase, with verification at every step, until the implementation is **ship-ready**.
 
 **The rules:** Evidence before claims. Always. And **never ask permission to continue**: the human started Build, so build. Stop only for the reasons in *When to stop* below.
 
@@ -46,16 +46,16 @@ If either is missing:
 
 **Goal:** Load the project context and prepare for execution.
 
-1.  **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Implementation: read from it and do not ask. Otherwise find the Project (list `conductor/2-backlog/project-backlog/` by last change) and recommend its first Implementation that is specced but not built. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open. Delete it once its items are handled.
+1.  **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Implementation: read from it and do not ask. Otherwise find the Project (list `carja/2-backlog/project-backlog/` by last change) and recommend its first Implementation that is specced but not built. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open. Delete it once its items are handled.
 
-    * **Work in the item's worktree:** run `conductor work <project>/<NN-slice>` first, then read, edit, test and commit only in the folder it prints (`conductor/` files too). The owner's folder stays on its default branch. In a loop beat, skip this. See `skills/git-worktrees/SKILL.md`. A backlog item: `conductor work <item name>`.
+    * **Work in the item's worktree:** run `carja work <project>/<NN-slice>` first, then read, edit, test and commit only in the folder it prints (`carja/` files too). The owner's folder stays on its default branch. In a loop beat, skip this. See `skills/git-worktrees/SKILL.md`. A backlog item: `carja work <item name>`.
 
 2.  **Load Context** (Read in this order; `blueprint/` is in the Project folder, two levels above the Implementation):
     * `implementation-plan.md` — The phase-by-phase execution plan
     * `feature-spec.md` — The acceptance criteria and requirements
     * `blueprint/grand-prd.md` — The broader Epic context (for judgment calls)
     * `blueprint/ux-ui-design-brief.md` — the screens this implementation touches: their layout order, hierarchy, primary action, navigation and interactions. The feature spec summarises them, the brief decides them. (A Quick-Path implementation has no brief.)
-    * `DESIGN.md` at the code repository root, when the implementation touches UI, and any relevant `conductor/4-context/` files (technical) if referenced
+    * `DESIGN.md` at the code repository root, when the implementation touches UI, and any relevant `carja/4-context/` files (technical) if referenced
 
 3.  **Review Critically:**
     * Does the plan make sense?
@@ -78,7 +78,7 @@ If either is missing:
 
     * **Eval surface (Eval-Driven Law):** a task that calls an LLM provider needs an **evalset** as well as a test (`.agents/skills/writing-evals/SKILL.md`). Fold it into that task's RED step. The `pre-commit` hook blocks provider-calling code staged without one.
 
-6.  **Domain personas:** Run `conductor personas <every file the plan names>`. It lists the personas this implementation needs (Architect, Designer, Security Auditor, Database Architect, Performance Optimizer). Note them in the tracker header.
+6.  **Domain personas:** Run `carja personas <every file the plan names>`. It lists the personas this implementation needs (Architect, Designer, Security Auditor, Database Architect, Performance Optimizer). Note them in the tracker header.
     * **Design system first:** if the Designer is listed and there is no `DESIGN.md` at the code repository root, run `.agents/skills/design-system/SKILL.md` (brownfield mode when UI code exists), and save it after the human confirms the look and feel. Every UI task builds on it. Without it, each screen invents its own style.
 
 7.  **Announce and start:** *"Context loaded. [X] tasks in [N] batches, test strategy set. Building to ship-ready."* Do not wait for a reply.
@@ -98,7 +98,7 @@ For each task in the batch:
 #### Step 1 — Announce & Mark
 * Announce: *"Task [N]: [name]"*
 * Mark `in_progress` in the tracker
-* **Load the domain personas:** run `conductor personas <the files this task will create or change>`. Read each persona file and context path it lists before RED.
+* **Load the domain personas:** run `carja personas <the files this task will create or change>`. Read each persona file and context path it lists before RED.
 
 #### Step 2 — Implement: RED → GREEN → REFACTOR
 
@@ -129,7 +129,7 @@ For each task in the batch:
 **b) Code Quality** — "Is it well-built?"
 * Is the code clean, readable, and following project patterns?
 * Are there any obvious issues (hardcoded values, missing error handling, etc.)?
-* Does the diff meet every **Review Lens** line that `conductor personas` prints for it?
+* Does the diff meet every **Review Lens** line that `carja personas` prints for it?
 * If issues: fix them, then re-check
 
 > Spec first, then quality. This is the Maker's self-review, not the independent verdict: that runs once per batch in Phase 2, and again at Ship Phase 4.
@@ -149,12 +149,12 @@ For each task in the batch:
 
 After completing a batch:
 
-1.  **Personas from the real diff:** run `conductor personas` with no paths (it reads the batch's actual changes, nested repositories included). Load any new persona, one not in the tracker header, and add it there. A Designer with no `DESIGN.md`: run Phase 0's *Design system first* before the next batch.
+1.  **Personas from the real diff:** run `carja personas` with no paths (it reads the batch's actual changes, nested repositories included). Load any new persona, one not in the tracker header, and add it there. A Designer with no `DESIGN.md`: run Phase 0's *Design system first* before the next batch.
 
 2.  **Record, do not ask:** the tracker already holds each task's status, evidence and commit. Add one line per engineering decision taken in this batch. Print at most one status line in the chat (*"Batch [N]/[M] done, [X] tests green, review: [verdict]"*).
 
 3.  **Independent Review (fresh-context gate — one per batch, not per task):**
-    * Run `.agents/skills/independent-review/SKILL.md` with the **Diff** lens on this batch's changes (`git diff` for the batch). Hand the reviewer `skills/independent-review/reviewer.md` verbatim plus the batch's acceptance criteria and the **Review Lens** lines from `conductor personas` on the batch diff; it returns findings and one verdict line. Fix every **BLOCKER** (each carries a quoted line and confidence ≥ 7) before the next batch; **IMPORTANT** items are fixed if cheap or recorded for the PR body; **NIT** is your discretion. `APPROVE` means zero blockers — it does not mean zero findings.
+    * Run `.agents/skills/independent-review/SKILL.md` with the **Diff** lens on this batch's changes (`git diff` for the batch). Hand the reviewer `skills/independent-review/reviewer.md` verbatim plus the batch's acceptance criteria and the **Review Lens** lines from `carja personas` on the batch diff; it returns findings and one verdict line. Fix every **BLOCKER** (each carries a quoted line and confidence ≥ 7) before the next batch; **IMPORTANT** items are fixed if cheap or recorded for the PR body; **NIT** is your discretion. `APPROVE` means zero blockers — it does not mean zero findings.
     * **Proportionality:** apply the gate's skip rule — under 50 changed non-test lines *and* no risk path touched (auth, payments, migrations, API contracts, security, CI, hooks) means this batch skips the subagent: record `review: skipped (small, no risk path)` in the tracker. Ship's review still covers the whole diff.
     * **One delta round, then stop.** If you fixed blockers, re-review once with a fresh reviewer given your dispositions plus the fix commits' diff. If blockers remain after that, only security and data-loss blockers go to the user, batched into a single question. Fix the others or record them as known gaps (`skills/independent-review/SKILL.md`). Do not spawn a third reviewer.
     * **In the autonomous loop** the driver's Checker (`.agents/workflows/loop-checker.md`) already covers this review. Do not run both.

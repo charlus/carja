@@ -1,8 +1,8 @@
 // src/projects.js
 //
-// The projects in conductor/2-backlog/project-backlog/, each with its stage and
+// The projects in carja/2-backlog/project-backlog/, each with its stage and
 // whether the loop is on for it (owner decisions D1, D2, 2026-10-20). Shown by
-// `conductor status` and by `conductor loop on` without a name. The stage is
+// `carja status` and by `carja loop on` without a name. The stage is
 // read the way the loop reads it (src/loop/blueprint.js, src/loop/slices.js),
 // so what is shown is what the loop would act on.
 

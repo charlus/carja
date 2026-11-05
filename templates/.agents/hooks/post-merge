@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ============================================================
-# Conductor post-merge hook: cleanup after `git pull`.
+# Carja post-merge hook: cleanup after `git pull`.
 #
-# When the owner pulls, the MRs he merged on the forge arrive. A `conductor
-# loop` worktree, or an interactive item's (`conductor work`, branch
-# conductor/work/), whose branch is now contained in the default branch is
+# When the owner pulls, the MRs he merged on the forge arrive. A `carja
+# loop` worktree, or an interactive item's (`carja work`, branch
+# carja/work/), whose branch is now contained in the default branch is
 # finished: remove it and its local branch, so nobody has to come back and say
 # "it is merged". Conservative: only a branch provably merged
 # (`merge-base --is-ancestor`), never a worktree with uncommitted changes, and
@@ -15,12 +15,14 @@
 # head is the local branch head. A deleted remote branch alone is not a merge.
 # Never a fresh loop branch (no commit of its own: its tip is on the default
 # branch's first-parent line), and never a worktree a live loop run holds (its
-# pid in conductor-holder, in the worktree's own git directory): worktrees are
+# pid in carja-holder, in the worktree's own git directory): worktrees are
 # shared by every checkout, so another loop's live work shows up here too.
 # Cleanup only: it never blocks, and always exits 0.
-# CONDUCTOR_HOOKS=off disables it, like every Conductor hook.
+# CARJA_HOOKS=off disables it, like every Carja hook.
 # ============================================================
-[ "${CONDUCTOR_HOOKS:-on}" = "off" ] && exit 0
+# 6.x names still work through 7.x: each CONDUCTOR_X sets CARJA_X when unset.
+for _k in $(compgen -e); do case "$_k" in CONDUCTOR_*) _n="CARJA_${_k#CONDUCTOR_}"; [ -n "${!_n:-}" ] || export "$_n=${!_k}" ;; esac; done
+[ "${CARJA_HOOKS:-on}" = "off" ] && exit 0
 
 base="$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null)"
 if [ -z "$base" ] || [ "$base" = "origin/HEAD" ]; then
@@ -55,8 +57,8 @@ own_line="$(git rev-list --first-parent "$base" 2>/dev/null)"
 held_by_live_run() {
   local dir pid
   dir="$(git -C "$1" rev-parse --path-format=absolute --git-dir 2>/dev/null)" || return 1
-  [ -f "$dir/conductor-holder" ] || return 1
-  pid="$(grep -o '"pid":[0-9]*' "$dir/conductor-holder" | head -1 | cut -d: -f2)"
+  [ -f "$dir/carja-holder" ] || return 1
+  pid="$(grep -o '"pid":[0-9]*' "$dir/carja-holder" | head -1 | cut -d: -f2)"
   [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
 }
 
@@ -76,7 +78,7 @@ path="" branch=""
 while IFS= read -r line; do
   case "$line" in
     "worktree "*) path="${line#worktree }"; branch="" ;;
-    "branch refs/heads/conductor/loop/"*|"branch refs/heads/conductor/work/"*) branch="${line#branch refs/heads/}" ;;
+    "branch refs/heads/carja/loop/"*|"branch refs/heads/carja/work/"*) branch="${line#branch refs/heads/}" ;;
     "")
       if [ -n "$branch" ] && [ "${path#*/.agents/.worktrees/}" != "$path" ] \
         && [ -z "$(git -C "$path" status --porcelain 2>/dev/null)" ] \
@@ -85,7 +87,7 @@ while IFS= read -r line; do
         && loop_branch_merged "$branch"; then
         if git worktree remove --force "$path" 2>/dev/null; then
           git branch -q -D "$branch" 2>/dev/null
-          echo "Conductor: removed the merged worktree ${path##*/} ($branch)."
+          echo "Carja: removed the merged worktree ${path##*/} ($branch)."
         fi
       fi
       path="" branch="" ;;

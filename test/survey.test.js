@@ -1,9 +1,9 @@
-// `conductor survey` — the facts about an inherited codebase (F15).
+// `carja survey` — the facts about an inherited codebase (F15).
 //
 // Genesis assumes a blank page. A product owner who has just inherited a
 // running product has the opposite problem: the code is the only honest
 // record of what it does, and nobody left to ask. There was no path from
-// code to `conductor/`.
+// code to `carja/`.
 //
 // Split on purpose, and the split is the point: a SCRIPT collects facts
 // exhaustively and an AGENT judges them. Everything here is the script half,
@@ -138,7 +138,7 @@ describe("F15 — the risk map", () => {
   });
 
   test("a prefixed test name still finds its source", () => {
-    // Conductor's own convention is `test/loop-driver.test.js` for
+    // Carja's own convention is `test/loop-driver.test.js` for
     // `src/loop/driver.js`. Exact stem matching missed every one of them and
     // reported src/loop — 18 files, heavily tested — as untested.
     const areas = coverageByArea([
@@ -313,7 +313,7 @@ describe("F15 — the configuration surface", () => {
   });
 
   test("values are discarded, only names survive", () => {
-    // A survey is committed to conductor/. Carrying values across would put
+    // A survey is committed to carja/. Carrying values across would put
     // whatever someone left in .env.example into the knowledge base.
     const keys = extractEnvKeys("SECRET=hunter2\n");
     assert.deepEqual(keys, ["SECRET"]);
@@ -436,7 +436,7 @@ describe("F15 — nested checkouts are detected, not guessed from a name", () =>
   }
 
   test("a linked worktree at any path is skipped, and the skip is reported", async () => {
-    const root = await mkdtemp(join(tmpdir(), "conductor-survey-"));
+    const root = await mkdtemp(join(tmpdir(), "carja-survey-"));
     try {
       await mkdir(join(root, "src"), { recursive: true });
       await writeFile(join(root, "src/app.js"), "export const x = 1;\n");
@@ -460,7 +460,7 @@ describe("F15 — nested checkouts are detected, not guessed from a name", () =>
   test("a real module NAMED worktrees is not excluded", async () => {
     // The name rule this replaced would have dropped it: a git client's own
     // src/worktrees/ is source, and has no .git of its own.
-    const root = await mkdtemp(join(tmpdir(), "conductor-survey-"));
+    const root = await mkdtemp(join(tmpdir(), "carja-survey-"));
     try {
       await mkdir(join(root, "src/worktrees"), { recursive: true });
       await writeFile(join(root, "src/worktrees/list.js"), "export const l = [];\n");
@@ -472,7 +472,7 @@ describe("F15 — nested checkouts are detected, not guessed from a name", () =>
   });
 
   test("the root's own .git is not mistaken for a nested checkout", async () => {
-    const root = await mkdtemp(join(tmpdir(), "conductor-survey-"));
+    const root = await mkdtemp(join(tmpdir(), "carja-survey-"));
     try {
       await mkdir(join(root, ".git"), { recursive: true });
       await mkdir(join(root, "src"), { recursive: true });

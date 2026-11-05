@@ -15,7 +15,7 @@ description: Retrospective (Learning from What We Shipped)
 
 ## Who You Are
 
-You are the Conductor in **reflection mode**. Your job is to close the feedback loop: turn shipping experience into knowledge that makes the next build better.
+You are the Carja in **reflection mode**. Your job is to close the feedback loop: turn shipping experience into knowledge that makes the next build better.
 
 ---
 
@@ -24,7 +24,7 @@ You are the Conductor in **reflection mode**. Your job is to close the feedback 
 **Announce:** *"Let's reflect on what we just shipped."*
 
 1.  **Load Context:**
-    * Read the latest `conductor/0-compass/ship-log.md` entry
+    * Read the latest `carja/0-compass/ship-log.md` entry
     * Read the `task-tracker.md` from the completed Implementation
     * Read the `feature-spec.md` for what was intended
     * **Mine the evidence in parallel (`.agents/skills/subagent-isolation/SKILL.md`):** the concrete lessons in Phase 2 must come from what *actually happened*, not memory. Fan out scouts across the independent evidence sources — the git history/diff for the branch, the tracker's evidence column (where retries/stalls/rework clustered), the ship-log, any `trace.md`, CI logs — each returning a short factual summary. Blind scouts don't anchor on the same story, and a fresh-context read resists the tendency to rationalize one's own work. Merge their findings into the summary below. For a small single-batch implementation, read inline instead.
@@ -65,17 +65,17 @@ For each answer, capture a concrete lesson — not vague feelings.
 **Announce:** *"Let me update our knowledge base with what we learned."*
 
 ### Product Area Updates
-* **Features file:** Add/update features that were shipped in `conductor/3-product-areas/[area]/[area]-features.md`
-* **Technical file:** Record architectural decisions and patterns in `conductor/3-product-areas/[area]/[area]-technical.md`
-* **Epics file:** Mark completed Epics or note scope changes in `conductor/3-product-areas/[area]/[area]-epics.md`
+* **Features file:** Add/update features that were shipped in `carja/3-product-areas/[area]/[area]-features.md`
+* **Technical file:** Record architectural decisions and patterns in `carja/3-product-areas/[area]/[area]-technical.md`
+* **Epics file:** Mark completed Epics or note scope changes in `carja/3-product-areas/[area]/[area]-epics.md`
 
 ### Context Updates
-* **Technical context:** Update `conductor/4-context/technical/` with new patterns, conventions, or stack decisions
+* **Technical context:** Update `carja/4-context/technical/` with new patterns, conventions, or stack decisions
 * **Design context:** Update `DESIGN.md` if new design patterns emerged (`.agents/skills/design-system/SKILL.md`)
-* **Product context:** Update `conductor/4-context/product/` if user insights were gained
+* **Product context:** Update `carja/4-context/product/` if user insights were gained
 
 ### Process Updates
-* If a workflow improvement is identified → write it on the ship-log entry's **`Framework lesson:`** line (Ship Phase 5). One grep across every project's `conductor/0-compass/ship-log.md` is how such lessons reach the framework; a note anywhere else has no reader.
+* If a workflow improvement is identified → write it on the ship-log entry's **`Framework lesson:`** line (Ship Phase 5). One grep across every project's `carja/0-compass/ship-log.md` is how such lessons reach the framework; a note anywhere else has no reader.
 * If a new pattern emerged → consider creating a new skill or updating an existing one
 
 ---

@@ -204,19 +204,19 @@ export function orderMergeQueue(results) {
 
 // ---------------------------------------------------------------------------
 // I3 (owner, 2026-10-23): KM relief stopped at slice 08 of 17 because its
-// Ship touched two Conductor documents (nexus-technical.md, coding-patterns.md)
+// Ship touched two Carja documents (nexus-technical.md, coding-patterns.md)
 // that CoP had changed on main in the meantime. A conflict that is only in
-// Conductor documents does not stop a project: the item's branch takes what it
+// Carja documents does not stop a project: the item's branch takes what it
 // must land on, both sides of each conflicted document are kept (an append-only
 // log is a union; a prose document keeps both texts and the report names it for
 // the owner), verify runs again, and the MR opens. A conflict in code still
 // stops the item: code is never merged by the loop.
 
 /** The path prefix of what the loop may merge on its own. */
-export const DOC_PREFIX = "conductor/";
+export const DOC_PREFIX = "carja/";
 
-/** True when every conflicted file is a Conductor document. */
-export function onlyConductorDocs(files) {
+/** True when every conflicted file is a Carja document. */
+export function onlyCarjaDocs(files) {
   return Array.isArray(files) && files.length > 0 && files.every((f) => String(f).startsWith(DOC_PREFIX));
 }
 
@@ -261,7 +261,7 @@ const MARKER = /^(<{7}|={7}|>{7})( |$)/m;
 
 /**
  * Merge `base` into the branch checked out in a worktree. Conflicts only in
- * Conductor documents are resolved by keeping both sides and committed (the
+ * Carja documents are resolved by keeping both sides and committed (the
  * commit runs the repository's hooks); any other conflict, or a failed
  * commit, aborts the merge and leaves the branch as it was.
  * IO injected: `git(args)` runs in the worktree, `read(rel)`/`write(rel, text)`.
@@ -274,9 +274,9 @@ export async function mergeKeepingDocs({ git, base, read, write, message }) {
     await git(["merge", "--abort"]);
     return { merged: false, files: [], reason: `git merge failed: ${String(start.stderr || start.stdout || "").split("\n")[0]}` };
   }
-  if (conflicted.length && !onlyConductorDocs(conflicted)) {
+  if (conflicted.length && !onlyCarjaDocs(conflicted)) {
     await git(["merge", "--abort"]);
-    return { merged: false, files: conflicted, reason: `a conflict outside the Conductor documents (${conflicted.filter((f) => !f.startsWith(DOC_PREFIX)).join(", ")}): code is never merged by the loop` };
+    return { merged: false, files: conflicted, reason: `a conflict outside the Carja documents (${conflicted.filter((f) => !f.startsWith(DOC_PREFIX)).join(", ")}): code is never merged by the loop` };
   }
   for (const f of conflicted) {
     const text = await read(f);

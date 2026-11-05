@@ -1,6 +1,6 @@
 // test/loop-lock.test.js
 //
-// The single-holder run lock (src/loop/lock.js): one `conductor loop` process per
+// The single-holder run lock (src/loop/lock.js): one `carja loop` process per
 // target. The decision is pure — given the existing lock text and an is-that-pid-
 // alive predicate — so it is exercised here without touching the filesystem.
 

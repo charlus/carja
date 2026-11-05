@@ -1,10 +1,10 @@
 // src/loop/ready-queue.js
 //
-// C4-F4: the backlog items the owner gave the loop (`conductor loop take`).
+// C4-F4: the backlog items the owner gave the loop (`carja loop take`).
 // A `(loop-ready)` tag is an edit to the tracked backlog, left uncommitted, and
 // the state MR changes the same file, so the owner's next `git pull` refused.
-// The queue lives in the git dir (`.git/conductor-loop-ready.json`): never
-// committed, never in a worktree, untouched by `conductor upgrade`. With
+// The queue lives in the git dir (`.git/carja-loop-ready.json`): never
+// committed, never in a worktree, untouched by `carja upgrade`. With
 // `loop.require_ready`, a queued item is harvested like a tagged one. An item
 // leaves the queue when it is no longer open in the backlog (ticked or renamed).
 
@@ -12,7 +12,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseBacklog, workItemId } from "./harvester.js";
 
-export const READY_FILE = "conductor-loop-ready.json";
+export const READY_FILE = "carja-loop-ready.json";
 
 const norm = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 

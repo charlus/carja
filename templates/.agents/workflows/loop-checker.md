@@ -6,26 +6,26 @@
 Read and adopt `.agents/personas/checker.md`, whose rubric is `.agents/skills/independent-review/reviewer.md` (**Rubric v2**). It defines the severities, the evidence a BLOCKER needs, and the exclusion list. Bring a skeptical posture with a bar: a BLOCKER needs a **quoted line** and **confidence ≥ 7**. If you cannot quote the line that proves a finding, it is not a BLOCKER — record it as IMPORTANT and do not withhold approval for it.
 
 ## Inputs
-- **The definition of done:** `goal_description` in `conductor/1-workbench/loop-state.json`, walked as a checklist, plus every item of `conductor/0-compass/architecture-checklist.md` if it exists.
+- **The definition of done:** `goal_description` in `carja/1-workbench/loop-state.json`, walked as a checklist, plus every item of `carja/0-compass/architecture-checklist.md` if it exists.
 - The diff under review: the commits on the current branch / worktree.
 - The passing verification output (the floor is already met).
-- The **Review Lens** lines that `conductor personas` prints for this diff (Architect, Designer, Security Auditor, Database Architect, Performance Optimizer). Do not load the persona files themselves.
+- The **Review Lens** lines that `carja personas` prints for this diff (Architect, Designer, Security Auditor, Database Architect, Performance Optimizer). Do not load the persona files themselves.
 
 ## Audit checklist
 1. Does the change implement the stated goal — all of it, not a partial slice?
 2. Do the tests genuinely exercise the new behavior (not tautological, not skipped, not asserting nothing)? A test that cannot fail for the reason its name claims is a BLOCKER.
 3. Any correctness, security, or data-loss risk the tests wouldn't catch? Quote the line.
 4. Is anything left in a broken or half-migrated state?
-5. **Architecture ship-contract:** if `conductor/0-compass/architecture-checklist.md` exists, verify the diff against **every** item (`skills/architecture-checklist/SKILL.md`) — run each item's `check:` command, and read the diff for the semantic ones. An unsatisfied item is a BLOCKER; name the failing item.
+5. **Architecture ship-contract:** if `carja/0-compass/architecture-checklist.md` exists, verify the diff against **every** item (`skills/architecture-checklist/SKILL.md`) — run each item's `check:` command, and read the diff for the semantic ones. An unsatisfied item is a BLOCKER; name the failing item.
 
 6. **Domain Review Lens:** check the diff against each Review Lens line from the inputs. Grade a violation with the rubric's severities: a security or data-loss violation can be a BLOCKER, a design or performance violation is IMPORTANT unless the goal names it.
 
 **Report the whole class.** Having found one instance, sweep for the rest and list them in the same finding — the Maker fixes exactly the class you name, so a single-instance finding costs a full beat per instance.
 
-**Not a finding** (per the rubric's exclusion list): anything already addressed in the diff, anything the linter/formatter/type checker enforces, anything under `conductor/` (process artefacts), test-structure opinions ("could be tighter"), or work beyond the stated goal.
+**Not a finding** (per the rubric's exclusion list): anything already addressed in the diff, anything the linter/formatter/type checker enforces, anything under `carja/` (process artefacts), test-structure opinions ("could be tighter"), or work beyond the stated goal.
 
 ## Record your verdict (REQUIRED)
-Write `conductor/1-workbench/checker-verdict.json` with exactly this shape:
+Write `carja/1-workbench/checker-verdict.json` with exactly this shape:
 
 ```json
 {

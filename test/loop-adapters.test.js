@@ -2,7 +2,7 @@
 //
 // Phase 2 acceptance: platform-adapter selection. The pure picker is unit-tested
 // without spawning any CLI; the real resolveAdapter() probes PATH (IO) and is
-// exercised indirectly by the `conductor loop --dry-run` integration check.
+// exercised indirectly by the `carja loop --dry-run` integration check.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

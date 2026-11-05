@@ -1,11 +1,11 @@
 // DESIGN.md — one file that keeps the UI coherent, months after the first build.
 //
-// conductor/4-context/design/ shipped three files (design-system, ui-components,
+// carja/4-context/design/ shipped three files (design-system, ui-components,
 // brand-assets) that no workflow filled before Build and only one skill read.
 // They are replaced by one DESIGN.md at the code repository root, which travels
-// with the code even when conductor/ lives in a separate outer repository.
+// with the code even when carja/ lives in a separate outer repository.
 //
-// `conductor design migrate` carries whatever a project wrote in the old folder
+// `carja design migrate` carries whatever a project wrote in the old folder
 // into DESIGN.md: every section is mapped by its heading, sections still equal
 // to the shipped template are dropped, and each migrated source becomes a
 // pointer so the two copies cannot drift. Nothing is deleted.
@@ -39,7 +39,7 @@ function io() {
 // and added a file of its own plus an image.
 async function project({ nested = false } = {}) {
   const root = await mkdtemp(join(tmpdir(), "cond-design-"));
-  const dir = join(root, "conductor", "4-context", "design");
+  const dir = join(root, "carja", "4-context", "design");
   await mkdir(dir, { recursive: true });
   const ds = LEGACY["design-system.md"].replace(
     "| Primary | #000000 | (e.g., Buttons, links) |",
@@ -76,7 +76,7 @@ describe("splitting and mapping", () => {
     const { dir } = await project();
     const files = {};
     for (const f of await readdir(dir)) files[f] = await readFile(join(dir, f), "utf8");
-    const { markdown } = buildDesignMd(files, { legacy: LEGACY, source: "conductor/4-context/design" });
+    const { markdown } = buildDesignMd(files, { legacy: LEGACY, source: "carja/4-context/design" });
     const section = (title) => {
       const start = markdown.indexOf(`## ${title}`);
       const next = markdown.indexOf("\n## ", start + 1);
@@ -110,13 +110,13 @@ describe("splitting and mapping", () => {
   });
 
   test("the greenfield template uses the same canonical sections as the migration", () => {
-    const tpl = readFileSync(join(ROOT, "templates", "conductor", "5-templates", "design-md.md"), "utf8");
+    const tpl = readFileSync(join(ROOT, "templates", "carja", "5-templates", "design-md.md"), "utf8");
     const headings = [...tpl.matchAll(/^## (.+)$/gm)].map((m) => m[1].trim());
     assert.deepEqual(headings, DESIGN_SECTIONS.map((s) => s.title));
   });
 });
 
-describe("conductor design migrate", () => {
+describe("carja design migrate", () => {
   test("writes DESIGN.md at the root and turns each migrated source into a pointer", async () => {
     const { root, dir } = await project();
     const s = io();
@@ -157,14 +157,14 @@ describe("conductor design migrate", () => {
 
   test("upgrade's hint shows before migration and disappears after it", async () => {
     const { root } = await project();
-    assert.match(await designMigrationHint(root), /conductor design migrate/);
+    assert.match(await designMigrationHint(root), /carja design migrate/);
     await designCommand(["migrate", root], { cwd: root, ...io() });
     assert.equal(await designMigrationHint(root), null);
   });
 
   test("a folder of untouched templates writes no DESIGN.md: Build would skip extracting a real one", async () => {
     const root = await mkdtemp(join(tmpdir(), "cond-design-tpl-"));
-    const dir = join(root, "conductor", "4-context", "design");
+    const dir = join(root, "carja", "4-context", "design");
     await mkdir(dir, { recursive: true });
     for (const [f, text] of Object.entries(LEGACY)) await writeFile(join(dir, f), text);
     const s = io();
@@ -187,7 +187,7 @@ describe("the framework uses DESIGN.md", () => {
   const read = (...p) => readFileSync(join(ROOT, "templates", ...p), "utf8");
 
   test("new installs no longer get the three design files", () => {
-    assert.ok(!existsSync(join(ROOT, "templates", "conductor", "4-context", "design")));
+    assert.ok(!existsSync(join(ROOT, "templates", "carja", "4-context", "design")));
   });
 
   test("no template points at the retired design files", () => {
@@ -205,7 +205,7 @@ describe("the framework uses DESIGN.md", () => {
     assert.match(brief, /skills\/design-system\/SKILL\.md/);
   });
 
-  test("conductor personas hands the Designer DESIGN.md and the design-system skill", () => {
+  test("carja personas hands the Designer DESIGN.md and the design-system skill", () => {
     const ctx = resolveRules({}).designer.context;
     assert.ok(ctx.includes("DESIGN.md"));
     assert.ok(ctx.includes(".agents/skills/design-system/SKILL.md"));

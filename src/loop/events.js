@@ -1,7 +1,7 @@
 // src/loop/events.js
 //
 // Loop Monitor M1 (docs/roadmap/Loop-Monitor.md): the event log. The driver
-// appends one JSON line per event to `<git dir>/conductor-loop-logs/events.ndjson`:
+// appends one JSON line per event to `<git dir>/carja-loop-logs/events.ndjson`:
 // run start and end, each beat's start and end (item, stage, role, model, time,
 // cost), verify exit codes, review verdicts, question rounds, escalations, MRs.
 // Every view reads this file; nothing else changes. Writing never fails a run.
@@ -85,7 +85,7 @@ export function watchModel(events) {
 }
 
 /**
- * Every live run of the folder (two `conductor loop <project>` runs side by
+ * Every live run of the folder (two `carja loop <project>` runs side by
  * side), or the latest run when none is live. A run is live when it has not
  * ended and its process (`pid` in run_start) is alive. Pure but for `isAlive`.
  */
@@ -197,14 +197,14 @@ export function stopInWords(status) {
 export function renderWatchAll(models, now) {
   if (!models.length) return renderWatch(null, now);
   if (models.length === 1 && !models[0].project) return renderWatch(models[0], now);
-  return models.map((m) => `  ── ${m.project ?? "whole folder (--from-conductor)"} ──\n${renderWatch(m, now)}`).join("\n");
+  return models.map((m) => `  ── ${m.project ?? "whole folder (--from-carja)"} ──\n${renderWatch(m, now)}`).join("\n");
 }
 
 const hhmm = (iso) => new Date(iso).toTimeString().slice(0, 5);
 
 /** The watch screen. `now` in ms. */
 export function renderWatch(m, now) {
-  if (!m) return "  No loop run recorded here yet. Start one with `conductor loop . --from-conductor`.\n";
+  if (!m) return "  No loop run recorded here yet. Start one with `carja loop . --from-carja`.\n";
   const lines = [];
   // I7: a stacked run says where it is in the project, and when it should end.
   const st = m.stack;

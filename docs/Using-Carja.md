@@ -1,20 +1,20 @@
-# Using Conductor
+# Using Carja
 
 How to do each thing, with the exact command. You work in two places:
 
 - **In your agent** (Claude Code, Antigravity, Codex), you run the workflows. In Claude Code each one is a slash command, such as `/spec-it`. Elsewhere you say its trigger ("write the spec").
-- **In a terminal**, you run the `conductor` CLI. Without it on your PATH, use `npx -y github:charlus/conductor-framework <command>`.
+- **In a terminal**, you run the `carja` CLI. Without it on your PATH, use `npx -y github:charlus/carja <command>`.
 
-`conductor` with no arguments, inside a project, says where the project stands and the next command. `conductor help <command>` shows every option.
+`carja` with no arguments, inside a project, says where the project stands and the next command. `carja help <command>` shows every option.
 
 ## Start a project
 
 | You want to | Do |
 |---|---|
-| Install Conductor | `npx -y github:charlus/conductor-framework init` |
-| Upgrade an install | `npx -y github:charlus/conductor-framework upgrade` (preview with `--dry-run`) |
-| Onboard a codebase you inherited | `conductor survey`, then `/survey` in your agent |
-| Turn on the git gates | `conductor verify --detect`, then `conductor install-hooks` |
+| Install Carja | `npx -y github:charlus/carja init` |
+| Upgrade an install | `npx -y github:charlus/carja upgrade` (preview with `--dry-run`) |
+| Onboard a codebase you inherited | `carja survey`, then `/survey` in your agent |
+| Turn on the git gates | `carja verify --detect`, then `carja install-hooks` |
 
 ## Build a product, in your agent
 
@@ -33,23 +33,23 @@ Each stage is one workflow, run in a fresh session. The workflow ends by naming 
 
 | You want to | Do |
 |---|---|
-| See what is on the plate | `conductor status` (add `--live` for MR and deploy state) |
-| Capture a thought | `conductor inbox add "<thought>"` |
-| See everything in a browser | `conductor view --open` |
-| Approve a document in the browser | `conductor review <file.md>` |
+| See what is on the plate | `carja status` (add `--live` for MR and deploy state) |
+| Capture a thought | `carja inbox add "<thought>"` |
+| See everything in a browser | `carja view --open` |
+| Approve a document in the browser | `carja review <file.md>` |
 
 ## Let the loop work unattended
 
 The loop runs the same workflows, one stage per fresh beat, each behind an independent review, and opens one MR per item. You merge.
 
-1. See your projects, their stage and whether the loop is on: `conductor status`, or `conductor loop on` with no name. Then turn it on for one: `conductor loop on <project>`. It shows each change in plain words and asks once: after your Discovery it writes the Blueprint stages you have not written as one MR (merging it is your sign-off), then it builds the slices, from spec to MR. If the code is a nested repository (`repo/` inside your `conductor/` repository), it finds it: each item then opens a code MR to the team's repository, then a state MR to yours. Merge the code MR first. If it says the code has no test command, run the command it prints. For backlog items alone, run `conductor loop on --backlog` once, then give the loop each item with `conductor loop take "<item>"` (the title, or a part of it that names one item). `conductor loop take` lists what it has been given, `--drop "<item>"` takes one back. Nothing tracked changes, so your next `git pull` is never blocked. `conductor loop off <project>` takes the project out again. `conductor loop profile` shows which model each role uses and the last run's cost; `conductor loop profile balanced` lowers the cost per beat (Sonnet writes code, Opus reviews and writes specs), `quality` uses Opus everywhere. In your agent, "turn the loop on for <project>" does the same.
-2. Check the project: `conductor loop doctor .` (`loop on` runs it for you)
-3. Preview: `conductor loop . --from-conductor --dry-run`
-4. Run it in a separate terminal: `conductor loop . --from-conductor`. Follow it from another one with `conductor watch`, or every product at once with `conductor watch --all`.
+1. See your projects, their stage and whether the loop is on: `carja status`, or `carja loop on` with no name. Then turn it on for one: `carja loop on <project>`. It shows each change in plain words and asks once: after your Discovery it writes the Blueprint stages you have not written as one MR (merging it is your sign-off), then it builds the slices, from spec to MR. If the code is a nested repository (`repo/` inside your `carja/` repository), it finds it: each item then opens a code MR to the team's repository, then a state MR to yours. Merge the code MR first. If it says the code has no test command, run the command it prints. For backlog items alone, run `carja loop on --backlog` once, then give the loop each item with `carja loop take "<item>"` (the title, or a part of it that names one item). `carja loop take` lists what it has been given, `--drop "<item>"` takes one back. Nothing tracked changes, so your next `git pull` is never blocked. `carja loop off <project>` takes the project out again. `carja loop profile` shows which model each role uses and the last run's cost; `carja loop profile balanced` lowers the cost per beat (Sonnet writes code, Opus reviews and writes specs), `quality` uses Opus everywhere. In your agent, "turn the loop on for <project>" does the same.
+2. Check the project: `carja loop doctor .` (`loop on` runs it for you)
+3. Preview: `carja loop . --from-carja --dry-run`
+4. Run it in a separate terminal: `carja loop . --from-carja`. Follow it from another one with `carja watch`, or every product at once with `carja watch --all`.
 5. When it stops, it prints the next step. Usually one of these:
-   - **Questions for you:** `conductor status` names the file. Write an option number after each `Answer:`, then run the loop again.
+   - **Questions for you:** `carja status` names the file. Write an option number after each `Answer:`, then run the loop again.
    - **An MR:** review and merge it, then run the loop again for the next item.
-   - **It needs you:** read `conductor/1-workbench/inbox.md`.
+   - **It needs you:** read `carja/1-workbench/inbox.md`.
 
 A run never waits for you. A later run reads what you did (an answer, a merge) from the files and from git. To start runs without you, call the same command from cron or CI, or pass a trigger with `--event`.
 
@@ -59,50 +59,50 @@ The full guide, with the safety model: [`Running-The-Loop.md`](Running-The-Loop.
 
 ## Command reference
 
-Generated from `src/usage.js`. `conductor <command> --help` prints the same.
+Generated from `src/usage.js`. `carja <command> --help` prints the same.
 
 ### Start or upgrade a project
 
-#### `conductor init`
+#### `carja init`
 
-Install Conductor in a new project.
+Install Carja in a new project.
 
 ```
-conductor init [dir] [options]
+carja init [dir] [options]
 ```
 
 | Option | What it does |
 |---|---|
 | `--all` | Install every bundle without asking |
 | `-f, --force` | Overwrite an existing .agents/ folder |
-| `--agent-only` | Install .agents/ only, no conductor/ folders |
+| `--agent-only` | Install .agents/ only, no carja/ folders |
 | `--no-detect` | Skip tech stack detection |
 
-- `npx -y github:charlus/conductor-framework init`: install in the current folder
+- `npx -y github:charlus/carja init`: install in the current folder
 
-#### `conductor upgrade`
+#### `carja upgrade`
 
 Upgrade a project to the latest framework.
 
 ```
-conductor upgrade [dir] [options]
+carja upgrade [dir] [options]
 ```
 
 | Option | What it does |
 |---|---|
 | `--dry-run` | Show what would change, write nothing |
 | `--force` | Upgrade although the checks advise against it |
-| `--no-backup` | Do not copy the old files to .conductor-backup/ |
+| `--no-backup` | Do not copy the old files to .carja-backup/ |
 | `--no-commit` | Leave the upgrade uncommitted and print the commit to make |
 
-- `npx -y github:charlus/conductor-framework upgrade --dry-run`: preview the upgrade
+- `npx -y github:charlus/carja upgrade --dry-run`: preview the upgrade
 
-#### `conductor survey`
+#### `carja survey`
 
 Collect the facts about a codebase you inherited.
 
 ```
-conductor survey [dir] [options]
+carja survey [dir] [options]
 ```
 
 | Option | What it does |
@@ -110,16 +110,16 @@ conductor survey [dir] [options]
 | `--json` | Print JSON |
 | `--out <file>` | Write the report to a file |
 
-- `conductor survey --out survey.md`: facts for the onboarding interview
+- `carja survey --out survey.md`: facts for the onboarding interview
 
 ### Every day
 
-#### `conductor status`
+#### `carja status`
 
 One-screen digest: inbox, backlog, next up, waiting questions.
 
 ```
-conductor status [dir] [options]
+carja status [dir] [options]
 ```
 
 | Option | What it does |
@@ -131,24 +131,24 @@ conductor status [dir] [options]
 
 Reads: `deployCheck`, `repos`.
 
-- `conductor status --live`: what is on our plate, with MR state
+- `carja status --live`: what is on our plate, with MR state
 
-#### `conductor inbox`
+#### `carja inbox`
 
 Capture a thought, or read the inbox.
 
 ```
-conductor inbox add <text> | conductor inbox list
+carja inbox add <text> | carja inbox list
 ```
 
-- `conductor inbox add "rename the export button"`: capture without opening a file
+- `carja inbox add "rename the export button"`: capture without opening a file
 
-#### `conductor view`
+#### `carja view`
 
-Render conductor/ as one HTML dashboard.
+Render carja/ as one HTML dashboard.
 
 ```
-conductor view [dir] [options]
+carja view [dir] [options]
 ```
 
 | Option | What it does |
@@ -157,14 +157,14 @@ conductor view [dir] [options]
 | `--out <file>` | Write it to this file |
 | `--stale-days <n>` | Days after which an item counts as stale |
 
-- `conductor view --open`: the full dashboard
+- `carja view --open`: the full dashboard
 
-#### `conductor review`
+#### `carja review`
 
 Show a document in the browser and wait for approve or request-changes.
 
 ```
-conductor review <file.md> [options]
+carja review <file.md> [options]
 ```
 
 | Option | What it does |
@@ -173,14 +173,14 @@ conductor review <file.md> [options]
 | `--timeout <min>` | Stop waiting after this many minutes |
 | `--quiet` | No JSON on stdout |
 
-- `conductor review conductor/2-backlog/project-backlog/x/blueprint/grand-prd.md`: review a PRD
+- `carja review carja/2-backlog/project-backlog/x/blueprint/grand-prd.md`: review a PRD
 
-#### `conductor personas`
+#### `carja personas`
 
 Which domain personas (Designer, Security…) a change needs.
 
 ```
-conductor personas [paths…] [options]
+carja personas [paths…] [options]
 ```
 
 | Option | What it does |
@@ -188,28 +188,28 @@ conductor personas [paths…] [options]
 | `--base <ref>` | Compare with this ref instead of the working tree |
 | `--json` | Print JSON |
 
-- `conductor personas --base master`: personas for this branch
+- `carja personas --base master`: personas for this branch
 
-#### `conductor work`
+#### `carja work`
 
 The hidden worktree an interactive Spec-It, Build or Ship works in, so your folder stays on its default branch.
 
 ```
-conductor work <item> [dir]
-conductor work clean [dir]
+carja work <item> [dir]
+carja work clean [dir]
 ```
 
 Reads: `loop.code_dir`, `loop.setup`.
 
-- `conductor work cop-availability/01-cockpit-access`: make or reuse the slice's worktree (and its code worktree), print where it is
-- `conductor work clean`: remove the worktrees of merged work now (git pull does it too)
+- `carja work cop-availability/01-cockpit-access`: make or reuse the slice's worktree (and its code worktree), print where it is
+- `carja work clean`: remove the worktrees of merged work now (git pull does it too)
 
-#### `conductor design`
+#### `carja design`
 
-Combine an old conductor/4-context/design/ folder into one DESIGN.md.
+Combine an old carja/4-context/design/ folder into one DESIGN.md.
 
 ```
-conductor design migrate [dir] [options]
+carja design migrate [dir] [options]
 ```
 
 | Option | What it does |
@@ -217,33 +217,33 @@ conductor design migrate [dir] [options]
 | `--repo <path>` | The code repository that gets DESIGN.md |
 | `--dry-run` | Show the result, write nothing |
 
-- `conductor design migrate --dry-run`: preview DESIGN.md
+- `carja design migrate --dry-run`: preview DESIGN.md
 
 ### Run work unattended
 
-#### `conductor loop`
+#### `carja loop`
 
 Run the autonomous loop: beats, reviews, one MR per item.
 
 ```
-conductor loop <project> [dir] [options]
-conductor loop [dir] [--from-conductor | --goal <text> | --event <file.json>] [options]
-conductor loop on|off <project> [dir] [--yes] [--dry-run]
-conductor loop take ["<item>"] [dir] [--drop]
-conductor loop profile [quality|balanced] [dir]
-conductor loop doctor [dir] [--beat]
+carja loop <project> [dir] [options]
+carja loop [dir] [--from-carja | --goal <text> | --event <file.json>] [options]
+carja loop on|off <project> [dir] [--yes] [--dry-run]
+carja loop take ["<item>"] [dir] [--drop]
+carja loop profile [quality|balanced] [dir]
+carja loop doctor [dir] [--beat]
 ```
 
 | Option | What it does |
 |---|---|
-| `<project>` | Build this project, after you approve its Technical Vision: the Carve, then every slice, each one on the branch of the one below, with no wait for a merge. A one-way question stops the run. You merge the MRs in order at the end: the list is in conductor/1-workbench/loop-report-<project>.md. An MR you close is built again with everything above it. Its state stays in .git; another terminal in the same folder can build another project at the same time. The loop removes its worktrees when it ends or on Ctrl+C |
-| `--from-conductor` | Take the work from conductor/: backlog, inbox, slices, Blueprints |
+| `<project>` | Build this project, after you approve its Technical Vision: the Carve, then every slice, each one on the branch of the one below, with no wait for a merge. A one-way question stops the run. You merge the MRs in order at the end: the list is in carja/1-workbench/loop-report-<project>.md. An MR you close is built again with everything above it. Its state stays in .git; another terminal in the same folder can build another project at the same time. The loop removes its worktrees when it ends or on Ctrl+C |
+| `--from-carja` | Take the work from carja/: backlog, inbox, slices, Blueprints |
 | `--dry-run` | Show what the run would pick up and do, write nothing |
 | `--platform <name>` | Engine: claude \| codex \| antigravity (default: loop-state, then detected) |
-| `--goal <text>` | One goal for this run, instead of conductor/ |
+| `--goal <text>` | One goal for this run, instead of carja/ |
 | `--event <file.json>` | Start from a trigger payload (cron, CI, bot); untrusted text is clamped to L1 |
-| `--priority <P1[,P2]>` | With --from-conductor: only backlog items under these headings |
-| `--no-inbox` | With --from-conductor: skip inbox lines |
+| `--priority <P1[,P2]>` | With --from-carja: only backlog items under these headings |
+| `--no-inbox` | With --from-carja: skip inbox lines |
 | `--unsafe-no-sandbox` | Allow sandbox: none (only inside a VM you control) |
 | `on` | List the projects, their stage, and which ones the loop can take |
 | `on <project>` | Let the loop work on a project: shows each change in plain words, asks once, writes the settings |
@@ -261,40 +261,40 @@ conductor loop doctor [dir] [--beat]
 
 Reads: `verify`, `loop.forge`, `loop.setup`, `loop.allowed_domains`, `loop.require_ready`, `loop.priorities`, `loop.inbox`, `loop.allow_nested_repo`, `loop.models`, `loop.cost_aware`, `loop.slices`, `loop.blueprint`, `loop.code_dir`, `loop.profile`, `loop.blank_env`, `loop.install`, `loop.dependency_min_age_days`, `loop.quota_max_wait_min`.
 
-- `conductor loop km-workload-relief`: build this project; a second terminal can run another project
-- `conductor loop km-workload-relief --dry-run`: what will it build?
-- `conductor loop on km-workload-relief`: let the loop work on this project
-- `conductor loop take "flaky login"`: give the loop this backlog item
-- `conductor loop doctor .`: is this project ready?
-- `conductor loop . --from-conductor --dry-run`: what would the next run do?
-- `conductor loop . --from-conductor`: the real run
+- `carja loop km-workload-relief`: build this project; a second terminal can run another project
+- `carja loop km-workload-relief --dry-run`: what will it build?
+- `carja loop on km-workload-relief`: let the loop work on this project
+- `carja loop take "flaky login"`: give the loop this backlog item
+- `carja loop doctor .`: is this project ready?
+- `carja loop . --from-carja --dry-run`: what would the next run do?
+- `carja loop . --from-carja`: the real run
 
-#### `conductor watch`
+#### `carja watch`
 
 What the loop run is doing: each item's beat in progress, the last news, beats and cost.
 
 ```
-conductor watch [dir] [--once]
-conductor watch --all [--once]
+carja watch [dir] [--once]
+carja watch --all [--once]
 ```
 
 | Option | What it does |
 |---|---|
-| `--all` | The watch tower: every product the loop is on, on one screen (registered by conductor loop on or conductor loop <project>), one row per running project |
+| `--all` | The watch tower: every product the loop is on, on one screen (registered by carja loop on or carja loop <project>), one row per running project |
 | `--once` | Print one screen and exit (it refreshes every few seconds otherwise) |
 | `--no-color` | Plain text on a terminal (NO_COLOR does the same) |
 
-- `conductor watch --all`: every product's run, beat, last news and waiting questions
-- `conductor watch`: this product only, every project run going on in it
+- `carja watch --all`: every product's run, beat, last news and waiting questions
+- `carja watch`: this product only, every project run going on in it
 
 ### Gates and evidence
 
-#### `conductor verify`
+#### `carja verify`
 
 Show or set the command `git push` must pass.
 
 ```
-conductor verify [options]
+carja verify [options]
 ```
 
 | Option | What it does |
@@ -307,28 +307,28 @@ conductor verify [options]
 
 Reads: `verify`, `repos`.
 
-- `conductor verify --set "npm test"`: set the push gate
+- `carja verify --set "npm test"`: set the push gate
 
-#### `conductor install-hooks`
+#### `carja install-hooks`
 
 Turn on the TDD and verification git hooks.
 
 ```
-conductor install-hooks [--uninstall]
+carja install-hooks [--uninstall]
 ```
 
 | Option | What it does |
 |---|---|
 | `--uninstall` | Turn them off |
 
-- `conductor install-hooks`: gates on
+- `carja install-hooks`: gates on
 
-#### `conductor trust-verify`
+#### `carja trust-verify`
 
 Record your consent for this repository's verify command.
 
 ```
-conductor trust-verify [--revoke | --list]
+carja trust-verify [--revoke | --list]
 ```
 
 | Option | What it does |
@@ -336,16 +336,16 @@ conductor trust-verify [--revoke | --list]
 | `--revoke` | Withdraw consent |
 | `--list` | List trusted repositories |
 
-- `conductor trust-verify`: trust the current command
+- `carja trust-verify`: trust the current command
 
-#### `conductor evidence`
+#### `carja evidence`
 
 Record and check verification evidence against the working tree.
 
 ```
-conductor evidence run --label <name> [--stable-tree] -- <cmd>
-conductor evidence check --label <name> [options]
-conductor evidence list
+carja evidence run --label <name> [--stable-tree] -- <cmd>
+carja evidence check --label <name> [options]
+carja evidence list
 ```
 
 | Option | What it does |
@@ -356,16 +356,16 @@ conductor evidence list
 | `--max-age <hours>` | With check: the evidence must be this recent |
 | `--allow-paths <a,b>` | With check: changes to these paths keep the evidence fresh |
 
-- `conductor evidence run --label tests -- npm test`: record a test run
+- `carja evidence run --label tests -- npm test`: record a test run
 
 ### Skills
 
-#### `conductor add`
+#### `carja add`
 
 Download a skill from the registry.
 
 ```
-conductor add <skill> [options]
+carja add <skill> [options]
 ```
 
 | Option | What it does |
@@ -375,28 +375,28 @@ conductor add <skill> [options]
 
 Reads: `registry`.
 
-- `npx -y github:charlus/conductor-framework add react-components`
+- `npx -y github:charlus/carja add react-components`
 
-#### `conductor remove`
+#### `carja remove`
 
 Remove an installed skill.
 
 ```
-conductor remove <skill> [-f]
+carja remove <skill> [-f]
 ```
 
 | Option | What it does |
 |---|---|
 | `-f, --force` | Remove without asking |
 
-- `conductor remove react-components`
+- `carja remove react-components`
 
-#### `conductor list`
+#### `carja list`
 
 List installed skills, or the registry's.
 
 ```
-conductor list [options]
+carja list [options]
 ```
 
 | Option | What it does |
@@ -406,14 +406,14 @@ conductor list [options]
 
 Reads: `registry`.
 
-- `conductor list --remote`
+- `carja list --remote`
 
-#### `conductor search`
+#### `carja search`
 
 Search the registry.
 
 ```
-conductor search <query> [options]
+carja search <query> [options]
 ```
 
 | Option | What it does |
@@ -423,30 +423,30 @@ conductor search <query> [options]
 
 Reads: `registry`.
 
-- `conductor search react`
+- `carja search react`
 
 ### Measurement and upkeep
 
-#### `conductor review-log`
+#### `carja review-log`
 
 Record review findings, and see which rules reviewers dismiss.
 
 ```
-conductor review-log append '<json>' | conductor review-log summary [--since <date>]
+carja review-log append '<json>' | carja review-log summary [--since <date>]
 ```
 
 | Option | What it does |
 |---|---|
 | `--since <date>` | With summary: only findings after this date |
 
-- `conductor review-log summary`
+- `carja review-log summary`
 
-#### `conductor context-bill`
+#### `carja context-bill`
 
 What the framework costs an agent per session.
 
 ```
-conductor context-bill [dir] [options]
+carja context-bill [dir] [options]
 ```
 
 | Option | What it does |
@@ -456,25 +456,25 @@ conductor context-bill [dir] [options]
 | `--budget <file>` | Check against a budget file |
 | `--capture` | Print a budget file for the current state |
 
-- `conductor context-bill`
+- `carja context-bill`
 
-#### `conductor agents-md`
+#### `carja agents-md`
 
 The project card in AGENTS.md: print facts, refresh them, check it.
 
 ```
-conductor agents-md <facts|write|check> [dir]
+carja agents-md <facts|write|check> [dir]
 ```
 
 Reads: `verify`, `eval`.
 
-- `conductor agents-md check`: is the card current?
+- `carja agents-md check`: is the card current?
 
-## Settings in `conductor.config.json`
+## Settings in `carja.config.json`
 
 | Key | What it does |
 |---|---|
-| `verify` | The command `git push` and the loop must pass (set it with `conductor verify --set`) |
+| `verify` | The command `git push` and the loop must pass (set it with `carja verify --set`) |
 | `eval` | The agent-layer eval command the push gate also runs |
 | `deployCheck` | A command that says whether the latest merge is deployed (`status --live`) |
 | `registry` | The skill registry URL for add, list and search |
@@ -482,11 +482,11 @@ Reads: `verify`, `eval`.
 | `loop.forge` | "gh" \| "glab" (default: from the origin host) |
 | `loop.setup` | Shell command run once in each new worktree, before the first beat |
 | `loop.allowed_domains` | Extra hosts the sandbox may reach; never a package registry (refused) |
-| `loop.require_ready` | true: only backlog items given with conductor loop take, or tagged loop-ready |
+| `loop.require_ready` | true: only backlog items given with carja loop take, or tagged loop-ready |
 | `loop.priorities` | ["P1"]: only backlog items under these headings |
 | `loop.inbox` | false: never take inbox lines |
 | `loop.allow_nested_repo` | true: run although a gitignored nested git repository exists |
-| `loop.profile` | "quality" (Opus everywhere) or "balanced" (Sonnet for code and ship, Opus for review, specs and designs): set it with conductor loop profile |
+| `loop.profile` | "quality" (Opus everywhere) or "balanced" (Sonnet for code and ship, Opus for review, specs and designs): set it with carja loop profile |
 | `loop.models` | { "maker": "sonnet", … }: one role's model over the profile (roles: maker, maker_escalation, checker, spec, blueprint, ship; claude engine) |
 | `loop.cost_aware` | true: budget.max_cost_usd in loop-state.json stops a run |
 | `loop.slices` | ["<Project>"] or true: the project's carved slices are loop work, from spec to MR |

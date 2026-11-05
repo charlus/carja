@@ -67,7 +67,7 @@ test("the expected loop worktree on its loop branch still captures the work", as
   const { base, r } = repo();
   try {
     const wt = join(r, ".agents/.worktrees/loop-x");
-    G(r, "worktree", "add", "-q", "-b", "conductor/loop/loop-x", wt);
+    G(r, "worktree", "add", "-q", "-b", "carja/loop/loop-x", wt);
     writeFileSync(join(wt, "work.txt"), "work\n");
     const res = await autoCommit({ git: git(wt), message: "chore: capture", expect: { path: wt } });
     assert.equal(res.committed, true);

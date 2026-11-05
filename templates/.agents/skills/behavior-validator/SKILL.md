@@ -8,7 +8,7 @@ category: core
 
 > Reading the code tells you what it was *meant* to do. Exercising the running thing tells you what it *actually* does. A validator that can see the implementation is tempted to confirm the code "looks right" instead of observing behavior — the same anchoring bias that makes an author a poor reviewer of their own work. So this gate runs **source-blind**: it never reads the diff, tests, or source while validating. It only drives the live artifact and reports what it sees.
 
-This is Conductor's third verification leg, and the three are distinct — don't collapse them:
+This is Carja's third verification leg, and the three are distinct — don't collapse them:
 
 | Gate | Vantage | Question |
 |---|---|---|
@@ -36,7 +36,7 @@ Validate against a contract, not a vibe. **Read the contract first; if none exis
 4. **Setup / runtime access** — URLs, commands, endpoints, fixtures, credentials needed to exercise it.
 5. **Evidence spec** — what to capture as proof (which outputs, screenshots, responses), and what to redact.
 
-For most Conductor work the spec's acceptance criteria (`skills/spec-it` output) *are* the first three; this gate turns them from prose into an executed check.
+For most Carja work the spec's acceptance criteria (`skills/spec-it` output) *are* the first three; this gate turns them from prose into an executed check.
 
 ## The procedure
 

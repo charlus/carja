@@ -7,7 +7,7 @@ description: Use after Build or Retrospective to update Product Area and Context
 
 ## Purpose
 
-Keep the knowledge base alive. After building or shipping, update Product Area files (`conductor/3-product-areas/`) and Context files (`conductor/4-context/`) with what was learned.
+Keep the knowledge base alive. After building or shipping, update Product Area files (`carja/3-product-areas/`) and Context files (`carja/4-context/`) with what was learned.
 
 Without this, upstream documents become stale and downstream workflows read outdated information.
 
@@ -19,7 +19,7 @@ Without this, upstream documents become stale and downstream workflows read outd
 
 ## What to Update
 
-### Product Area Files (`conductor/3-product-areas/[area]/`)
+### Product Area Files (`carja/3-product-areas/[area]/`)
 
 | File | Update With |
 |------|------------|
@@ -27,7 +27,7 @@ Without this, upstream documents become stale and downstream workflows read outd
 | `[area]-Technical.md` | New architectural decisions, patterns, data model changes, API changes |
 | `[area]-Epics.md` | Mark completed Epics. Note scope changes. Add new Epics discovered during Build |
 
-### Context Files (`conductor/4-context/`)
+### Context Files (`carja/4-context/`)
 
 | File | Update With |
 |------|------------|

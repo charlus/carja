@@ -1,7 +1,7 @@
 // test/view-command.test.js
 //
 // The `--out` escape hatch is the one path where a derived view can reach a
-// commit. `conductor view` with no flags writes into `conductor/.views/` and
+// commit. `carja view` with no flags writes into `carja/.views/` and
 // adds the ignore entry itself, so the page is invisible to `git status` and to
 // `git add -A`. `--out <path>` means "write it exactly here" — often outside the
 // repo entirely — so silently editing `.gitignore` for an arbitrary path would

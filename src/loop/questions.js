@@ -18,7 +18,7 @@
 
 import { parseRulings } from "./rulings.js";
 
-export const QUESTIONS_REL = "conductor/1-workbench/questions";
+export const QUESTIONS_REL = "carja/1-workbench/questions";
 
 /** A file-safe key for a task id: `slice:notes-app/02-sync` → `slice-notes-app-02-sync`. */
 export function roundKey(id) {

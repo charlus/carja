@@ -14,9 +14,9 @@
 import { createHash } from "node:crypto";
 
 export const CARD_LIMIT_BYTES = 3072;
-// Readers accept both marker prefixes (rename to Carja, PR 1); writers emit `conductor:`.
+// Readers accept both marker prefixes (rename to Carja, PR 1); writers emit `carja:`.
 const BEGIN_RE = /<!-- (?:carja|conductor):project-card:begin[^>]*-->/;
-const END = "<!-- conductor:project-card:end -->";
+const END = "<!-- carja:project-card:end -->";
 const END_RE = /<!-- (?:carja|conductor):project-card:end -->/;
 const SOURCES_RE = /<!-- (?:carja|conductor):project-card:sources (\{.*\}) -->\n?/;
 
@@ -29,10 +29,10 @@ const TODO = {
 };
 
 const READ_MORE = [
-  "- Goals: `conductor/0-compass/north-star.md`",
-  "- Architecture: `conductor/4-context/technical/architecture.md`",
-  "- Coding patterns: `conductor/4-context/technical/coding-patterns.md`",
-  "- Product areas: `conductor/3-product-areas/`",
+  "- Goals: `carja/0-compass/north-star.md`",
+  "- Architecture: `carja/4-context/technical/architecture.md`",
+  "- Coding patterns: `carja/4-context/technical/coding-patterns.md`",
+  "- Product areas: `carja/3-product-areas/`",
   "- Framework reference: `.agents/how-it-works.md`",
 ].join("\n");
 
@@ -47,14 +47,14 @@ function codeSections(facts) {
   ].join("\n");
   const commands = facts.commands?.length
     ? facts.commands.map((c) => `- ${c.what}: \`${c.cmd}\``).join("\n")
-    : "- None found. Set one with `conductor verify --set <cmd>`.";
+    : "- None found. Set one with `carja verify --set <cmd>`.";
   const layout = facts.layout?.length
     ? facts.layout.map((d) => `- \`${d.dir}/\` — ${d.files} file${d.files === 1 ? "" : "s"}`).join("\n")
     : "- No directories found.";
   return { Stack: stack, Commands: commands, Layout: layout, "Read more": READ_MORE };
 }
 
-/** What `conductor agents-md facts` prints: the code-written sections only. */
+/** What `carja agents-md facts` prints: the code-written sections only. */
 export function renderFacts(facts) {
   const s = codeSections(facts);
   const areas = facts.areas?.length ? facts.areas.map((a) => `- \`${a}\``).join("\n") : "- None yet.";
@@ -108,7 +108,7 @@ export function buildCard({ facts, previous }) {
     "Read more": s["Read more"],
   };
   return [
-    "<!-- conductor:project-card:begin status=draft -->",
+    "<!-- carja:project-card:begin status=draft -->",
     "## Project card",
     "",
     ...HEADINGS.flatMap((h) => [`### ${h}`, "", body[h], ""]),
@@ -124,7 +124,7 @@ function contentBytes(block) {
 /** Shape, size, no TODO, facts untouched. @returns {{ok:boolean, problems:string[]}} */
 export function checkCard(text, facts) {
   const block = cardBlock(text);
-  if (!block) return { ok: false, problems: ["no project card block in AGENTS.md (run `conductor agents-md write`)"] };
+  if (!block) return { ok: false, problems: ["no project card block in AGENTS.md (run `carja agents-md write`)"] };
   const card = parseCard(block);
   const problems = [];
   if (card.order.join("|") !== HEADINGS.join("|")) {
@@ -139,17 +139,17 @@ export function checkCard(text, facts) {
   const fresh = codeSections(facts);
   for (const h of CODE_SECTIONS) {
     if (card.sections[h] !== undefined && card.sections[h] !== fresh[h]) {
-      problems.push(`${h} differs from what the code says; it is generated, do not edit it (run \`conductor agents-md write\`)`);
+      problems.push(`${h} differs from what the code says; it is generated, do not edit it (run \`carja agents-md write\`)`);
     }
   }
   const listed = Object.keys(card.areaText).sort().join("|");
   if (listed !== [...(facts.areas ?? [])].sort().join("|")) {
-    problems.push("Product areas list differs from conductor/3-product-areas/ (run `conductor agents-md write`)");
+    problems.push("Product areas list differs from carja/3-product-areas/ (run `carja agents-md write`)");
   }
   const bullets = (card.sections.Conventions ?? "").split("\n").filter((l) => /^\s*[-*] /.test(l)).length;
   if (bullets > 5) problems.push(`Conventions has ${bullets} bullets, at most 5`);
   const bytes = contentBytes(block);
-  if (bytes > CARD_LIMIT_BYTES) problems.push(`card is ${bytes} bytes, limit ${CARD_LIMIT_BYTES}: move detail into conductor/ and link it`);
+  if (bytes > CARD_LIMIT_BYTES) problems.push(`card is ${bytes} bytes, limit ${CARD_LIMIT_BYTES}: move detail into carja/ and link it`);
   return { ok: problems.length === 0, problems };
 }
 
@@ -160,9 +160,9 @@ export function stampCard(text, sources) {
   const block = cardBlock(text);
   const hashes = Object.fromEntries(Object.keys(sources).sort().map((k) => [k, shortHash(sources[k])]));
   const stamped = block
-    .replace(BEGIN_RE, "<!-- conductor:project-card:begin status=ok -->")
+    .replace(BEGIN_RE, "<!-- carja:project-card:begin status=ok -->")
     .replace(SOURCES_RE, "")
-    .replace(END_RE, `<!-- conductor:project-card:sources ${JSON.stringify(hashes)} -->\n${END}`);
+    .replace(END_RE, `<!-- carja:project-card:sources ${JSON.stringify(hashes)} -->\n${END}`);
   return text.replace(block, stamped);
 }
 

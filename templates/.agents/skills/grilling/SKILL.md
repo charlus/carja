@@ -5,7 +5,7 @@ description: "The interview primitive. A relentless interview, asked in short nu
 
 # Grilling — The Interview Primitive
 
-> This is the **single source of truth** for how Conductor interviews a human. Workflows that need to extract intent (Genesis, Storyboard, Grand PRD, Spec-It, Design Brief) load this instead of re-inventing an interview each time. It defines the *technique*; the calling workflow supplies the *agenda* (which topics, in what order, and what documents to produce).
+> This is the **single source of truth** for how Carja interviews a human. Workflows that need to extract intent (Genesis, Storyboard, Grand PRD, Spec-It, Design Brief) load this instead of re-inventing an interview each time. It defines the *technique*; the calling workflow supplies the *agenda* (which topics, in what order, and what documents to produce).
 
 ## The Prime Directive
 
@@ -17,7 +17,7 @@ description: "The interview primitive. A relentless interview, asked in short nu
 
 2. **Recommend an answer to every question.** Never ask an open question you could take a position on. Pose the question, then give *your* recommended answer and why. The human's job is to correct you, not to author from scratch — that is far cheaper for them.
 
-3. **Look it up; don't ask it.** If a *fact* can be found by exploring the environment — filesystem, existing `conductor/` docs, codebase, tools — find it yourself. Never make the human tell you something you could have discovered.
+3. **Look it up; don't ask it.** If a *fact* can be found by exploring the environment — filesystem, existing `carja/` docs, codebase, tools — find it yourself. Never make the human tell you something you could have discovered.
 
 4. **Descend the decision tree in dependency order.** Answers reshape which questions matter next. Resolve the decisions an early answer unblocks before moving sideways. The order is emergent, not a fixed script.
 
@@ -43,14 +43,14 @@ Everything else is yours to decide.
 
 ## Challenge the Brief
 
-Before convergence, check the brief against four conditions and state what you find. This is the only outward-facing gate Conductor has — every other one proves the code matches the spec, and none of them ask whether the spec was worth building.
+Before convergence, check the brief against four conditions and state what you find. This is the only outward-facing gate Carja has — every other one proves the code matches the spec, and none of them ask whether the spec was worth building.
 
 | | Condition | Where you look |
 |---|---|---|
-| **C1** | It contradicts a decision the human made earlier | Prior `conductor/` docs — genesis, PRDs, specs, ship-logs. **This project only.** |
-| **C2** | It breaks something for existing users | Shipped acceptance criteria in `conductor/2-implementations/` and the code's current behaviour |
+| **C1** | It contradicts a decision the human made earlier | Prior `carja/` docs — genesis, PRDs, specs, ship-logs. **This project only.** |
+| **C2** | It breaks something for existing users | Shipped acceptance criteria in `carja/2-implementations/` and the code's current behaviour |
 | **C3** | Its cost or duration is far from what the brief assumes | The size or deadline the brief names, against the surface the work actually touches |
-| **C4** | We lack the data, the access or the rights | A named integration, dataset, credential or licence absent from `conductor/4-context/` and from the environment |
+| **C4** | We lack the data, the access or the rights | A named integration, dataset, credential or licence absent from `carja/4-context/` and from the environment |
 
 **How to state it.** Two sentences per hit, naming the source you read. Then stop and let the human answer in one line.
 

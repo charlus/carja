@@ -1,5 +1,5 @@
 {"type": "system", "subtype": "init", "model": "claude-haiku-5-5", "cwd": "/work/app", "session_id": "s1"}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "toolu_01LVkGmtcVSHRwV7oX8RCgs4", "name": "Read", "input": {"file_path": "/home/u/.cache/conductor-stream-sample/a.txt"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "toolu_01LVkGmtcVSHRwV7oX8RCgs4", "name": "Read", "input": {"file_path": "/home/u/.cache/carja-stream-sample/a.txt"}}]}}
 {"type": "user", "message": {"content": [{"type": "tool_result", "content": "(output)"}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "toolu_01UuZ7z77WdcTfQcXFB2a7tS", "name": "Bash", "input": {"command": "echo hi", "description": "Print hi"}}]}}
 {"type": "rate_limit_event", "subtype": null}

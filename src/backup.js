@@ -1,7 +1,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export const BACKUP_DIR = ".conductor-backup";
+export const BACKUP_DIR = ".carja-backup";
 
 /** Filesystem-safe timestamp. `nowIso` injectable for deterministic tests. */
 export function backupStamp(nowIso) {
@@ -10,7 +10,7 @@ export function backupStamp(nowIso) {
 
 /**
  * Copy each existing relative path under targetDir into
- * `.conductor-backup/<timestamp>/<relpath>`, preserving structure.
+ * `.carja-backup/<timestamp>/<relpath>`, preserving structure.
  * Returns { backupRoot, copied: string[] }. Non-existent paths are skipped.
  */
 export function createBackup(targetDir, relPaths, { nowIso } = {}) {
@@ -39,7 +39,7 @@ export function restoreBackup(targetDir, backupRoot, relPaths) {
   }
 }
 
-/** Ensure `.conductor-backup/` is git-ignored. Returns true if it added the entry. */
+/** Ensure `.carja-backup/` is git-ignored. Returns true if it added the entry. */
 export function ensureGitignore(targetDir, entry = `${BACKUP_DIR}/`) {
   const p = join(targetDir, ".gitignore");
   let content = existsSync(p) ? readFileSync(p, "utf8") : "";

@@ -1,8 +1,8 @@
 // src/commands/design.js
 //
-// `conductor design migrate [dir] [--repo <path>] [--dry-run]`
+// `carja design migrate [dir] [--repo <path>] [--dry-run]`
 //
-// Combines everything in conductor/4-context/design/ into one DESIGN.md at the
+// Combines everything in carja/4-context/design/ into one DESIGN.md at the
 // code repository root: the nested repository in the outer layout, or `dir`
 // itself. Refuses to overwrite an existing DESIGN.md. Each migrated text file
 // becomes a pointer to DESIGN.md; other files (images) stay as they are.
@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { buildDesignMd, pointerStub } from "../design-md.js";
 import { ignoredNestedRepos } from "../nested-repos.js";
 
-const SOURCE_REL = "conductor/4-context/design";
+const SOURCE_REL = "carja/4-context/design";
 const LEGACY = JSON.parse(
   readFileSync(new URL("../retired-design-templates.json", import.meta.url), "utf8"),
 ).files;
@@ -49,8 +49,8 @@ async function isDir(p) {
 }
 
 /**
- * The line `conductor upgrade` prints when the old design folder still holds
- * something that is not a pointer, or null. Upgrade never touches conductor/,
+ * The line `carja upgrade` prints when the old design folder still holds
+ * something that is not a pointer, or null. Upgrade never touches carja/,
  * so it only says what to run.
  */
 export async function designMigrationHint(root) {
@@ -64,13 +64,13 @@ export async function designMigrationHint(root) {
   // Untouched templates hold nothing to carry over: no hint for them.
   const { migrated } = buildDesignMd(files, { legacy: LEGACY, source: SOURCE_REL });
   if (!migrated.length) return null;
-  return `   Design: ${SOURCE_REL}/ is replaced by one DESIGN.md. Run \`conductor design migrate\` to combine it.\n`;
+  return `   Design: ${SOURCE_REL}/ is replaced by one DESIGN.md. Run \`carja design migrate\` to combine it.\n`;
 }
 
 export async function designCommand(args, { cwd, stdout, stderr }) {
   const opts = parseArgs(args);
   if (opts.sub !== "migrate") {
-    stderr.write("usage: conductor design migrate [dir] [--repo <path>] [--dry-run]\n");
+    stderr.write("usage: carja design migrate [dir] [--repo <path>] [--dry-run]\n");
     return opts.sub ? 1 : 0;
   }
   const root = resolve(cwd, opts.dir || ".");

@@ -3,7 +3,7 @@
 // I6 (owner, 2026-10-23): the loop writes for the owner, never into git. Its
 // messages, its run reports, the question rounds waiting for an answer and its
 // improvement proposals stay where the owner and an agent find them, under
-// conductor/1-workbench/, and git's local exclude file hides them, so
+// carja/1-workbench/, and git's local exclude file hides them, so
 // `git status` in the owner's folder stays clean and nothing reaches a commit.
 // Before 6.52.0 the loop appended its escalations to the tracked inbox.md.
 
@@ -12,16 +12,16 @@ import { join } from "node:path";
 import { ensureWorktreesExcluded } from "./worktree.js";
 
 /** The loop's messages to the owner: escalations, stops, decisions taken alone. */
-export const MESSAGES_REL = "conductor/1-workbench/loop-messages.md";
+export const MESSAGES_REL = "carja/1-workbench/loop-messages.md";
 
 /** Paths in the owner's checkout the loop writes and git must not see. */
 export const OWNER_EXCLUDES = Object.freeze([
   ".agents/.worktrees/",
   MESSAGES_REL,
-  "conductor/1-workbench/loop-report-*.md",
+  "carja/1-workbench/loop-report-*.md",
   // Only the rounds waiting at the top level: answered rounds ride the item's branch.
-  "conductor/1-workbench/questions/*.md",
-  "conductor/1-workbench/loop-improvements.md",
+  "carja/1-workbench/questions/*.md",
+  "carja/1-workbench/loop-improvements.md",
 ]);
 
 /** Add every owner-file entry to git's local exclude file. Idempotent; never throws. */
@@ -35,7 +35,7 @@ const HEADER = "# Loop messages\n\nWhat the loop needs you to know: why a run st
 export async function appendLoopMessage(root, text) {
   const path = join(root, MESSAGES_REL);
   try {
-    await mkdir(join(root, "conductor/1-workbench"), { recursive: true });
+    await mkdir(join(root, "carja/1-workbench"), { recursive: true });
     const existing = await readFile(path, "utf8").catch(() => null);
     await appendFile(path, `${existing === null ? HEADER : ""}${text}`, "utf8");
   } catch {

@@ -3,7 +3,7 @@
 // A12 (docs/roadmap/Superlite-Imports.md): the ruling log. An unattended Maker
 // decides product questions alone; before this, only its diff showed what it
 // chose. It appends one line per decision the spec did not settle to
-// conductor/1-workbench/rulings.md:
+// carja/1-workbench/rulings.md:
 //
 //   - [YYYY-MM-DD HH:MM] <task id> · <decision> · why: <reason> · if wrong: low|medium|high · <what breaks>
 //
@@ -15,7 +15,7 @@
 
 import { envelopeUntrusted } from "./untrusted.js";
 
-export const RULINGS_REL = "conductor/1-workbench/rulings.md";
+export const RULINGS_REL = "carja/1-workbench/rulings.md";
 export const RULING_FORMAT =
   "- [YYYY-MM-DD HH:MM] <task id> · <decision> · why: <reason> · if wrong: low|medium|high · <what breaks>";
 
@@ -74,7 +74,7 @@ export function rulingsForChecker(rulings) {
     "",
     "The Maker logged these decisions, which the spec did not settle. A ruling that contradicts the spec or an acceptance criterion is a finding. A ruling that changes what a user sees or does, rated low, is a finding too: say so.",
     "",
-    envelopeUntrusted(rulings.map(bullet).join("\n"), { source: "the Maker's ruling log (conductor/1-workbench/rulings.md)" }),
+    envelopeUntrusted(rulings.map(bullet).join("\n"), { source: "the Maker's ruling log (carja/1-workbench/rulings.md)" }),
   ].join("\n");
 }
 

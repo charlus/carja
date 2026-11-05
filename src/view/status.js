@@ -1,6 +1,6 @@
 // src/view/status.js
 //
-// The terminal renderer over the shared state — `conductor status`.
+// The terminal renderer over the shared state — `carja status`.
 //
 // This is the surface that replaces "what's on our plate for today". It answers
 // that question in one screen, instantly, for zero tokens and zero context: no
@@ -9,7 +9,7 @@
 // summarise the backlog costs a whole turn every time, and it is the question
 // asked most often.
 //
-// Reads the SAME state object `conductor view` renders, on purpose. Two parsers
+// Reads the SAME state object `carja view` renders, on purpose. Two parsers
 // would eventually disagree and then neither surface would be trusted.
 
 import { stripInlineMarkdown } from "./markdown.js";
@@ -106,7 +106,7 @@ function shipLogLine(shipLog, c) {
 function verifyLine(verify, c) {
   if (verify?.configured) return verify.command;
   if (verify?.state === "none") return c("off by choice — this project declares nothing to verify", "dim");
-  return c('OFF — pushes run no test · fix: conductor verify --set "<cmd>"', "red");
+  return c('OFF — pushes run no test · fix: carja verify --set "<cmd>"', "red");
 }
 
 /**
@@ -119,7 +119,7 @@ function gatesLine(gates, c) {
     case "not-git":
       return c("not a git repository — nothing to wire", "dim");
     case "missing":
-      return c("OFF — .agents/hooks/ is missing · fix: conductor upgrade", "red");
+      return c("OFF — .agents/hooks/ is missing · fix: carja upgrade", "red");
     case "custom":
       return c(`not wired — core.hooksPath is '${gates.customPath}' · see .agents/hooks/README.md`, "yellow");
     case "on": {
@@ -129,12 +129,12 @@ function gatesLine(gates, c) {
         : "agent guards: none (opt-in)";
       const unguarded = (gates.nested || []).filter((n) => n.hooks !== "on").map((n) => `${n.repo}/`);
       if (unguarded.length)
-        return c(`code NOT gated in ${unguarded.join(", ")} · fix: conductor install-hooks`, "red");
+        return c(`code NOT gated in ${unguarded.join(", ")} · fix: carja install-hooks`, "red");
       const scope = gates.nested?.length ? ` (${gates.nested.map((n) => `${n.repo}/`).join(", ")} too)` : "";
       return `on · commit + push${scope} · ${c(guards, "dim")}`;
     }
     default:
-      return c("OFF — commits and pushes are not checked · fix: conductor install-hooks", "red");
+      return c("OFF — commits and pushes are not checked · fix: carja install-hooks", "red");
   }
 }
 
@@ -152,7 +152,7 @@ function skippedLine(skipped, c) {
     parts.push(`${n} commit${n > 1 ? "s" : ""} skipped the hooks (${shown})`);
   }
   if (skipped.pushes) parts.push(`${skipped.pushes} push${skipped.pushes > 1 ? "es" : ""} skipped the hooks`);
-  return c(`${parts.join(", ")} in ${skipped.days} days · --no-verify, CONDUCTOR_HOOKS=off or a git client that ignores hooks`, "yellow");
+  return c(`${parts.join(", ")} in ${skipped.days} days · --no-verify, CARJA_HOOKS=off or a git client that ignores hooks`, "yellow");
 }
 
 /** One line for the waivers logged in the window. A waived gate is not a gate. */
@@ -167,7 +167,7 @@ const MR_COLOUR = { merged: "green", open: "cyan", closed: "dim", unknown: "yell
 const MAX_LIVE_ENTRIES = 2;
 
 /**
- * The live section of `conductor status --live`: each MR the newest ship-log
+ * The live section of `carja status --live`: each MR the newest ship-log
  * entries name, as the forge reports it now, and the project's deploy check.
  * The check time leads, because this block is only true at that moment.
  *
@@ -189,9 +189,9 @@ export function renderLive(live, c) {
     lines.push(`   ${mr.label.padEnd(6)} ${c(state, MR_COLOUR[mr.state] ?? "dim")}  ${c(`${mr.entryDate} ${mr.entryTitle}`, "dim")}`);
     if (mr.stale) lines.push(`          ${c(`stale: ${mr.stale}, the forge says ${mr.state}`, "red")}`);
   }
-  if (hidden) lines.push(`   ${c(`${hidden} older MR${hidden === 1 ? "" : "s"} merged · conductor status --live --json for all`, "dim")}`);
+  if (hidden) lines.push(`   ${c(`${hidden} older MR${hidden === 1 ? "" : "s"} merged · carja status --live --json for all`, "dim")}`);
   if (live.deploy.state === "ask") {
-    lines.push(`   ${"Deploy".padEnd(6)} ${c("not checked · no deployCheck in conductor.config.json · ask the human", "yellow")}`);
+    lines.push(`   ${"Deploy".padEnd(6)} ${c("not checked · no deployCheck in carja.config.json · ask the human", "yellow")}`);
   }
   for (const d of live.deploy.checks) {
     const where = d.repo ? ` (${d.repo}/)` : "";
@@ -217,7 +217,7 @@ export function renderStatus(state, { color = true, width = 78 } = {}) {
 
   lines.push("");
   lines.push(
-    `  ${c(state.projectName, "bold")} ${c("· conductor", "dim")}` +
+    `  ${c(state.projectName, "bold")} ${c("· carja", "dim")}` +
       `  ${c(new Date(state.generatedAt).toLocaleString(), "dim")}`
   );
   lines.push("");
@@ -289,13 +289,13 @@ export function renderStatus(state, { color = true, width = 78 } = {}) {
   if (!d.docCount && !d.inboxCount && !d.backlogOpen) {
     lines.push("");
     lines.push(`  ${c("Nothing here yet.", "bold")}`);
-    lines.push(`  Capture an idea:  ${c('conductor inbox add "…"', "cyan")}   ${c("or /inbox in chat", "dim")}`);
+    lines.push(`  Capture an idea:  ${c('carja inbox add "…"', "cyan")}   ${c("or /inbox in chat", "dim")}`);
     lines.push(`  Start something:  ${c("/genesis", "cyan")}`);
   }
 
   lines.push("");
   lines.push(
-    `  ${c("conductor view --open", "cyan")}  ${c("full dashboard (rendered docs, search, backlinks)", "dim")}`
+    `  ${c("carja view --open", "cyan")}  ${c("full dashboard (rendered docs, search, backlinks)", "dim")}`
   );
   lines.push("");
 

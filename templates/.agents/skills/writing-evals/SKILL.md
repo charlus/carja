@@ -8,11 +8,11 @@ category: core
 
 > Tests verify the **deterministic** parts of a system: this input → that output. Evals verify the parts that are **not** deterministic: did the LLM's output meet the quality bar. A feature that calls a model can pass every unit test and still be wrong on the thing that matters — the generation. "It compiles and the tests are green" is exactly the false-confidence case. If the code calls an LLM, it needs an eval, not just a test.
 
-This is the **Eval-Driven Law**, the non-deterministic counterpart to the Test-Driven Law. The `pre-commit` hook enforces it: staging code that calls a provider (`openai`, `anthropic`, `langchain`, …) with no evalset alongside blocks the commit (escape hatch: `CONDUCTOR_NO_EVAL="reason"`, logged). This skill is the *how*.
+This is the **Eval-Driven Law**, the non-deterministic counterpart to the Test-Driven Law. The `pre-commit` hook enforces it: staging code that calls a provider (`openai`, `anthropic`, `langchain`, …) with no evalset alongside blocks the commit (escape hatch: `CARJA_NO_EVAL="reason"`, logged). This skill is the *how*.
 
 ## Scope — which evals these are
 
-These evals cover **the LLM features of the app you are building** (a support bot, a RAG answer, a classifier, a summarizer) — Level B. They are NOT for evaluating your coding agent's own trajectory (out of scope), and NOT the same as Conductor's `judge-panel`/`independent-review`, which review Conductor's *own* artifacts. If the thing you ship makes a model call whose output a human would judge, it needs an eval here.
+These evals cover **the LLM features of the app you are building** (a support bot, a RAG answer, a classifier, a summarizer) — Level B. They are NOT for evaluating your coding agent's own trajectory (out of scope), and NOT the same as Carja's `judge-panel`/`independent-review`, which review Carja's *own* artifacts. If the thing you ship makes a model call whose output a human would judge, it needs an eval here.
 
 ## Where evals live
 
@@ -57,4 +57,4 @@ Most features want a **mix**: a few property assertions (mode 3) as a hard floor
 ## Composition
 
 - Runs **alongside** the Test-Driven Law — the LLM feature needs both a test (the deterministic glue: routing, parsing, error paths) and an eval (the generation). The `pre-commit` gate enforces each independently.
-- For non-deterministic output *inside Conductor's own workflows*, see `skills/judge-panel/SKILL.md` and `skills/independent-review/SKILL.md` — same spirit (rubrics + LM-judges), different target.
+- For non-deterministic output *inside Carja's own workflows*, see `skills/judge-panel/SKILL.md` and `skills/independent-review/SKILL.md` — same spirit (rubrics + LM-judges), different target.

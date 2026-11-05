@@ -1,11 +1,11 @@
 // src/verify-config.js
 //
 // The push gate's configuration: read it, write it, and say what it is in words
-// the reader can act on. Shared by `init`, `upgrade`, `conductor verify`,
-// `conductor status` and the pre-push hook's message.
+// the reader can act on. Shared by `init`, `upgrade`, `carja verify`,
+// `carja status` and the pre-push hook's message.
 //
 // WHY. The Verification Iron Law is enforced by `pre-push` running the `verify`
-// command from `conductor.config.json`. Measured 2026-09-15 across the
+// command from `carja.config.json`. Measured 2026-09-15 across the
 // maintainer's five live projects: ONE had a command. Everywhere else the hook
 // printed a one-line "Skipping verify." and the framework's central enforcement
 // bet was not running — and nobody noticed, because the message read as
@@ -26,26 +26,26 @@ import { join } from "node:path";
 import { suggestVerifyCommand } from "./detect.js";
 import { configPath as configPathOf } from "./names.js";
 
-export const CONFIG_FILE = "conductor.config.json";
+export const CONFIG_FILE = "carja.config.json";
 
 /** The one spelling of a deliberately disabled gate. Never handed to a shell. */
 export const NONE = "none";
 
 export const NO_VERIFY_WARNING =
   "\n⚠️  Push gate OFF — `git push` will not run any test in this project.\n" +
-  "   Conductor could not work out how to verify it from the files that are here.\n" +
+  "   Carja could not work out how to verify it from the files that are here.\n" +
   "   Decide in one command:\n" +
-  '     conductor verify --set "npm test"   ← the command that proves this project works\n' +
-  "     conductor verify --none             ← nothing to verify here (docs/state repo)\n" +
+  '     carja verify --set "npm test"   ← the command that proves this project works\n' +
+  "     carja verify --none             ← nothing to verify here (docs/state repo)\n" +
   "   Until then the Verification Iron Law is not enforced on push.\n";
 
 /**
  * The gate's state from the two files that can define it. Pure, so the CLI, the
  * status digest and the tests all read it the same way — and it mirrors
- * `lib.sh`'s `conductor_verify_cmd` priority exactly, so the hook can never
- * disagree with what `conductor status` printed.
+ * `lib.sh`'s `carja_verify_cmd` priority exactly, so the hook can never
+ * disagree with what `carja status` printed.
  *
- * @param {string|null} configRaw contents of conductor.config.json
+ * @param {string|null} configRaw contents of carja.config.json
  * @param {string|null} pkgRaw contents of package.json
  * @returns {{state: "set"|"none"|"unset", command: string|null, source: string|null}}
  */
@@ -82,7 +82,7 @@ async function readIfPresent(path) {
 /**
  * `gateStateFrom` for a directory on disk. With `repo` (outer layout), the gate
  * of that nested code repository: `repos.<repo>.verify`, then its own
- * package.json, the same order as lib.sh `conductor_verify_cmd`.
+ * package.json, the same order as lib.sh `carja_verify_cmd`.
  */
 export async function readGateState(targetDir, repo = null) {
   if (!repo) {
@@ -101,7 +101,7 @@ export async function readGateState(targetDir, repo = null) {
 }
 
 /**
- * Write `verify` into conductor.config.json, CREATING the file when it is
+ * Write `verify` into carja.config.json, CREATING the file when it is
  * missing. Every other key is preserved.
  *
  * Creating it matters: the old warning named a file that `upgrade` never wrote,
@@ -130,7 +130,7 @@ export async function writeVerify(targetDir, command, repo = null) {
 }
 
 /**
- * Read conductor.config.json, fill `verify` from the project's files when it is
+ * Read carja.config.json, fill `verify` from the project's files when it is
  * empty and derivable, and report. Never overwrites a decision already made —
  * a command, or a declared `none`.
  *
@@ -144,7 +144,7 @@ export async function ensureVerifyCommand(targetDir, stdout) {
   if (gate.state === NONE) {
     stdout.write(
       "\n🔓 Push gate: OFF by declaration (\"verify\": \"none\").\n" +
-        '   Turn it on whenever there is something to run:  conductor verify --set "<command>"\n',
+        '   Turn it on whenever there is something to run:  carja verify --set "<command>"\n',
     );
     return { command: "", source: "declared-none" };
   }
@@ -152,7 +152,7 @@ export async function ensureVerifyCommand(targetDir, stdout) {
   if (gate.state === "set") {
     stdout.write(
       `\n🔒 Push gate: ${gate.command}\n` +
-        `   From ${gate.source}. Change it:  conductor verify --set "<command>"\n`,
+        `   From ${gate.source}. Change it:  carja verify --set "<command>"\n`,
     );
     // A package.json fallback works, but it is invisible until something breaks.
     // Pin it so the gate is stated, not inferred.
@@ -165,7 +165,7 @@ export async function ensureVerifyCommand(targetDir, stdout) {
     await writeVerify(targetDir, derived);
     stdout.write(
       `\n🔒 Push gate set to: ${derived}\n` +
-        `   Derived from this project's files. Wrong?  conductor verify --set "<command>"\n`,
+        `   Derived from this project's files. Wrong?  carja verify --set "<command>"\n`,
     );
     return { command: derived, source: "derived" };
   }

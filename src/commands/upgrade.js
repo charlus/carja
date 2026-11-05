@@ -16,6 +16,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { designMigrationHint } from "./design.js";
 import { ensureUnionMerge } from "../gitattributes.js";
+import { needsRename, renameInstall, renderRenameReport } from "../rename-migration.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -25,8 +26,8 @@ const execFileAsync = promisify(execFile);
  */
 const FRAMEWORK_PATHS = [
   ".agents", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "CHANGELOG.md", ".claude/commands",
-  "conductor/5-templates", "conductor/1-workbench/loop-state.json",
-  "conductor.config.json", ".gitignore", ".gitattributes",
+  "carja/5-templates", "carja/1-workbench/loop-state.json",
+  "carja.config.json", ".gitignore", ".gitattributes",
 ];
 
 async function git(args, cwd, env) {
@@ -104,10 +105,10 @@ async function upgradeTarget(targetDir, version) {
       mode: "refuse",
       why:
         `you are on ${current}, so the upgrade would ride that branch's merge request. ` +
-        `Switch to ${main} and run conductor upgrade again: it commits on its own branch`,
+        `Switch to ${main} and run carja upgrade again: it commits on its own branch`,
     };
   }
-  const branch = `chore/conductor-${version}`;
+  const branch = `chore/carja-${version}`;
   if ((await git(["rev-parse", "--verify", "-q", `refs/heads/${branch}`], targetDir)).ok) {
     return { mode: "refuse", why: `branch ${branch} already exists` };
   }
@@ -120,11 +121,11 @@ async function upgradeTarget(targetDir, version) {
  * the one command that does it.
  *
  * WHY. An upgrade rewrites the enforcement hooks, so its commit needs
- * CONDUCTOR_NO_PROTECTED. Making every user discover and type that was the
+ * CARJA_NO_PROTECTED. Making every user discover and type that was the
  * friction the maintainer asked to remove. The push needs nothing: pre-push
  * recognises the official pre-commit it ships with.
  */
-async function commitUpgrade({ targetDir, version, snap, noCommit, structural, extraPaths = [], stdout }) {
+async function commitUpgrade({ targetDir, version, snap, noCommit, structural, extraPaths = [], stdout, onBranch = null }) {
   if (!snap.repo) return;
   const existing = [];
   for (const p of FRAMEWORK_PATHS) {
@@ -142,10 +143,10 @@ async function commitUpgrade({ targetDir, version, snap, noCommit, structural, e
     if ((await exists(join(targetDir, p))) || (await git(["ls-files", "--", p], targetDir)).stdout) existing.push(p);
   }
   const paths = existing.join(" ");
-  const message = `chore: upgrade Conductor to ${version}`;
+  const message = `chore: upgrade Carja to ${version}`;
   const manual = structural
-    ? `git add -A && CONDUCTOR_NO_PROTECTED="conductor upgrade" git commit -m "${message}"`
-    : `git add -A -- ${paths} && CONDUCTOR_NO_PROTECTED="conductor upgrade" git commit -m "${message}" -- ${paths}`;
+    ? `git add -A && CARJA_NO_PROTECTED="carja upgrade" git commit -m "${message}"`
+    : `git add -A -- ${paths} && CARJA_NO_PROTECTED="carja upgrade" git commit -m "${message}" -- ${paths}`;
   const printManual = (why) => {
     stdout.write(`\n   Commit it with one command${why ? ` (${why})` : ""}:\n`);
     stdout.write(`     ${manual}\n`);
@@ -170,9 +171,10 @@ async function commitUpgrade({ targetDir, version, snap, noCommit, structural, e
   const excluded = snap.dirty.map((p) => `:(exclude)${p}`);
 
   if (!existing.length) return;
-  const target = await upgradeTarget(targetDir, version);
+  // The rename step (7.0.0) already switched to the upgrade's branch.
+  const target = onBranch ?? (await upgradeTarget(targetDir, version));
   if (target.mode === "refuse") return printManual(target.why);
-  if (target.mode === "branch") {
+  if (target.mode === "branch" && !onBranch) {
     const sw = await git(["switch", "-q", "-c", target.branch], targetDir);
     if (!sw.ok) return printManual(`could not create branch ${target.branch}`);
   }
@@ -184,8 +186,10 @@ async function commitUpgrade({ targetDir, version, snap, noCommit, structural, e
   }
   // `-- paths` commits ONLY these paths, so anything else the user had staged
   // stays staged and out of this commit.
-  const commit = await git(["commit", "-q", "-m", message, "--", ...existing, ...excluded], targetDir, {
-    CONDUCTOR_NO_PROTECTED: `conductor upgrade to ${version}`,
+  // The waiver is recorded in the commit itself too: during the move to Carja
+  // the 6.x hooks judge this commit and log it to a ship-log that has moved.
+  const commit = await git(["commit", "-q", "-m", message, "-m", `Hook waiver (Protected): carja upgrade to ${version} rewrites the enforcement hooks.`, "--", ...existing, ...excluded], targetDir, {
+    CARJA_NO_PROTECTED: `carja upgrade to ${version}`,
   });
   if (!commit.ok) {
     const why = (commit.stdout + "\n" + commit.stderr).split("\n").map((l) => l.trim()).filter(Boolean).slice(-1)[0];
@@ -217,12 +221,12 @@ async function commitUpgrade({ targetDir, version, snap, noCommit, structural, e
  * the user's, and stays theirs.
  */
 async function commitWaiverLine(targetDir, version) {
-  const log = "conductor/0-compass/ship-log.md";
+  const log = "carja/0-compass/ship-log.md";
   const diff = await git(["diff", "-U0", "--", log], targetDir);
   if (!diff.ok) return null;
   const changed = diff.stdout.split("\n").filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---) /.test(l));
   if (!changed.length || !changed.every((l) => /^\+- \[[\d-]+ [\d:]+\] Hook waiver \(/.test(l))) return null;
-  const c = await git(["commit", "-q", "-m", `chore: log the Conductor ${version} upgrade waiver`, "--", log], targetDir);
+  const c = await git(["commit", "-q", "-m", `chore: log the Carja ${version} upgrade waiver`, "--", log], targetDir);
   if (!c.ok) return null;
   return (await git(["rev-parse", "--short", "HEAD"], targetDir)).stdout || null;
 }
@@ -262,43 +266,102 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
 
   const agentsDir = join(targetDir, ".agents");
   const legacyAgentDir = join(targetDir, ".agent");
-  const conductorDir = join(targetDir, "conductor");
+  const carjaDir = join(targetDir, "carja");
   const legacyConductorDir = join(targetDir, ".conductor");
   const templateDir = getTemplateDir();
   const sourceAgentsDir = join(templateDir, ".agents");
-  const source5Templates = join(templateDir, "conductor", "5-templates");
+  const source5Templates = join(templateDir, "carja", "5-templates");
   const checksumPath = join(agentsDir, ".checksums.json");
-  const target5Templates = join(conductorDir, "5-templates");
-  const loopStateRel = join("conductor", "1-workbench", "loop-state.json");
+  const target5Templates = join(carjaDir, "5-templates");
+  const loopStateRel = join("carja", "1-workbench", "loop-state.json");
 
   try {
+    // ---- Step R: a 6.x install moves from Conductor to Carja first ----
+    // Everything below reads carja/ and carja.config.json, so this runs before
+    // anything is read. Two commits of its own, on the upgrade's branch.
+    let onBranch = null;
+    let renamedUncommitted = false;
+    if (needsRename(targetDir)) {
+      const version = packageVersion();
+      if (dryRun) {
+        const plan = await renameInstall(targetDir, { version, dryRun: true });
+        if (plan.refused) {
+          stderr.write(`The rename to Carja cannot run now: ${plan.refused.join("; ")}.\nNothing was changed.\n`);
+          return 1;
+        }
+        stdout.write(renderRenameReport(plan).replace("Step R: Rename", "Step R (dry run): would rename"));
+      } else {
+        const inRepo = (await git(["rev-parse", "--is-inside-work-tree"], targetDir)).stdout === "true";
+        let commit = inRepo && !noCommit && (await git(["rev-parse", "--verify", "-q", "HEAD"], targetDir)).ok;
+        if (commit) {
+          const target = await upgradeTarget(targetDir, version);
+          if (target.mode === "refuse") {
+            stderr.write(`The rename to Carja cannot run now: ${target.why}.\nNothing was changed.\n`);
+            return 1;
+          }
+          const pre = await renameInstall(targetDir, { version, dryRun: true });
+          if (pre.refused) {
+            stderr.write(`The rename to Carja cannot run now: ${pre.refused.join("; ")}.\nNothing was changed.\n`);
+            return 1;
+          }
+          if (target.mode === "branch") {
+            const sw = await git(["switch", "-q", "-c", target.branch], targetDir);
+            if (!sw.ok) {
+              stderr.write(`Could not create branch ${target.branch}. Nothing was changed.\n`);
+              return 1;
+            }
+            onBranch = target;
+          }
+        }
+        const common = inRepo ? (await git(["rev-parse", "--path-format=absolute", "--git-common-dir"], targetDir)).stdout : null;
+        let report;
+        try {
+          report = await renameInstall(targetDir, { version, commit, gitCommonDir: common });
+        } catch (e) {
+          // renameInstall put the files back; the branch goes too.
+          if (onBranch) {
+            await git(["switch", "-q", "-"], targetDir);
+            await git(["branch", "-q", "-D", onBranch.branch], targetDir);
+          }
+          stderr.write(`The rename to Carja failed and was undone, nothing changed: ${e.message}\n`);
+          return 1;
+        }
+        if (report.refused) {
+          stderr.write(`The rename to Carja cannot run now: ${report.refused.join("; ")}.\nNothing was changed.\n`);
+          return 1;
+        }
+        stdout.write(renderRenameReport(report));
+        if (!commit && inRepo) renamedUncommitted = "the project was renamed from conductor/ to carja/ and nothing is committed yet";
+      }
+    }
+
     const hasAgents = await exists(agentsDir);
     const hasLegacyAgent = await exists(legacyAgentDir);
-    const hasConductor = await exists(conductorDir);
+    const hasCarja = await exists(carjaDir);
     const hasLegacyConductor = await exists(legacyConductorDir);
     const rootFolders = [];
     for (const f of ROOT_FOLDER_NAMES) if (await exists(join(targetDir, f))) rootFolders.push(f);
     const hasRootFolders = rootFolders.length > 0;
 
-    if (!hasAgents && !hasLegacyAgent && !hasRootFolders && !hasLegacyConductor && !hasConductor) {
+    if (!hasAgents && !hasLegacyAgent && !hasRootFolders && !hasLegacyConductor && !hasCarja) {
       stderr.write(
-        "This doesn't look like a Conductor project.\n" +
+        "This doesn't look like a Carja project.\n" +
           "No .agents/, .agent/, or numbered folders found.\n" +
-          'Run "conductor init" to set up a new project instead.\n'
+          'Run "carja init" to set up a new project instead.\n'
       );
       return 1;
     }
 
-    // An `.agents/` folder alone does not make a Conductor project: it is the
+    // An `.agents/` folder alone does not make a Carja project: it is the
     // cross-tool convention, and some repos use it for their own agents. With
-    // no conductor/ layout and no version stamp, an upgrade would turn such a
-    // repo into a full Conductor install (workflows, hooks, a new conductor/).
-    if (!hasConductor && !hasLegacyConductor && !hasRootFolders && !readVersionStamp(agentsDir) && !force) {
+    // no carja/ layout and no version stamp, an upgrade would turn such a
+    // repo into a full Carja install (workflows, hooks, a new carja/).
+    if (!hasCarja && !hasLegacyConductor && !hasRootFolders && !readVersionStamp(agentsDir) && !force) {
       stderr.write(
-        "This repo has .agents/ but no conductor/ folder and no Conductor version stamp.\n" +
-          "It looks like an agent-only repo, not a Conductor project.\n" +
-          "Upgrading would install every workflow and the git hooks, create conductor/,\n" +
-          "and write a Conductor framework block into the root AGENTS.md.\n" +
+        "This repo has .agents/ but no carja/ folder and no Carja version stamp.\n" +
+          "It looks like an agent-only repo, not a Carja project.\n" +
+          "Upgrading would install every workflow and the git hooks, create carja/,\n" +
+          "and write a Carja framework block into the root AGENTS.md.\n" +
           "If that is what you want, re-run with --force. Nothing was changed.\n"
       );
       return 1;
@@ -318,7 +381,7 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
     const shape = stamp ? `stamped ${stamp.frameworkVersion}` : detectShape(targetDir);
     const doesStructuralMigration = hasLegacyAgent || hasLegacyConductor || hasRootFolders;
 
-    stdout.write(`🎼 Conductor Framework — Upgrade${dryRun ? " (dry run)" : ""}\n\n`);
+    stdout.write(`🎼 Carja Framework — Upgrade${dryRun ? " (dry run)" : ""}\n\n`);
     stdout.write(`  Detected: ${shape}  →  target ${version}\n`);
     if (stamp && stamp.frameworkVersion === version && !doesStructuralMigration) {
       stdout.write(`  Already on ${version}; refreshing derived artifacts only.\n`);
@@ -331,7 +394,7 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
         stdout.write([hasLegacyAgent && ".agent/", hasLegacyConductor && ".conductor/", hasRootFolders && "root numbered folders"].filter(Boolean).join(", "));
         stdout.write(")\n");
       }
-      stdout.write(`  Backup:   .conductor-backup/<ts>/ (.agents/${(await exists(target5Templates)) ? ", conductor/5-templates/" : ""}${doesStructuralMigration ? ", legacy dirs" : ""})\n`);
+      stdout.write(`  Backup:   .carja-backup/<ts>/ (.agents/${(await exists(target5Templates)) ? ", carja/5-templates/" : ""}${doesStructuralMigration ? ", legacy dirs" : ""})\n`);
       if (hasAgents) {
         const c = planCounts(planUpdate(sourceAgentsDir, agentsDir, checksumPath, { coreSkills, retired }));
         stdout.write(`  .agents/  REPLACE ${c.UPDATE} framework · ADD ${c.COPY} new · PRUNE ${c.REMOVE} dropped · CARRY ${c.KEEP} custom · ${c.AVAILABLE} optional (not selected)\n`);
@@ -340,11 +403,11 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
       }
       if (await exists(target5Templates)) {
         const c5 = planCounts(planUpdate(source5Templates, target5Templates, ""));
-        stdout.write(`  conductor/5-templates/  REFRESH ${c5.UPDATE + c5.COPY} · CARRY ${c5.KEEP} custom\n`);
+        stdout.write(`  carja/5-templates/  REFRESH ${c5.UPDATE + c5.COPY} · CARRY ${c5.KEEP} custom\n`);
       }
       const lsPath = join(targetDir, loopStateRel);
       stdout.write(`  ${loopStateRel}  ${(await exists(lsPath)) ? "MIGRATE schema → v2" : "CREATE"}\n`);
-      stdout.write(`  Preserve: conductor/ knowledge (0-compass,2-backlog,3-product-areas,4-context,6-archive) untouched\n`);
+      stdout.write(`  Preserve: carja/ knowledge (0-compass,2-backlog,3-product-areas,4-context,6-archive) untouched\n`);
       stdout.write(`  AGENTS.md: write the framework block (keep your text); move notes from CLAUDE.md/GEMINI.md into it, then remove them\n`);
       stdout.write(`  Then: regenerate .claude/commands, git hooks; stamp ${version}\n`);
       stdout.write(`\nNo changes written (dry run). Re-run without --dry-run to apply.\n`);
@@ -361,7 +424,7 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
     let skillPaths = [];
     const backupPaths = [];
     if (hasAgents) backupPaths.push(".agents");
-    if (await exists(target5Templates)) backupPaths.push(join("conductor", "5-templates"));
+    if (await exists(target5Templates)) backupPaths.push(join("carja", "5-templates"));
     if (await exists(join(targetDir, loopStateRel))) backupPaths.push(loopStateRel);
     for (const stub of ["AGENTS.md", "CLAUDE.md", "GEMINI.md"]) {
       if (await exists(join(targetDir, stub))) backupPaths.push(stub);
@@ -387,35 +450,35 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
       } else if (hasLegacyAgent && hasAgents) {
         await rm(legacyAgentDir, { recursive: true, force: true });
       }
-      if (hasLegacyConductor && !hasConductor) {
-        await rename(legacyConductorDir, conductorDir);
-        stdout.write("  📁 .conductor/ → conductor/\n");
-      } else if (hasLegacyConductor && hasConductor) {
+      if (hasLegacyConductor && !hasCarja) {
+        await rename(legacyConductorDir, carjaDir);
+        stdout.write("  📁 .conductor/ → carja/\n");
+      } else if (hasLegacyConductor && hasCarja) {
         await rm(legacyConductorDir, { recursive: true, force: true });
       }
       if (hasRootFolders) {
-        await mkdir(conductorDir, { recursive: true });
+        await mkdir(carjaDir, { recursive: true });
         for (const folder of rootFolders) {
           const src = join(targetDir, folder);
-          const dst = join(conductorDir, folder);
+          const dst = join(carjaDir, folder);
           if (!(await exists(dst))) {
             await cp(src, dst, { recursive: true });
             await rm(src, { recursive: true, force: true });
-            stdout.write(`  📁 ${folder}/ → conductor/${folder}/\n`);
+            stdout.write(`  📁 ${folder}/ → carja/${folder}/\n`);
           } else {
-            stdout.write(`  ⚠️  Left ${folder}/ at root (conductor/${folder}/ already exists — merge manually)\n`);
+            stdout.write(`  ⚠️  Left ${folder}/ at root (carja/${folder}/ already exists — merge manually)\n`);
           }
         }
-      } else if (!(await exists(conductorDir))) {
-        await cp(join(templateDir, "conductor"), conductorDir, { recursive: true });
-        stdout.write("  ✅ Created conductor/ from templates\n");
+      } else if (!(await exists(carjaDir))) {
+        await cp(join(templateDir, "carja"), carjaDir, { recursive: true });
+        stdout.write("  ✅ Created carja/ from templates\n");
       }
 
       // ---- Step 2: Normalize casing (framework names only) ----
       stdout.write("\nStep 2: Normalizing framework names to kebab-case...\n");
       await renameRecursive(agentsDir, stdout);        // all of .agents/ is framework
-      await renameNumberedFolders(conductorDir, stdout); // only the numbered folders, no user files
-      renamedKnowledge = await renameFrameworkNames(conductorDir, join(templateDir, "conductor"), stdout);
+      await renameNumberedFolders(carjaDir, stdout); // only the numbered folders, no user files
+      renamedKnowledge = await renameFrameworkNames(carjaDir, join(templateDir, "carja"), stdout);
       if (await exists(target5Templates)) await renameRecursive(target5Templates, stdout);
       await updateChecksumsKeys(checksumPath);
 
@@ -427,12 +490,12 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
       const retiredRemoved = plan.filter((i) => i.reason === "retired framework file").map((i) => i.relativePath);
       stdout.write(`  ✅ Replaced ${c.UPDATE} framework files, added ${c.COPY} new, pruned ${c.REMOVE} dropped upstream, carried ${c.KEEP} custom (${c.AVAILABLE} optional not installed).\n`);
       if (retiredRemoved.length) {
-        stdout.write(`  🗑️  Removed ${retiredRemoved.length} framework file(s) Conductor no longer ships (kept in the backup):\n`);
+        stdout.write(`  🗑️  Removed ${retiredRemoved.length} framework file(s) Carja no longer ships (kept in the backup):\n`);
         for (const rel of retiredRemoved) stdout.write(`       .agents/${rel}\n`);
       }
 
-      // ---- Step 4: Refresh conductor/5-templates (framework scaffolding) ----
-      stdout.write("\nStep 4: Refreshing conductor/5-templates/...\n");
+      // ---- Step 4: Refresh carja/5-templates (framework scaffolding) ----
+      stdout.write("\nStep 4: Refreshing carja/5-templates/...\n");
       await mkdir(target5Templates, { recursive: true });
       const plan5 = planUpdate(source5Templates, target5Templates, "");
       const c5 = planCounts(plan5);
@@ -441,8 +504,8 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
 
       // ---- Step 5: Migrate loop-state.json schema (v1 → v2) ----
       stdout.write("\nStep 5: Loop-state schema...\n");
-      const targetStateFile = join(conductorDir, "1-workbench", "loop-state.json");
-      await mkdir(join(conductorDir, "1-workbench"), { recursive: true });
+      const targetStateFile = join(carjaDir, "1-workbench", "loop-state.json");
+      await mkdir(join(carjaDir, "1-workbench"), { recursive: true });
       if (await exists(targetStateFile)) {
         let raw = {};
         try { raw = JSON.parse(await readFile(targetStateFile, "utf8")); } catch { raw = {}; }
@@ -451,7 +514,7 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
         await writeFile(targetStateFile, JSON.stringify(migrated, null, 2) + "\n");
         stdout.write(wasV2 ? "  ✅ loop-state.json already v2 (normalized).\n" : "  ✅ Migrated loop-state.json → schema v2.\n");
       } else {
-        const templateStateFile = join(templateDir, "conductor", "1-workbench", "loop-state.json");
+        const templateStateFile = join(templateDir, "carja", "1-workbench", "loop-state.json");
         if (await exists(templateStateFile)) {
           await cp(templateStateFile, targetStateFile);
           stdout.write("  ✅ Created loop-state.json.\n");
@@ -512,7 +575,7 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
 
       // ---- Step 9: Version stamp ----
       const stampWritten = writeVersionStamp(agentsDir);
-      stdout.write(`\nStep 9: Stamped .agents/.conductor-version.json → ${stampWritten.frameworkVersion}\n`);
+      stdout.write(`\nStep 9: Stamped .agents/.carja-version.json → ${stampWritten.frameworkVersion}\n`);
     } catch (stepError) {
       if (backup) {
         stdout.write("\n⚠️  Upgrade failed mid-run — restoring from backup...\n");
@@ -527,16 +590,18 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
     await ensureVerifyCommand(targetDir, stdout);
 
     stdout.write("\n🎼 Upgrade complete!\n");
-    const structural = doesStructuralMigration
+    const structural = renamedUncommitted
+      ? renamedUncommitted
+      : doesStructuralMigration
       ? "legacy folders were moved — check `git status` first"
-      : renamedKnowledge > 0 ? "framework names in conductor/ were renamed — check `git status` first" : false;
-    await commitUpgrade({ targetDir, version, snap, noCommit, structural, extraPaths: skillPaths, stdout });
+      : renamedKnowledge > 0 ? "framework names in carja/ were renamed — check `git status` first" : false;
+    await commitUpgrade({ targetDir, version, snap, noCommit, structural, extraPaths: skillPaths, stdout, onBranch });
     if (backup) stdout.write(`   Old instructions backed up in ${backup.backupRoot.replace(targetDir + "/", "")} (git-ignored).\n`);
-    stdout.write("   Your conductor/ project knowledge was preserved.\n");
+    stdout.write("   Your carja/ project knowledge was preserved.\n");
     const designHint = await designMigrationHint(targetDir);
     if (designHint) stdout.write(designHint);
-    stdout.write("   Verify: bash .agents/tests/check-conductor.sh\n");
-    stdout.write("   Autonomous loop: `conductor loop --dry-run` (npm i -g github:charlus/conductor-framework) or `npx github:charlus/conductor-framework loop --dry-run`.\n");
+    stdout.write("   Verify: bash .agents/tests/check-carja.sh\n");
+    stdout.write("   Autonomous loop: `carja loop --dry-run` (npm i -g github:charlus/carja) or `npx github:charlus/carja loop --dry-run`.\n");
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

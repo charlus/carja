@@ -48,14 +48,14 @@ const put = (rel, text) => {
   writeFileSync(rel, text);
 };
 const field = (label) => prompt.match(new RegExp(`\\*\\*${label}:\\*\\* \`([^\`]+)\``))?.[1];
-const done = () => put("conductor/1-workbench/maker-signal.json", '{ "done": true }');
+const done = () => put("carja/1-workbench/maker-signal.json", '{ "done": true }');
 const body = "## What changes for you\nstub\n\n## Decisions I took alone\nnone\n\n## Evidence\nstub\n\n## What I need from you\nmerge\n";
 const doc = (title) => `# ${title}\n\nWritten by the stub engine for the conformance test.\n`;
 const skip = process.env.STUB_SKIP;
 
 const checker = existsSync(".agents/workflows/loop-checker.md") && prompt.startsWith(readFileSync(".agents/workflows/loop-checker.md", "utf8"));
 if (checker) {
-  put("conductor/1-workbench/checker-verdict.json", JSON.stringify({ approved: true, reason: "stub approves", findings: [] }));
+  put("carja/1-workbench/checker-verdict.json", JSON.stringify({ approved: true, reason: "stub approves", findings: [] }));
 } else if (prompt.includes("# Blueprint assignment (this beat)")) {
   const project = field("Project folder");
   const key = prompt.match(/\*\*Stage:\*\* ([a-z-]+)/)[1];
@@ -64,7 +64,7 @@ if (checker) {
     put(join(project, "blueprint", out), doc(key));
     if (key === "ux-ui-brief") put("DESIGN.md", doc("DESIGN"));
     if (key === "carve") {
-      const tpl = (n) => readFileSync(join("conductor/5-templates/carve-workflow", n), "utf8");
+      const tpl = (n) => readFileSync(join("carja/5-templates/carve-workflow", n), "utf8");
       // $STUB_SLICES: how many slices the Carve makes (default 1, "01-first").
       const n = Number(process.env.STUB_SLICES ?? 1);
       const names = n === 1 ? ["01-first"] : Array.from({ length: n }, (_, i) => `0${i + 1}-slice-${i + 1}`);
@@ -73,7 +73,7 @@ if (checker) {
         put(join(project, `implementations/${s}/implementation-plan.md`), tpl("implementation-plan.md"));
       }
       put(join(project, "project-documentation.md"), `# Project documentation\n\n${names.map((s) => `## ${s}\nA slice.\n`).join("\n")}`);
-      put("conductor/1-workbench/pr-body.md", body);
+      put("carja/1-workbench/pr-body.md", body);
     }
     done();
   }
@@ -89,19 +89,19 @@ if (checker) {
     renameSync(from[1], from[2]);
   }
   if (prompt.includes("**Tick it in this branch:**")) {
-    const b = "conductor/2-backlog/task-backlog.md";
+    const b = "carja/2-backlog/task-backlog.md";
     writeFileSync(b, readFileSync(b, "utf8").replace(/- \[ \] (.*?) \(loop-ready\)/, "- [x] $1 **Done 2026-10-20** stub"));
   }
-  appendFileSync("conductor/0-compass/ship-log.md", "\n## 2026-10-20 — stub ship\n\n**For you**\n- **Impact:** a\n- **Cost:** none\n- **Risk:** none\n- **Decide:** none\n");
+  appendFileSync("carja/0-compass/ship-log.md", "\n## 2026-10-20 — stub ship\n\n**For you**\n- **Impact:** a\n- **Cost:** none\n- **Risk:** none\n- **Decide:** none\n");
   // The KM relief case: this ship and another project's both edit a prose document.
-  if (process.env.STUB_RACE_OUTER) appendFileSync("conductor/4-context/meta/glossary.md", "\n- KM: knowledge manager, written by this slice\n");
+  if (process.env.STUB_RACE_OUTER) appendFileSync("carja/4-context/meta/glossary.md", "\n- KM: knowledge manager, written by this slice\n");
   const mark = join(process.env.STUB_LOG_DIR ?? ".", "raced");
   if (!existsSync(mark) && (process.env.STUB_RACE_OUTER || process.env.STUB_RACE_CODE)) {
     writeFileSync(mark, "1");
-    if (process.env.STUB_RACE_OUTER) race(process.env.STUB_RACE_OUTER, "master", "conductor/4-context/meta/glossary.md", "\n- CoP: a community of practice, written by another project\n");
+    if (process.env.STUB_RACE_OUTER) race(process.env.STUB_RACE_OUTER, "master", "carja/4-context/meta/glossary.md", "\n- CoP: a community of practice, written by another project\n");
     if (process.env.STUB_RACE_CODE) race(process.env.STUB_RACE_CODE, "main", "app.py", "y = 'someone else'\n");
   }
-  put("conductor/1-workbench/pr-body.md", body);
+  put("carja/1-workbench/pr-body.md", body);
   done();
 } else if (prompt.includes("# Loop Assignment (this beat)")) {
   // In the outer layout ($STUB_CODE_DIR) the code goes into the nested repository.

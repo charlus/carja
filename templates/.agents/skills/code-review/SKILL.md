@@ -106,7 +106,7 @@ When judging quality, carry this fixed baseline of code smells (from Fowler). Ea
 | Message Chains / Middle Man | `a.b().c().d()`, or a class that only delegates → collapse |
 
 Two rules on top of the baseline:
-- **The repo overrides.** Documented project conventions (`conductor/4-context/`, existing patterns) win over the baseline.
+- **The repo overrides.** Documented project conventions (`carja/4-context/`, existing patterns) win over the baseline.
 - **Skip what tooling enforces.** Don't hand-flag formatting, lint, or type errors the linter/formatter/compiler already catches — that's noise, not review.
 
 ### Output Format

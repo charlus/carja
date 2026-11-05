@@ -111,9 +111,9 @@ test("S8: the owner's documents up to the Technical Vision, by plain name; a car
 test("S6: the report lists the open MRs in merge order, the decisions taken alone, where the run stopped, and the cost", () => {
   const e1 = { ...entry(1), summary: "the list", rulings: [{ risk: "high", decision: "sort by date", why: "the brief" }], cost_usd: 2.5 };
   const e2 = { ...entry(2), cost_usd: 1 };
-  const text = renderStackReport({ project: "p", entries: [{ ...entry(0), merged: true }, e1, e2], stop: { status: "awaiting_answers", item: "slice 03", round: "conductor/1-workbench/questions/" }, now: "2026-10-22T20:00:00Z" });
+  const text = renderStackReport({ project: "p", entries: [{ ...entry(0), merged: true }, e1, e2], stop: { status: "awaiting_answers", item: "slice 03", round: "carja/1-workbench/questions/" }, now: "2026-10-22T20:00:00Z" });
   assert.match(text, /Merge these MRs in this order \(2 items\)/);
-  assert.match(text, /### 1\. slice 01\n\n- Code MR: https:\/\/x\/code\/1\n- Conductor state MR: https:\/\/x\/state\/1\n- What it does: the list/);
+  assert.match(text, /### 1\. slice 01\n\n- Code MR: https:\/\/x\/code\/1\n- Carja state MR: https:\/\/x\/state\/1\n- What it does: the list/);
   assert.match(text, /Decided for you \(overrule in the MR\):\n  - \*\*high\*\* sort by date: the brief/);
   assert.match(text, /### 2\. slice 02[\s\S]*Decided for you: nothing\./);
   assert.match(text, /slice 03 needs your decision on a one-way door[\s\S]*Nothing was built above it/);

@@ -35,7 +35,7 @@ function listFiles(dirPath, prefix) {
         } else if (entry.isFile()) {
             if (entry.name === '.checksums.json') continue;
             if (entry.name === '.selections.json') continue;
-            if (entry.name === '.conductor-version.json' || entry.name === '.carja-version.json') continue;
+            if (entry.name === '.carja-version.json' || entry.name === '.conductor-version.json') continue;
             results.push(rel);
         }
     }
@@ -112,14 +112,14 @@ function isSelected(relativePath, selections, coreSkills) {
  *   Source present,  Target absent,  NOT selected    → AVAILABLE (optional, not installed)
  *   Source present,  Target present                   → UPDATE (framework file — replaced wholesale)
  *   Source absent,   Target present,  in old manifest → REMOVE (framework file dropped upstream — prune it)
- *   Source absent,   Target present,  NOT in manifest → KEEP   (user-authored OR `conductor add`-imported — carried forward)
+ *   Source absent,   Target present,  NOT in manifest → KEEP   (user-authored OR `carja add`-imported — carried forward)
  *
  * The REMOVE / KEEP split turns on framework OWNERSHIP, read from the stored
  * `.checksums.json`: that manifest records only files init/upgrade itself delivered.
- * `conductor add` never writes to it, so registry-imported skills (terraform, angular,
+ * `carja add` never writes to it, so registry-imported skills (terraform, angular,
  * …) and hand-authored files are absent from the manifest and are always KEEP — only a
  * file we ourselves installed AND that upstream has since deleted is pruned. A missing
- * manifest (legacy/V4 install) falls back to `options.retired`: a path Conductor once
+ * manifest (legacy/V4 install) falls back to `options.retired`: a path Carja once
  * shipped and no longer ships (src/retired-framework-files.json) is pruned. The
  * caller backs up the old tree first, so a REMOVE is recoverable from the backup.
  *
@@ -137,7 +137,7 @@ function planUpdate(sourceDir, targetDir, checksumPath, options = {}) {
     const selections = readSelections(targetDir);
     const coreSkills = options.coreSkills;
     // Ownership record: paths this install's init/upgrade actually delivered.
-    // `conductor add` does NOT write here, so imported/custom files are absent.
+    // `carja add` does NOT write here, so imported/custom files are absent.
     const oldManifest = readChecksumFile(checksumPath);
     // With a manifest, it alone decides ownership: a registry skill that reuses a
     // retired name is never pruned. `retired` applies only when there is none.
@@ -171,11 +171,11 @@ function planUpdate(sourceDir, targetDir, checksumPath, options = {}) {
                 // We delivered this file before; upstream has dropped it → prune it.
                 plan.push({ action: 'REMOVE', relativePath: rel, reason: 'framework file removed upstream' });
             } else if (noManifest && retired.has(rel)) {
-                // No manifest (V4): the proof of ownership is that Conductor once
+                // No manifest (V4): the proof of ownership is that Carja once
                 // shipped this exact path (src/retired-framework-files.json).
                 plan.push({ action: 'REMOVE', relativePath: rel, reason: 'retired framework file' });
             } else {
-                // Never framework-tracked → user-authored or `conductor add`-imported → keep.
+                // Never framework-tracked → user-authored or `carja add`-imported → keep.
                 plan.push({ action: 'KEEP', relativePath: rel, reason: 'custom or imported file' });
             }
         }

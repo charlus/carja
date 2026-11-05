@@ -31,13 +31,13 @@ describe("F3 — Quick-Path keeps Build's and Ship's gates", () => {
 
   test("the build step loads the personas from the files it changes", () => {
     const build = section("## Phase 4", "## Completion");
-    assert.match(build, /conductor personas/);
+    assert.match(build, /carja personas/);
   });
 
   test("the build step hands the reviewer reviewer.md and logs each finding", () => {
     const build = section("## Phase 4", "## Completion");
     assert.match(build, /independent-review\/reviewer\.md/);
-    assert.match(build, /conductor review-log append/);
+    assert.match(build, /carja review-log append/);
   });
 
   test("the build step reads build.md whole, not its first lines", () => {

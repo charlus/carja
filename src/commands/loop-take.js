@@ -1,4 +1,4 @@
-// src/commands/loop-take.js — `conductor loop take ["<item>"] [dir] [--drop]`.
+// src/commands/loop-take.js — `carja loop take ["<item>"] [dir] [--drop]`.
 //
 // C4-F4: give the loop a backlog item without editing a tracked file. The queue
 // is in the git dir (src/loop/ready-queue.js), so the owner's checkout stays clean.
@@ -10,7 +10,7 @@ import { readReady, writeReady, resolveTake, openOnly } from "../loop/ready-queu
 import { parseLoopConfig } from "../loop/config.js";
 import { configPath as configPathOf } from "../names.js";
 
-const BACKLOG_REL = "conductor/2-backlog/task-backlog.md";
+const BACKLOG_REL = "carja/2-backlog/task-backlog.md";
 
 /** The main repository's git dir, shared by every worktree; null outside git. */
 export function gitCommonDir(root) {
@@ -63,7 +63,7 @@ export async function loopTakeCommand(root, text, { drop = false, stdout, stderr
   } catch {
     /* no config: the loop takes every open item */
   }
-  if (!requireReady) stdout.write("  Note: loop.require_ready is off, so the loop takes every open backlog item, queued or not. `conductor loop on --backlog` turns it on.\n");
-  if (list.length) stdout.write("\n  Next: `conductor loop . --from-conductor` runs them. `conductor loop take --drop \"<item>\"` removes one.\n");
+  if (!requireReady) stdout.write("  Note: loop.require_ready is off, so the loop takes every open backlog item, queued or not. `carja loop on --backlog` turns it on.\n");
+  if (list.length) stdout.write("\n  Next: `carja loop . --from-carja` runs them. `carja loop take --drop \"<item>\"` removes one.\n");
   return 0;
 }

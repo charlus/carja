@@ -3,7 +3,7 @@
 //
 // E3 — the FIRST test in this repo that says something true about the agent
 // layer. Everything else stubs the agent; this spawns a real `claude -p` and
-// asks the question the framework actually depends on: given Conductor's
+// asks the question the framework actually depends on: given Carja's
 // always-on context, does a fresh model route the request to the right place?
 //
 // Two suites, because two different artifacts are being graded:
@@ -24,12 +24,12 @@
 // Cases run concurrently with a small cap. Every run prints wall-clock and the
 // per-case verdict; no case is retried, so a flake shows up as a flake.
 //
-// Gated behind CONDUCTOR_EVALS=1 so it never runs in `npm run test:unit`:
+// Gated behind CARJA_EVALS=1 so it never runs in `npm run test:unit`:
 // it costs real money and needs a live CLI.
 //
-//   CONDUCTOR_EVALS=1 npm run eval:routing
-//   CONDUCTOR_EVALS=1 npm run eval:routing -- --suite descriptions
-//   CONDUCTOR_EVALS=1 npm run eval:routing -- --case inbox-capture --verbose
+//   CARJA_EVALS=1 npm run eval:routing
+//   CARJA_EVALS=1 npm run eval:routing -- --suite descriptions
+//   CARJA_EVALS=1 npm run eval:routing -- --case inbox-capture --verbose
 
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, cp } from "node:fs/promises";
 import { spawn } from "node:child_process";
@@ -47,7 +47,7 @@ const TEMPLATES = join(ROOT, "templates");
 // that sends everything somewhere is as broken as one that sends nothing.
 // ---------------------------------------------------------------------------
 const CASES = [
-  // --- positives: each Conductor entry point -------------------------------
+  // --- positives: each Carja entry point -------------------------------
   { id: "genesis-idea", expect: "genesis.md",
     prompt: "I have an idea for a tool that helps restaurants manage their waitlist. Where do we start?" },
   { id: "grand-prd", expect: "grand-prd.md",
@@ -79,7 +79,7 @@ const CASES = [
 
   // --- negative controls: these must NOT trigger a workflow ---------------
   { id: "neg-question", expect: "ANSWER_DIRECTLY",
-    prompt: "What does the conductor/2-backlog folder hold?" },
+    prompt: "What does the carja/2-backlog folder hold?" },
   { id: "neg-explain", expect: "ANSWER_DIRECTLY",
     prompt: "Explain how the Verification Iron Law differs from the Test-Driven Law." },
   { id: "neg-trivial", expect: "ANSWER_DIRECTLY",
@@ -103,11 +103,11 @@ const MUTATE = flag("mutate", null);
 const ONLY = flag("case", null);
 const VERBOSE = args.includes("--verbose");
 const CONCURRENCY = Number(flag("concurrency", 4));
-const CLI = process.env.CONDUCTOR_EVAL_CLI || "claude";
+const CLI = process.env.CARJA_EVAL_CLI || "claude";
 
-if (!process.env.CONDUCTOR_EVALS) {
+if (!process.env.CARJA_EVALS) {
   console.log(
-    "routing-eval: skipped (set CONDUCTOR_EVALS=1 to run).\n" +
+    "routing-eval: skipped (set CARJA_EVALS=1 to run).\n" +
       "  This spawns a real agent CLI and costs money; it is deliberately not part of test:unit.",
   );
   process.exit(0);
@@ -123,7 +123,7 @@ if (!process.env.CONDUCTOR_EVALS) {
  * and the suite cannot fail on the class it exists to catch.
  */
 async function makeFixture(suite) {
-  const dir = await mkdtemp(join(tmpdir(), `conductor-routing-${suite}-`));
+  const dir = await mkdtemp(join(tmpdir(), `carja-routing-${suite}-`));
   await cp(join(TEMPLATES, ".agents"), join(dir, ".agents"), { recursive: true });
 
   if (MUTATE) {
@@ -173,11 +173,11 @@ async function makeFixture(suite) {
   const agentsMd = renderRootAgentsMd(null, await buildFrameworkBlock(join(dir, ".agents")));
   await writeFile(join(dir, "AGENTS.md"), nudge ? `${agentsMd}\n${nudge}` : agentsMd);
 
-  // Enough of conductor/ to look like a real install.
+  // Enough of carja/ to look like a real install.
   for (const d of ["0-compass", "1-workbench", "2-backlog"]) {
-    await mkdir(join(dir, "conductor", d), { recursive: true });
+    await mkdir(join(dir, "carja", d), { recursive: true });
   }
-  await writeFile(join(dir, "conductor", "1-workbench", "inbox.md"), "# Inbox\n");
+  await writeFile(join(dir, "carja", "1-workbench", "inbox.md"), "# Inbox\n");
   return dir;
 }
 
@@ -292,7 +292,7 @@ async function main() {
   );
   console.log(`  wrote ${outFile}`);
 
-  if (!process.env.CONDUCTOR_EVAL_KEEP) await rm(dir, { recursive: true, force: true });
+  if (!process.env.CARJA_EVAL_KEEP) await rm(dir, { recursive: true, force: true });
 
   // A routing regression is a real failure, not a warning. Under --mutate the
   // contract inverts: the mutated case MUST fail, or the eval is not actually

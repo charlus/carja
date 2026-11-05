@@ -8,9 +8,9 @@ description: Grand PRD (Organizing the Problem Space)
 
 **Trigger:** "Grand PRD", "Blueprint PRD", "Create PRD", "Define the epics"
 **Goal:** Transform Genesis and Storyboard content into a Grand PRD that organizes the problem space into Epics.
-**Output:** `conductor/2-backlog/project-backlog/[ProjectName]/blueprint/grand-prd.md`
+**Output:** `carja/2-backlog/project-backlog/[ProjectName]/blueprint/grand-prd.md`
 
-**Template:** Use `conductor/5-templates/blueprint-workflows/grand-prd.md` for consistent output structure.
+**Template:** Use `carja/5-templates/blueprint-workflows/grand-prd.md` for consistent output structure.
 
 **Prerequisites:** Genesis (required), Storyboard (recommended)
 **Next Workflow:** UX/UI Design Brief
@@ -29,7 +29,7 @@ It is the first of three Blueprint documents: **Grand PRD** (this) → **UX/UI D
 
 ## Phase 0: Setup — determine project and load context
 
-1. **Which project:** **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Project: read from it and do not ask. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open. Otherwise ask which existing project, or whether we're starting fresh. Then check `conductor/2-backlog/project-backlog/[ProjectName]/` yourself and branch:
+1. **Which project:** **Target (fact — look it up):** If this workflow was started with a path (`/<workflow> <path>`), that folder is the Project: read from it and do not ask. If that folder holds a `handoff.md`, read it first: it lists what the previous session left open. Otherwise ask which existing project, or whether we're starting fresh. Then check `carja/2-backlog/project-backlog/[ProjectName]/` yourself and branch:
    - **Path A — Genesis + Storyboard both exist:** Read all of them carefully (the three `genesis/` docs, Main-Character, Storyboard). Present a brief synthesis (the core problem, the before and after, the main character + outcomes, the scenes, the functional jobs) and confirm it captures the essence.
    - **Path B — Genesis only:** Recommend running Storyboard first (it adds user perspective). If the user proceeds anyway, load Genesis and continue.
    - **Path C — neither:** Recommend running Genesis first. If the user prefers, do condensed context-gathering (grill the problem, transformation, main character, capabilities) and continue.
@@ -73,7 +73,7 @@ It is the first of three Blueprint documents: **Grand PRD** (this) → **UX/UI D
 ## Completion Protocol
 
 - **Recap:** "Grand PRD complete for `[ProjectName]` — [N] Epics covering [key areas]." It captures the WHAT and WHY.
-- **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/ux-ui-design-brief conductor/2-backlog/project-backlog/[ProjectName]`."*
+- **Fresh session (`.agents/skills/handoff/SKILL.md`, *Between workflows*):** delete any `handoff.md` you read at the start. Write a new `handoff.md` into the folder the next command names only if this session leaves open questions or decisions that no document records. Then give the human the exact next command with the real path: *"Start a fresh session (Claude Code: `/clear`), then run `/ux-ui-design-brief carja/2-backlog/project-backlog/[ProjectName]`."*
 - **Next step:** The **UX/UI Design Brief** — translate these Epics into screens, navigation, and interactions.
 - **Project state:**
   ```

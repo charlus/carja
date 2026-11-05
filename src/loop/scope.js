@@ -1,14 +1,14 @@
 // src/loop/scope.js
 //
-// `conductor loop <project>` (owner, 2026-10-22): "I open a terminal, go into the
+// `carja loop <project>` (owner, 2026-10-22): "I open a terminal, go into the
 // project folder and run the loop on a project. For the second project I open
 // another terminal, same folder, run the loop on another project. I don't want
 // to know about worktrees." The project named on the command line is the whole
 // scope: its remaining Blueprint stages and its carved slices, never the backlog
-// or the inbox, and the owner's conductor.config.json is not edited.
+// or the inbox, and the owner's carja.config.json is not edited.
 //
 // Each project's run has its own state and lock in the repository's git
-// directory (`conductor-loop-logs/runs/<project>/`), invisible in the owner's
+// directory (`carja-loop-logs/runs/<project>/`), invisible in the owner's
 // folder. Same project twice is refused by that lock; two projects run side by
 // side, each in its own worktrees. The settings (autonomy, sandbox, budget,
 // platform, verify) still come from the owner's loop-state.json.
@@ -21,7 +21,7 @@ export const RUNS_DIR = "runs";
 /** Options that take a value: their value is not a positional. */
 const VALUE_FLAGS = new Set(["--platform", "--goal", "--event", "--priority", "--code-dir"]);
 
-/** The positional arguments of `conductor loop`, skipping option values. */
+/** The positional arguments of `carja loop`, skipping option values. */
 export function positionals(args) {
   const out = [];
   for (let i = 0; i < args.length; i++) {

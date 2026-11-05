@@ -1,6 +1,6 @@
 // src/loop/trigger.js
 //
-// The IGNITION contract for the Conductor autonomous loop.
+// The IGNITION contract for the Carja autonomous loop.
 //
 // The driver (src/loop/driver.js) is a GOAL loop: it runs until a stop
 // condition is met. It has no scheduler and no event ingestion — by design.
@@ -181,7 +181,7 @@ export function renderTriggerDoc(provenance) {
   const lines = [
     "# Loop Trigger",
     "",
-    "> Written by `conductor loop` when an external trigger seeded this run.",
+    "> Written by `carja loop` when an external trigger seeded this run.",
     "> This is the current run's brief. The driver enforces all guardrails regardless.",
     "",
     `- **Source:** ${p.source ?? "external"}`,

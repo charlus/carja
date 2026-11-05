@@ -10,11 +10,11 @@ category: core
 
 ## Where it lives
 
-`DESIGN.md` at the root of the **code repository**: the nested repository in the outer layout, otherwise the project root. It travels with the code, so a teammate or a harness that never sees `conductor/` still finds it. One file per code repository. Do not split it. An install whose outer layout holds several code repositories (a public site and a CMS, say) has one DESIGN.md in each: different products, different audiences, different designs. `conductor personas` hands the Designer the one of the repository a change touches, and `conductor design migrate --repo <path>` says which one receives the old notes.
+`DESIGN.md` at the root of the **code repository**: the nested repository in the outer layout, otherwise the project root. It travels with the code, so a teammate or a harness that never sees `carja/` still finds it. One file per code repository. Do not split it. An install whose outer layout holds several code repositories (a public site and a CMS, say) has one DESIGN.md in each: different products, different audiences, different designs. `carja personas` hands the Designer the one of the repository a change touches, and `carja design migrate --repo <path>` says which one receives the old notes.
 
 ## The structure
 
-Use `conductor/5-templates/design-md.md`. Its sections, in order: Visual Theme & Atmosphere · Colour Palette & Roles · Typography · Layout & Spacing · Component Styling · Patterns · Data Display · Brand Assets · Reference Screens · Tokens · Other Notes.
+Use `carja/5-templates/design-md.md`. Its sections, in order: Visual Theme & Atmosphere · Colour Palette & Roles · Typography · Layout & Spacing · Component Styling · Patterns · Data Display · Brand Assets · Reference Screens · Tokens · Other Notes.
 
 A philosophy is not a system. "Restraint" and "progressive density" do not tell an agent how wide a page is, how a record is edited, or how a date is written. Each section states rules an agent can follow and a reviewer can check.
 
@@ -31,7 +31,7 @@ A philosophy is not a system. "Restraint" and "progressive density" do not tell 
 
 **Brownfield (code exists, no DESIGN.md).** Extract, do not invent. Read the token file, global stylesheets, the component library configuration, and 3 to 5 representative screens. Describe what is there, with the role each value plays. Where the code is inconsistent (four greys used for body text), propose one choice and list the others as debt in **Other Notes**. Name the most coherent existing screens under **Reference Screens**.
 
-**Migration (an old `conductor/4-context/design/` folder).** Run `conductor design migrate`. When the folder holds only the untouched templates it writes nothing: use the brownfield mode instead. It writes DESIGN.md from the old files, drops untouched template sections, and turns each old file into a pointer. Then rewrite each migrated section into the format above, and delete placeholder rows the old template left (`#000000`, "(e.g., …)").
+**Migration (an old `carja/4-context/design/` folder).** Run `carja design migrate`. When the folder holds only the untouched templates it writes nothing: use the brownfield mode instead. It writes DESIGN.md from the old files, drops untouched template sections, and turns each old file into a pointer. Then rewrite each migrated section into the format above, and delete placeholder rows the old template left (`#000000`, "(e.g., …)").
 
 ## Who decides
 

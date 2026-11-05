@@ -3,7 +3,7 @@
 // A4 — the async surfaces report to a PO, not to an engineer.
 //
 // The maintainer reads the loop's output asynchronously: a ship-log entry, a
-// PR body, and `conductor status`. All three were engineering-shaped. The
+// PR body, and `carja status`. All three were engineering-shaped. The
 // ship-log's six fields were quality, platform and a three-line retrospective;
 // the PR body had no shape at all beyond "link issues, summarise the review";
 // and `status` answered "what is on our plate" with counts and freshness, so
@@ -11,7 +11,7 @@
 //
 // Maintainer decisions, 2026-09-16: restructure the ship-log into two blocks
 // (For you / For the record) rather than appending four fields to six, and
-// surface unanswered `Decide:` lines at the top of `conductor status`.
+// surface unanswered `Decide:` lines at the top of `carja status`.
 //
 // The `For you` block is gated in pre-commit for the same reason the brief
 // check is: a rule that only lives in workflow prose is advisory.
@@ -20,7 +20,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { openDecisions, buildState } from "../src/conductor-state.js";
+import { openDecisions, buildState } from "../src/carja-state.js";
 import { renderStatus } from "../src/view/status.js";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -134,13 +134,13 @@ describe("A4 — the Ship workflow writes both blocks and a PO-shaped PR body", 
 
 describe("A4 — the For-you block is enforced, not requested", () => {
   test("lib.sh can spot a ship-log and a newest entry missing the block", () => {
-    assert.match(LIB, /conductor_is_ship_log\(\)/, "no conductor_is_ship_log helper");
-    assert.match(LIB, /conductor_newest_entry_has_for_you\(\)/, "no newest-entry helper");
+    assert.match(LIB, /carja_is_ship_log\(\)/, "no carja_is_ship_log helper");
+    assert.match(LIB, /carja_newest_entry_has_for_you\(\)/, "no newest-entry helper");
   });
 
   test("pre-commit gates it with a logged waiver", () => {
-    assert.match(PRECOMMIT, /conductor_is_ship_log/, "pre-commit does not use the helper");
-    assert.match(PRECOMMIT, /CONDUCTOR_NO_REPORT/, "no waiver for the report gate");
-    assert.match(PRECOMMIT, /conductor_log_waiver "\$(PROJECT_)?ROOT" "Report"/, "the report waiver is not logged");
+    assert.match(PRECOMMIT, /carja_is_ship_log/, "pre-commit does not use the helper");
+    assert.match(PRECOMMIT, /CARJA_NO_REPORT/, "no waiver for the report gate");
+    assert.match(PRECOMMIT, /carja_log_waiver "\$(PROJECT_)?ROOT" "Report"/, "the report waiver is not logged");
   });
 });

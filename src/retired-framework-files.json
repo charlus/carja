@@ -26,6 +26,8 @@
     "skills/stitch-loop/SKILL.md",
     "skills/stitch-loop/skill.json",
     "skills/testing-patterns/SKILL.md",
-    "skills/testing-patterns/skill.json"
+    "skills/testing-patterns/skill.json",
+    "personas/conductor-assistant.md",
+    "tests/check-conductor.sh"
   ]
 }

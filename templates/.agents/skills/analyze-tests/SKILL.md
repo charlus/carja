@@ -9,7 +9,7 @@ Testing is not an afterthought. This skill enforces the creation of a testing st
 
 ## Directives
 
-1. **Review Requirements**: Read the current task in `conductor/1-workbench/` or `conductor/2-backlog/`.
+1. **Review Requirements**: Read the current task in `carja/1-workbench/` or `carja/2-backlog/`.
 2. **Identify Boundaries**: Determine the integration boundaries, core domain logic, and edge cases for the task.
 3. **Formulate Strategy**: Decide on the necessary types of tests:
    - Unit Tests (for isolated logic)

@@ -1,9 +1,9 @@
 // test/loop-fleet-bridge.test.js
 //
 // Fleet Bridge (Loop-Robustness-Plan §5) regression guards: harvesting the
-// ./conductor/ source of truth into a typed work queue (FB-1), work-type→workflow
+// ./carja/ source of truth into a typed work queue (FB-1), work-type→workflow
 // routing (FB-4), and the claim/write-back transforms that reflect fleet progress
-// back into the SAME conductor/ files (FB-2/FB-3). All pure — no repo, no agent.
+// back into the SAME carja/ files (FB-2/FB-3). All pure — no repo, no agent.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

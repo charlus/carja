@@ -6,9 +6,9 @@ description: Survey (Onboarding a Codebase Somebody Else Wrote)
 
 > **System Instruction:** Upon triggering this workflow, you MUST read the entire content of this file again to load the latest protocols. Do not rely on previous memory.
 
-**Trigger:** "I inherited this codebase", "Onboard this existing product", "What is this thing", "Set up Conductor on an existing project"
-**Goal:** Turn a running product nobody documented into the `conductor/` knowledge base the rest of the methodology needs.
-**Output:** `conductor/3-product-areas/<area>/` for each real area, plus `4-context/technical/` and a populated `0-compass/`.
+**Trigger:** "I inherited this codebase", "Onboard this existing product", "What is this thing", "Set up Carja on an existing project"
+**Goal:** Turn a running product nobody documented into the `carja/` knowledge base the rest of the methodology needs.
+**Output:** `carja/3-product-areas/<area>/` for each real area, plus `4-context/technical/` and a populated `0-compass/`.
 **Prerequisites:** A checkout of the codebase. Nothing else.
 
 **Technique:** The interview uses `.agents/skills/grilling/SKILL.md`; the documents use `.agents/skills/collaborative-drafting/SKILL.md`.
@@ -42,7 +42,7 @@ what it printed, and reason from that.
 ## Phase 1: Collect the facts
 
 ```bash
-conductor survey --out conductor/1-workbench/survey.md
+carja survey --out carja/1-workbench/survey.md
 ```
 
 Read the file it wrote. It gives you, for the whole tree: file and language
@@ -86,8 +86,8 @@ only they can answer:
 
 ## Phase 3: Write the knowledge base
 
-For each confirmed area, create `conductor/3-product-areas/<area>/` from
-`conductor/5-templates/new-product-area/`, and fill in only what you can
+For each confirmed area, create `carja/3-product-areas/<area>/` from
+`carja/5-templates/new-product-area/`, and fill in only what you can
 source:
 
 - **What it does** — from the interview, in the human's words.
@@ -101,20 +101,20 @@ find out>`. Never write a plausible-sounding sentence to fill a gap: this
 document becomes the ground truth every later workflow reads, and an invented
 fact here is repeated forever.
 
-Then write `conductor/4-context/technical/tech-stack.md` from the language and
-dependency counts, and open `conductor/0-compass/` with the product's current
+Then write `carja/4-context/technical/tech-stack.md` from the language and
+dependency counts, and open `carja/0-compass/` with the product's current
 state as the human described it.
 
 ---
 
 ## Phase 4: Set the gates up
 
-An inherited codebase usually has no verification command Conductor knows
+An inherited codebase usually has no verification command Carja knows
 about, so every later gate is inert:
 
 ```bash
-conductor verify --detect     # derive it, or --set "…" / --none
-conductor install-hooks
+carja verify --detect     # derive it, or --set "…" / --none
+carja install-hooks
 ```
 
 If the survey found substantial untested areas, say so plainly and let the
@@ -125,10 +125,10 @@ that is a product decision, and it is theirs.
 
 ## Completion
 
-- `conductor/3-product-areas/` has a folder per confirmed area
+- `carja/3-product-areas/` has a folder per confirmed area
 - Every unestablished claim is marked `TBD` with how to resolve it
 - The verification command is set or explicitly declared `none`
-- `conductor/1-workbench/survey.md` is kept — it is the evidence for
+- `carja/1-workbench/survey.md` is kept — it is the evidence for
   everything above, and re-running it later shows what moved
 
 **Next:** `workflows/grand-prd.md` for new work on this product, or

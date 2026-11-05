@@ -1,7 +1,7 @@
 // test/claude-skills.test.js
 //
 // The Claude Code skill bridge. Claude Code discovers skills only under
-// `.claude/skills/<name>/SKILL.md`; Conductor installs them under
+// `.claude/skills/<name>/SKILL.md`; Carja installs them under
 // `.agents/skills/`. Before this bridge, a skill no workflow loads by path —
 // `handoff` — was unreachable in Claude Code except by an `@` file reference.
 
@@ -76,7 +76,7 @@ test("a removed skill loses its shim; the user's own Claude skills are never tou
   assert.ok(existsSync(join(own, "SKILL.md")), "user skill kept");
 });
 
-test("a user skill with the same name as a Conductor skill is kept, not overwritten", async () => {
+test("a user skill with the same name as a Carja skill is kept, not overwritten", async () => {
   const dir = installWithSkill("handoff", "Hand off.");
   const own = join(dir, ".claude", "skills", "handoff");
   mkdirSync(own, { recursive: true });

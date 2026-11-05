@@ -7,7 +7,7 @@
 // before and reported it as today's fact. The human had merged and deployed in
 // between, outside the conversation. A dated record is history; MR and deploy
 // status is live and is fetched at the moment of the claim, or the agent says
-// it did not check. `conductor status --live` is the one command that fetches it.
+// it did not check. `carja status --live` is the one command that fetches it.
 //
 // Fixtures are taken from real ship-logs (eurassistant, evalapp-v2), including
 // the "MRs !79 to !83" range and the hand-written correction entry that shows
@@ -44,7 +44,7 @@ const SHIP_LOG = `# Ship Log
 
 ## 2026-10-19 — Ownership migration
 - **Platform:** MR !254. Not merged yet.
-- **Risk:** see https://github.com/charlus/conductor-framework/pull/78 for the framework side.
+- **Risk:** see https://github.com/charlus/carja/pull/78 for the framework side.
 
 - [2026-10-19 10:00] Hook waiver (TDD): generated migration !999
 `;
@@ -53,7 +53,7 @@ describe("mrRefsFromShipLog — the pure half", () => {
   test("finds bare GitLab refs, ranges, GitLab and GitHub URLs, newest entry first", () => {
     const refs = mrRefsFromShipLog(SHIP_LOG);
     const keys = refs.map((r) => r.key);
-    assert.deepEqual(keys.slice(0, 2).sort(), ["github:charlus/conductor-framework#78", "gitlab:!254"], "the newest entry's refs come first");
+    assert.deepEqual(keys.slice(0, 2).sort(), ["github:charlus/carja#78", "gitlab:!254"], "the newest entry's refs come first");
     for (const n of [79, 80, 81, 82, 83, 85]) assert.ok(keys.includes(`gitlab:!${n}`), `!${n} from the range`);
     assert.ok(keys.includes("gitlab:code.euranova.eu/enx-it/eurassistant!41"));
     assert.ok(!keys.includes("gitlab:!41"), "a bare ref next to its own URL is the same MR, not a second one");
@@ -151,7 +151,7 @@ describe("deployChecksFrom — the config, or an honest 'ask the human'", () => 
 describe("collectLive — IO through an injected runner", () => {
   async function project(config, shipLog = SHIP_LOG) {
     const root = await mkdtemp(join(tmpdir(), "live-"));
-    await writeFile(join(root, "conductor.config.json"), JSON.stringify(config));
+    await writeFile(join(root, "carja.config.json"), JSON.stringify(config));
     return { root, shipLog };
   }
 
@@ -227,13 +227,13 @@ describe("collectLive — IO through an injected runner", () => {
   });
 });
 
-describe("conductor status — --live is opt-in, and its absence is said", () => {
+describe("carja status — --live is opt-in, and its absence is said", () => {
   async function install() {
     const root = await mkdtemp(join(tmpdir(), "live-cli-"));
-    await mkdir(join(root, "conductor/0-compass"), { recursive: true });
-    await mkdir(join(root, "conductor/1-workbench"), { recursive: true });
-    await writeFile(join(root, "conductor/1-workbench/inbox.md"), "# Inbox\n\n- \n");
-    await writeFile(join(root, "conductor/0-compass/ship-log.md"), "## 2026-10-19 — X\n- **Platform:** MR !254. Not merged yet.\n");
+    await mkdir(join(root, "carja/0-compass"), { recursive: true });
+    await mkdir(join(root, "carja/1-workbench"), { recursive: true });
+    await writeFile(join(root, "carja/1-workbench/inbox.md"), "# Inbox\n\n- \n");
+    await writeFile(join(root, "carja/0-compass/ship-log.md"), "## 2026-10-19 — X\n- **Platform:** MR !254. Not merged yet.\n");
     return root;
   }
   const sink = () => ({ text: "", write(s) { this.text += s; } });
@@ -244,7 +244,7 @@ describe("conductor status — --live is opt-in, and its absence is said", () =>
     const stdout = sink();
     await statusCommand([root, "--no-color"], { cwd: root, stdout, stderr: sink(), run: async (cmd) => (calls.push(cmd), { code: 1, stdout: "" }) });
     assert.deepEqual(calls, []);
-    assert.match(stdout.text, /MR and deploy status: not checked\. Run conductor status --live/);
+    assert.match(stdout.text, /MR and deploy status: not checked\. Run carja status --live/);
   });
 
   test("--live --json: the digest carries the live block", async () => {
@@ -317,15 +317,15 @@ test("forgeMergedHead reads the merged MR head from GitLab and GitHub, null othe
     return answers[cmd]?.(args) ?? { code: 1, stdout: "", stderr: "no" };
   };
   const gitlab = runFor("git@code.example.eu:team/app.git", {
-    glab: (a) => (/source_branch=conductor%2Floop%2Fx&state=merged/.test(a[1]) ? { code: 0, stdout: `[{"sha":"${sha}"}]` } : { code: 0, stdout: "[]" }),
+    glab: (a) => (/source_branch=carja%2Floop%2Fx&state=merged/.test(a[1]) ? { code: 0, stdout: `[{"sha":"${sha}"}]` } : { code: 0, stdout: "[]" }),
   });
-  assert.equal(await forgeMergedHead("/r", "conductor/loop/x", gitlab), sha);
-  assert.equal(await forgeMergedHead("/r", "conductor/loop/y", gitlab), null);
+  assert.equal(await forgeMergedHead("/r", "carja/loop/x", gitlab), sha);
+  assert.equal(await forgeMergedHead("/r", "carja/loop/y", gitlab), null);
   const github = runFor("https://github.com/o/r.git", {
-    gh: (a) => (a.includes("conductor/loop/x") ? { code: 0, stdout: `[{"headRefOid":"${sha}"}]` } : { code: 0, stdout: "[]" }),
+    gh: (a) => (a.includes("carja/loop/x") ? { code: 0, stdout: `[{"headRefOid":"${sha}"}]` } : { code: 0, stdout: "[]" }),
   });
-  assert.equal(await forgeMergedHead("/r", "conductor/loop/x", github), sha);
-  assert.equal(await forgeMergedHead("/r", "conductor/loop/y", github), null);
+  assert.equal(await forgeMergedHead("/r", "carja/loop/x", github), sha);
+  assert.equal(await forgeMergedHead("/r", "carja/loop/y", github), null);
   const broken = runFor("git@code.example.eu:team/app.git", { glab: () => ({ code: 0, stdout: "not json" }) });
-  assert.equal(await forgeMergedHead("/r", "conductor/loop/x", broken), null);
+  assert.equal(await forgeMergedHead("/r", "carja/loop/x", broken), null);
 });

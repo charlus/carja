@@ -1,11 +1,11 @@
 // src/heartbeat.js
 //
-// Which local commits and pushes skipped the Conductor hooks.
+// Which local commits and pushes skipped the Carja hooks.
 //
 // "Gates on" only says git is configured to run the hooks. A commit made with
-// --no-verify or CONDUCTOR_HOOKS=off, or by a git client that ignores hooks,
+// --no-verify or CARJA_HOOKS=off, or by a git client that ignores hooks,
 // leaves no trace there. So each hook appends `<epoch> <hook>` to a heartbeat
-// file in the git directory, and `conductor install-hooks` appends
+// file in the git directory, and `carja install-hooks` appends
 // `<epoch> installed`, the floor before which nothing is judged. The reflog
 // records every local commit and push with its time. A commit or push with no
 // heartbeat of its hook shortly before it skipped the hooks.
@@ -23,7 +23,7 @@ import { isAbsolute, join } from "node:path";
 
 const execFileP = promisify(execFile);
 
-export const HEARTBEAT_FILE = "conductor-heartbeat";
+export const HEARTBEAT_FILE = "carja-heartbeat";
 // How long before a commit or push its hook may have started. pre-push runs
 // the verify command, so it gets the longer window.
 const WINDOW_S = { "pre-commit": 1800, "pre-push": 7200 };

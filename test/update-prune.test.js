@@ -9,7 +9,7 @@ import { writeChecksumFile, readChecksumFile } from "../src/checksums.js";
 // Build a source (upstream templates) + target (installed) pair where:
 //  - skills/keeper       is a framework skill still shipped upstream        → UPDATE
 //  - skills/dropped      is a framework skill upstream deleted (in manifest) → REMOVE
-//  - skills/Terraform    was `conductor add`-imported (NOT in manifest)      → KEEP
+//  - skills/Terraform    was `carja add`-imported (NOT in manifest)      → KEEP
 //  - my-notes.md         is a hand-authored custom file (NOT in manifest)    → KEEP
 function makePair({ withManifest }) {
   const root = mkdtempSync(join(tmpdir(), "cond-prune-"));

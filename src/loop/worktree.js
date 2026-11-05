@@ -30,7 +30,7 @@ export function slugify(text, fallback = "loop", max = 40) {
 /** Stable worktree branch + path for a run. No randomness (driver constraint). */
 export function worktreePlan(root, goalDescription) {
   const slug = slugify(goalDescription);
-  const branch = `conductor/loop/${slug}`;
+  const branch = `carja/loop/${slug}`;
   const path = join(root, WORKTREES_DIR, slug);
   return { branch, path, slug };
 }
@@ -42,7 +42,7 @@ export function worktreePlan(root, goalDescription) {
 export function taskWorktreePlan(root, goalDescription, taskId) {
   const goal = slugify(goalDescription, "loop", 20).replace(/-+$/, "");
   const slug = `${goal}-${slugify(taskId, "task", Infinity)}`;
-  return { branch: `conductor/loop/${slug}`, path: join(root, WORKTREES_DIR, slug), slug };
+  return { branch: `carja/loop/${slug}`, path: join(root, WORKTREES_DIR, slug), slug };
 }
 
 /** Is `path` a live worktree of this repository: registered, and on disk? */
@@ -56,7 +56,7 @@ export async function isLiveWorktree({ git, path }) {
  * worktree's path. `git worktree add` then failed, the loop did not notice, and
  * a beat ran in a folder git did not know. Before an add, a folder at the path
  * that is not a live worktree is moved aside to
- * `<git dir>/conductor-loop-logs/leftovers/<name>-<time>`, never deleted, and
+ * `<git dir>/carja-loop-logs/leftovers/<name>-<time>`, never deleted, and
  * stale registrations are pruned. The leftover stays there for the owner.
  * @returns {Promise<{moved: string|null}>}
  */
@@ -66,7 +66,7 @@ export async function freeWorktreePath({ git, path, now = () => new Date() }) {
   if (!existsSync(path)) return { moved: null };
   const common = await git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   if (!common.ok) return { moved: null };
-  const dir = join(common.stdout.trim(), "conductor-loop-logs", "leftovers");
+  const dir = join(common.stdout.trim(), "carja-loop-logs", "leftovers");
   mkdirSync(dir, { recursive: true });
   const dest = join(dir, `${basename(path)}-${now().toISOString().replace(/[:.]/g, "-")}`);
   try {
@@ -103,14 +103,14 @@ export async function createWorktree({ root, goalDescription, git }) {
   return { path, branch, created: true };
 }
 
-// The conductor scaffold a Maker needs to be conductor-enabled + product-aware.
+// The carja scaffold a Maker needs to be carja-enabled + product-aware.
 // `git worktree add` only checks out TRACKED files, so in a repo that gitignores
 // these (a real, legitimate setup) the worktree would be blind. We fill them in
 // from the main working tree; ignored files stay ignored in the worktree, so they
 // never pollute the feature branch / PR.
 // AGENTS.md is the instruction file; CLAUDE.md / GEMINI.md stay listed for installs
 // that still carry them (a copy is made only when the root has one).
-export const CONTEXT_ANCHORS = Object.freeze(["AGENTS.md", "CLAUDE.md", "GEMINI.md", ".agents", "conductor"]);
+export const CONTEXT_ANCHORS = Object.freeze(["AGENTS.md", "CLAUDE.md", "GEMINI.md", ".agents", "carja"]);
 
 /** Pure: which anchors exist at the root but are MISSING from the worktree. */
 export function anchorsToMaterialize({ anchors = CONTEXT_ANCHORS, existsAtRoot, existsInWorktree }) {
@@ -118,14 +118,14 @@ export function anchorsToMaterialize({ anchors = CONTEXT_ANCHORS, existsAtRoot, 
 }
 
 /**
- * Fill an isolated worktree with any conductor scaffold git didn't check out
- * (untracked / gitignored), so the Maker is conductor-enabled + product-aware
+ * Fill an isolated worktree with any carja scaffold git didn't check out
+ * (untracked / gitignored), so the Maker is carja-enabled + product-aware
  * regardless of whether the scaffold is committed. Tracked anchors are already
  * present → skipped. IO injected: existsAtRoot/existsInWorktree(anchor)->bool,
  * copy(anchor)->void (the caller's copy MUST exclude `.agents/.worktrees` or it
  * recurses into the worktrees dir). @returns anchors actually materialized.
  */
-export async function materializeConductorContext({ anchors = CONTEXT_ANCHORS, existsAtRoot, existsInWorktree, copy }) {
+export async function materializeCarjaContext({ anchors = CONTEXT_ANCHORS, existsAtRoot, existsInWorktree, copy }) {
   const todo = anchorsToMaterialize({ anchors, existsAtRoot, existsInWorktree });
   for (const a of todo) await copy(a);
   return todo;

@@ -2,7 +2,7 @@
 //
 // The trust envelope for external trigger content (E4).
 //
-// THREAT MODEL. `conductor loop` can be seeded from a GitHub issue body, a PR
+// THREAT MODEL. `carja loop` can be seeded from a GitHub issue body, a PR
 // comment, a Slack message or a webhook (see src/loop/trigger.js). Anyone who
 // can file an issue can therefore put text in front of an UNATTENDED agent that
 // holds credentials. This is not hypothetical: the Feb-2026 Cline incident

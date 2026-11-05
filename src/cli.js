@@ -28,9 +28,9 @@ function helpText() {
   return mainHelp();
 }
 
-/** A bare `conductor` inside a project: where it stands and the next command, not the whole list. */
+/** A bare `carja` inside a project: where it stands and the next command, not the whole list. */
 async function projectGuide(cwd) {
-  const { collectState } = await import("./conductor-state.js");
+  const { collectState } = await import("./carja-state.js");
   const { readRounds, loopItems, loopOffProjects } = await import("./commands/status.js");
   const { ok, state } = await collectState(cwd, {});
   if (!ok) return null;
@@ -38,18 +38,20 @@ async function projectGuide(cwd) {
   const d = state.digest ?? {};
   return [
     "",
-    `  Conductor project: ${cwd}`,
+    `  Carja project: ${cwd}`,
     `  Inbox ${d.inboxCount ?? 0} · backlog open ${d.backlogOpen ?? 0} · question rounds waiting ${rounds.waiting.length}`,
     "",
     `  ${nextAfterStatus({ waitingRounds: rounds.waiting, answeredRounds: rounds.answered.length, verifyConfigured: d.verify?.state !== "unset", inboxCount: d.inboxCount ?? 0, queueLength: d.queueLength ?? 0, loopItems: await loopItems(cwd), loopOffProjects: await loopOffProjects(cwd) })}`,
     "",
-    "  Often used:  conductor status · conductor inbox add \"<idea>\" · conductor loop . --from-conductor --dry-run",
-    "  All commands: conductor help   ·   Full guide: docs/Using-Conductor.md",
+    "  Often used:  carja status · carja inbox add \"<idea>\" · carja loop . --from-carja --dry-run",
+    "  All commands: carja help   ·   Full guide: docs/Using-Carja.md",
     "",
   ].join("\n");
 }
 
-export async function runCli(args, io = process) {
+export async function runCli(rawArgs, io = process) {
+  // The 6.x spelling of the flag, kept through 7.x.
+  const args = rawArgs.map((a) => (a === "--from-conductor" ? "--from-carja" : a));
   const [command, ...rest] = args;
 
   if (!command) {
@@ -67,7 +69,7 @@ export async function runCli(args, io = process) {
     io.stdout.write(`${text}\n`);
     return 0;
   }
-  // `conductor <command> --help`: the flags before a `--` are the CLI's; after it, the wrapped command's.
+  // `carja <command> --help`: the flags before a `--` are the CLI's; after it, the wrapped command's.
   const own = rest.includes("--") ? rest.slice(0, rest.indexOf("--")) : rest;
   if ((own.includes("--help") || own.includes("-h")) && commandHelp(command)) {
     io.stdout.write(`${commandHelp(command)}\n`);

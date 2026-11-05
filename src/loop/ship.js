@@ -59,14 +59,14 @@ export function renderShipAssignment(task, { branch } = {}) {
     lines.push(`- **Item:** ${cleanTitle(task.title)}`);
     if (task.source?.kind === "backlog") {
       lines.push(
-        "- **Tick it in this branch:** in `conductor/2-backlog/task-backlog.md`, change its `- [ ]` to `- [x]`, remove `(loop-ready)` and any `🤖` marker, and add **Done YYYY-MM-DD** with one line on what shipped. Merging the MR is what makes it done."
+        "- **Tick it in this branch:** in `carja/2-backlog/task-backlog.md`, change its `- [ ]` to `- [x]`, remove `(loop-ready)` and any `🤖` marker, and add **Done YYYY-MM-DD** with one line on what shipped. Merging the MR is what makes it done."
       );
     }
   }
   if (task?.source?.kind === "slice" && task.source.path) {
-    lines.push(`- **Archive it in this branch:** move \`${task.source.path}\` to \`conductor/6-archive/completed-implementations/${task.source.slice}\` (ship.md Phase 5).`);
+    lines.push(`- **Archive it in this branch:** move \`${task.source.path}\` to \`carja/6-archive/completed-implementations/${task.source.slice}\` (ship.md Phase 5).`);
   }
-  if (branch) lines.push(`- **Branch:** \`${branch}\`. In the ship-log entry write \`Platform: branch ${branch} — MR opened by conductor loop\`.`);
+  if (branch) lines.push(`- **Branch:** \`${branch}\`. In the ship-log entry write \`Platform: branch ${branch} — MR opened by carja loop\`.`);
   return lines.join("\n");
 }
 
@@ -119,7 +119,7 @@ export function checkShipEvidence({ rootShipLog, branchShipLog, body, backlog = 
     if (!line || !/^\s*- \[[xX]\]/.test(line)) reasons.push(`the backlog item is not ticked: ${cleanTitle(backlog.title)}`);
   }
   if (slice && (slice.stillInBacklog || !slice.archived)) {
-    reasons.push("the slice folder is not archived to conductor/6-archive/completed-implementations/ (ship.md Phase 5)");
+    reasons.push("the slice folder is not archived to carja/6-archive/completed-implementations/ (ship.md Phase 5)");
   }
   return { ok: reasons.length === 0, reasons };
 }

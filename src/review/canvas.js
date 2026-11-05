@@ -2,8 +2,8 @@
 //
 // The review canvas — pure half (F4, slice 1).
 //
-// WHY THIS EXISTS. Conductor's human is a product owner, and on Claude Code
-// there is no file browser: the terminal is the only surface. `conductor view`
+// WHY THIS EXISTS. Carja's human is a product owner, and on Claude Code
+// there is no file browser: the terminal is the only surface. `carja view`
 // fixed the reading half — every document rendered into one page. This is the
 // missing return path. The human reads a plan in a browser and says approve or
 // request changes, and that verdict comes back to a CLI call the agent is
@@ -51,7 +51,7 @@ const MAX_ANCHOR_CHARS = 400;
 /**
  * The element the human pointed at, bounded and flattened.
  *
- * This arrives from a browser and ends up quoted into `conductor/`, so only
+ * This arrives from a browser and ends up quoted into `carja/`, so only
  * the three fields we use survive, each a bounded string. An unbounded
  * snippet or a nested object would land in the knowledge base verbatim.
  */
@@ -322,7 +322,7 @@ article [data-anchorable].picked { background: color-mix(in srgb, var(--accent) 
 
   function notSent() {
     notice.textContent = "Not sent \u2014 this review is no longer running. " +
-      "Your text is still in the box: re-run conductor review, then send it again.";
+      "Your text is still in the box: re-run carja review, then send it again.";
   }
 
   function sent() {

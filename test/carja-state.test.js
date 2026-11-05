@@ -1,12 +1,12 @@
-// test/conductor-state.test.js
+// test/carja-state.test.js
 //
-// ONE state function, TWO renderers. `conductor status` (terminal) and
-// `conductor view` (HTML) must both read from this module, or the two surfaces
+// ONE state function, TWO renderers. `carja status` (terminal) and
+// `carja view` (HTML) must both read from this module, or the two surfaces
 // will disagree and the human will stop believing either. So the digest is
 // built and tested here, once, as a pure function.
 //
 // It also proves the read path reuses `src/loop/harvester.js` — the autonomous
-// loop already had a structured view of `conductor/` and the human did not.
+// loop already had a structured view of `carja/` and the human did not.
 // Closing that asymmetry is the whole point; a second parser would reopen it.
 
 import { test, describe } from "node:test";
@@ -27,7 +27,7 @@ import {
   openerFor,
   captureInbox,
   clickableUrl,
-} from "../src/conductor-state.js";
+} from "../src/carja-state.js";
 import { harvestWorkQueue } from "../src/loop/harvester.js";
 
 const INBOX = `# Inbox
@@ -55,9 +55,9 @@ const BACKLOG = `# Backlog
 `;
 
 const docs = (overrides = []) => [
-  { relPath: "conductor/0-compass/north-star.md", raw: "# North Star\n\nSee conductor/2-backlog/task-backlog.md\n", mtimeMs: 0 },
-  { relPath: "conductor/2-backlog/task-backlog.md", raw: BACKLOG, mtimeMs: 0 },
-  { relPath: "conductor/3-product-areas/auth/spec.md", raw: "# Auth\n\nDepends on north-star.md\n", mtimeMs: 0 },
+  { relPath: "carja/0-compass/north-star.md", raw: "# North Star\n\nSee carja/2-backlog/task-backlog.md\n", mtimeMs: 0 },
+  { relPath: "carja/2-backlog/task-backlog.md", raw: BACKLOG, mtimeMs: 0 },
+  { relPath: "carja/3-product-areas/auth/spec.md", raw: "# Auth\n\nDepends on north-star.md\n", mtimeMs: 0 },
   ...overrides,
 ];
 
@@ -72,12 +72,12 @@ describe("section mapping", () => {
   });
 
   test("a path maps to its numbered folder", () => {
-    assert.equal(sectionForPath("conductor/2-backlog/task-backlog.md"), "2-backlog");
-    assert.equal(sectionForPath("conductor/3-product-areas/auth/spec.md"), "3-product-areas");
+    assert.equal(sectionForPath("carja/2-backlog/task-backlog.md"), "2-backlog");
+    assert.equal(sectionForPath("carja/3-product-areas/auth/spec.md"), "3-product-areas");
   });
 
   test("an unknown path maps to null rather than guessing", () => {
-    assert.equal(sectionForPath("conductor/stray.md"), null);
+    assert.equal(sectionForPath("carja/stray.md"), null);
   });
 });
 
@@ -111,19 +111,19 @@ describe("backlog summary", () => {
 describe("backlinks — information the folder tree cannot show", () => {
   test("a document referenced by another gets a backlink to it", () => {
     const links = computeBacklinks(docs());
-    assert.deepEqual(links["conductor/2-backlog/task-backlog.md"], ["conductor/0-compass/north-star.md"]);
+    assert.deepEqual(links["carja/2-backlog/task-backlog.md"], ["carja/0-compass/north-star.md"]);
   });
 
   test("a bare filename reference counts as a link", () => {
     const links = computeBacklinks(docs());
-    assert.deepEqual(links["conductor/0-compass/north-star.md"], ["conductor/3-product-areas/auth/spec.md"]);
+    assert.deepEqual(links["carja/0-compass/north-star.md"], ["carja/3-product-areas/auth/spec.md"]);
   });
 
   test("a document does not link to itself", () => {
     const links = computeBacklinks([
-      { relPath: "conductor/0-compass/north-star.md", raw: "see north-star.md", mtimeMs: 0 },
+      { relPath: "carja/0-compass/north-star.md", raw: "see north-star.md", mtimeMs: 0 },
     ]);
-    assert.deepEqual(links["conductor/0-compass/north-star.md"] ?? [], []);
+    assert.deepEqual(links["carja/0-compass/north-star.md"] ?? [], []);
   });
 });
 
@@ -134,20 +134,20 @@ describe("staleness", () => {
   test("flags documents older than the threshold", () => {
     const stale = computeStale(
       [
-        { relPath: "conductor/0-compass/north-star.md", mtimeMs: now - 40 * day },
-        { relPath: "conductor/0-compass/ship-log.md", mtimeMs: now - 2 * day },
+        { relPath: "carja/0-compass/north-star.md", mtimeMs: now - 40 * day },
+        { relPath: "carja/0-compass/ship-log.md", mtimeMs: now - 2 * day },
       ],
       { now, days: 30 }
     );
-    assert.deepEqual(stale.map((d) => d.relPath), ["conductor/0-compass/north-star.md"]);
+    assert.deepEqual(stale.map((d) => d.relPath), ["carja/0-compass/north-star.md"]);
     assert.equal(stale[0].ageDays, 40);
   });
 
   test("templates and the archive are never stale — they are meant to sit still", () => {
     const stale = computeStale(
       [
-        { relPath: "conductor/5-templates/prd.md", mtimeMs: now - 999 * day },
-        { relPath: "conductor/6-archive/old.md", mtimeMs: now - 999 * day },
+        { relPath: "carja/5-templates/prd.md", mtimeMs: now - 999 * day },
+        { relPath: "carja/6-archive/old.md", mtimeMs: now - 999 * day },
       ],
       { now, days: 30 }
     );
@@ -215,21 +215,21 @@ describe("buildState — the shared digest", () => {
   });
 
   test("each document carries rendered html, headings and its backlinks", () => {
-    const doc = state().docs.find((d) => d.relPath === "conductor/2-backlog/task-backlog.md");
+    const doc = state().docs.find((d) => d.relPath === "carja/2-backlog/task-backlog.md");
     assert.ok(doc.html.includes("<h2"), "html is rendered at generation time");
     assert.ok(doc.headings.length > 0);
-    assert.deepEqual(doc.backlinks, ["conductor/0-compass/north-star.md"]);
+    assert.deepEqual(doc.backlinks, ["carja/0-compass/north-star.md"]);
     assert.ok(!("raw" in doc), "raw markdown is not shipped to the page — html already is");
   });
 
   test("the document body does not repeat the title the page already shows", () => {
-    const doc = state().docs.find((d) => d.relPath === "conductor/0-compass/north-star.md");
+    const doc = state().docs.find((d) => d.relPath === "carja/0-compass/north-star.md");
     assert.equal(doc.title, "North Star", "title came from the leading h1");
     assert.ok(!doc.html.includes("<h1"), `the h1 must not also be in the body: ${doc.html}`);
     assert.ok(doc.headings.some((h) => h.level === 1), "but the outline still knows about it");
   });
 
-  test("an empty conductor/ still produces a usable state", () => {
+  test("an empty carja/ still produces a usable state", () => {
     const s = buildState({ root: "/repo", projectName: "repo", docs: [], now: 0 });
     assert.equal(s.digest.inboxCount, 0);
     assert.equal(s.digest.backlogOpen, 0);
@@ -272,35 +272,35 @@ describe("inbox capture — deterministic, so it cannot be forgotten", () => {
 });
 
 describe("capture refuses to litter", () => {
-  test("captureInbox will not scaffold conductor/ in a project that has none", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "conductor-capture-"));
-    await assert.rejects(() => captureInbox(dir, "a thought"), /conductor/i);
-    assert.equal(existsSync(join(dir, "conductor")), false, "nothing was created");
+  test("captureInbox will not scaffold carja/ in a project that has none", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "carja-capture-"));
+    await assert.rejects(() => captureInbox(dir, "a thought"), /carja/i);
+    assert.equal(existsSync(join(dir, "carja")), false, "nothing was created");
   });
 
   test("but it does create inbox.md inside a real install", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "conductor-capture-"));
-    await mkdir(join(dir, "conductor", "1-workbench"), { recursive: true });
+    const dir = await mkdtemp(join(tmpdir(), "carja-capture-"));
+    await mkdir(join(dir, "carja", "1-workbench"), { recursive: true });
     const res = await captureInbox(dir, "a thought");
     assert.equal(res.created, true);
-    assert.match(readFileSync(join(dir, "conductor/1-workbench/inbox.md"), "utf8"), /- a thought/);
+    assert.match(readFileSync(join(dir, "carja/1-workbench/inbox.md"), "utf8"), /- a thought/);
   });
 });
 
 describe("derived views are never committed", () => {
   test("adds the ignore entry when missing", () => {
-    const out = ensureGitignoreEntry("node_modules\n", "conductor/.views/");
-    assert.ok(out.includes("conductor/.views/"), out);
+    const out = ensureGitignoreEntry("node_modules\n", "carja/.views/");
+    assert.ok(out.includes("carja/.views/"), out);
   });
 
   test("is idempotent", () => {
-    const once = ensureGitignoreEntry("", "conductor/.views/");
-    assert.equal(ensureGitignoreEntry(once, "conductor/.views/"), once);
+    const once = ensureGitignoreEntry("", "carja/.views/");
+    assert.equal(ensureGitignoreEntry(once, "carja/.views/"), once);
   });
 
   test("does not match a different entry by prefix", () => {
-    const out = ensureGitignoreEntry("conductor/.views-old/\n", "conductor/.views/");
-    assert.ok(out.includes("conductor/.views/"), out);
+    const out = ensureGitignoreEntry("carja/.views-old/\n", "carja/.views/");
+    assert.ok(out.includes("carja/.views/"), out);
   });
 });
 

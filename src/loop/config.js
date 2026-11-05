@@ -1,7 +1,7 @@
 // src/loop/config.js
 //
-// The `loop` block of conductor.config.json: per-project settings the operator
-// owns and `conductor upgrade` never overwrites (field report F2–F5).
+// The `loop` block of carja.config.json: per-project settings the operator
+// owns and `carja upgrade` never overwrites (field report F2–F5).
 //
 //   forge            "gh" | "glab" — overrides the forge read from the origin host
 //   setup            shell command run once per new worktree, before the first beat
@@ -16,7 +16,7 @@
 //   blank_env        ["GEMINI_API_KEY", …] → set empty in every beat's environment (default: the
 //                    common provider keys, minus the engine's own); [] turns it off
 //   cost_aware       true → budget.max_cost_usd halts the run (off: cost is shown, never acts)
-//   profile          "quality" | "balanced" → the model of every role (conductor loop profile)
+//   profile          "quality" | "balanced" → the model of every role (carja loop profile)
 //   models           { maker, maker_escalation, checker, spec, blueprint, ship } → one role's model, over the profile
 //                    (claude engine); maker_escalation runs a Maker beat after two rejections
 //   install          shell command the driver runs, outside the sandbox, after the dependency gate
@@ -97,7 +97,7 @@ export function parseLoopConfig(config) {
   }
   if (raw.profile !== undefined && raw.profile !== null) {
     if (Object.keys(PROFILES).includes(raw.profile)) out.profile = raw.profile;
-    else errors.push(`loop.profile must be one of ${Object.keys(PROFILES).join(", ")} (set it with conductor loop profile <name>)`);
+    else errors.push(`loop.profile must be one of ${Object.keys(PROFILES).join(", ")} (set it with carja loop profile <name>)`);
   }
   if (raw.models !== undefined && raw.models !== null) {
     if (typeof raw.models !== "object" || Array.isArray(raw.models)) errors.push('loop.models must be an object such as { "maker": "sonnet", "checker": "opus" }');
@@ -189,7 +189,7 @@ export function resolveForge({ override, remoteUrl }) {
   if (r) return { forge: r.forge, source: `origin host ${r.host}`, host: r.host };
   return {
     forge: null,
-    error: "cannot tell the forge from 'git remote get-url origin'. Set loop.forge to \"gh\" or \"glab\" in conductor.config.json.",
+    error: "cannot tell the forge from 'git remote get-url origin'. Set loop.forge to \"gh\" or \"glab\" in carja.config.json.",
   };
 }
 

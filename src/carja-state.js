@@ -1,9 +1,9 @@
-// src/conductor-state.js
+// src/carja-state.js
 //
-// ONE read of `conductor/`, shared by every human-facing surface.
+// ONE read of `carja/`, shared by every human-facing surface.
 //
 // WHY THIS EXISTS. The autonomous loop already had a structured view of the
-// human's `conductor/` folder: `src/loop/harvester.js` turns `inbox.md` and
+// human's `carja/` folder: `src/loop/harvester.js` turns `inbox.md` and
 // `task-backlog.md` into a ranked, typed work queue. The human had `ls`, `cat`
 // and `vim`. That asymmetry is the actual problem with using this framework from
 // a terminal — not the files themselves, which are what make the loop, the
@@ -34,13 +34,13 @@ import {
 } from "./view/markdown.js";
 import { stateDirName, statePath, configPath } from "./names.js";
 
-export const CONDUCTOR_DIR = "conductor";
-export const VIEWS_REL = "conductor/.views";
-export const INBOX_REL = "conductor/1-workbench/inbox.md";
-export const BACKLOG_REL = "conductor/2-backlog/task-backlog.md";
-export const LOOP_STATE_REL = "conductor/1-workbench/loop-state.json";
-export const SHIP_LOG_REL = "conductor/0-compass/ship-log.md";
-export const CONFIG_REL = "conductor.config.json";
+export const CARJA_DIR = "carja";
+export const VIEWS_REL = "carja/.views";
+export const INBOX_REL = "carja/1-workbench/inbox.md";
+export const BACKLOG_REL = "carja/2-backlog/task-backlog.md";
+export const LOOP_STATE_REL = "carja/1-workbench/loop-state.json";
+export const SHIP_LOG_REL = "carja/0-compass/ship-log.md";
+export const CONFIG_REL = "carja.config.json";
 
 /** The lifecycle, in order. This is the nav, so the folder tree is never browsed. */
 export const SECTIONS = Object.freeze([
@@ -60,10 +60,10 @@ const NEVER_STALE = new Set(["5-templates", "6-archive"]);
 
 const DAY_MS = 86400000;
 
-/** Which lifecycle folder a `conductor/…` path belongs to, or null. */
+/** Which lifecycle folder a `carja/…` path belongs to, or null. */
 export function sectionForPath(relPath) {
   const parts = String(relPath ?? "").split("/");
-  const key = parts[0] === "carja" || parts[0] === CONDUCTOR_DIR ? parts[1] : parts[0];
+  const key = parts[0] === "conductor" || parts[0] === CARJA_DIR ? parts[1] : parts[0];
   return SECTION_KEYS.has(key) ? key : null;
 }
 
@@ -186,7 +186,7 @@ export function summariseShipLog(md, { now = Date.now() } = {}) {
 /**
  * Count the hook waivers logged in the last `days` days.
  *
- * Reads the exact line `hooks/lib.sh conductor_log_waiver` appends:
+ * Reads the exact line `hooks/lib.sh carja_log_waiver` appends:
  * `- [YYYY-MM-DD HH:MM] Hook waiver (Kind): reason`. A gate waived every week
  * is a gate in name only, and this is the one place that shows it.
  *
@@ -413,7 +413,7 @@ export function ensureGitignoreEntry(contents, entry) {
   if (lines.includes(entry)) return text;
   const prefix = text && !text.endsWith("\n") ? "\n" : "";
   const spacer = text.trim() ? "\n" : "";
-  return `${text}${prefix}${spacer}# Conductor's derived HTML views — regenerate with \`conductor view\`\n${entry}\n`;
+  return `${text}${prefix}${spacer}# Carja's derived HTML views — regenerate with \`carja view\`\n${entry}\n`;
 }
 
 /**
@@ -522,7 +522,7 @@ async function isExecutable(path) {
   }
 }
 
-/** Which Conductor guards a Claude Code settings file wires as PreToolUse hooks. */
+/** Which Carja guards a Claude Code settings file wires as PreToolUse hooks. */
 function guardsIn(raw) {
   let settings;
   try {
@@ -541,8 +541,8 @@ function guardsIn(raw) {
 }
 
 /**
- * Whether git will actually run the Conductor hooks here, and which opt-in
- * Claude Code guards are wired. Mirrors `conductor install-hooks`: armed means
+ * Whether git will actually run the Carja hooks here, and which opt-in
+ * Claude Code guards are wired. Mirrors `carja install-hooks`: armed means
  * `core.hooksPath` resolves to `.agents/hooks` and both entry scripts are
  * executable. Anything less and every law is prose.
  *
@@ -620,7 +620,7 @@ async function readOwnGateWiring(root) {
   return { hooks: armed ? "on" : "off", guards };
 }
 
-/** Every markdown file under `conductor/`, excluding the derived views. */
+/** Every markdown file under `carja/`, excluding the derived views. */
 async function walkDocs(root) {
   const base = join(root, stateDirName(root));
   const out = [];
@@ -654,7 +654,7 @@ async function walkDocs(root) {
 }
 
 /**
- * Read `conductor/` from disk and build the shared state.
+ * Read `carja/` from disk and build the shared state.
  * Returns `{ ok: false }` when the folder is not there, so callers can print a
  * useful message instead of an empty dashboard.
  */
@@ -670,7 +670,7 @@ export async function collectState(root, { now = Date.now(), staleDays = 30 } = 
 
   // What pre-push will actually run: `verify` from the config, else the hook's
   // own fallback (`npm test` when package.json has a test script). Mirrors
-  // `hooks/lib.sh conductor_verify_cmd` so status and the gate never disagree.
+  // `hooks/lib.sh carja_verify_cmd` so status and the gate never disagree.
   const verifyCommand = resolveVerifyCommand(configRaw, pkgRaw);
 
   const shipLog = summariseShipLog(shipLogMd, { now });
@@ -712,8 +712,8 @@ export async function collectState(root, { now = Date.now(), staleDays = 30 } = 
  * Append to the inbox on disk, creating `inbox.md` from a stub if the install
  * has none yet.
  *
- * It will NOT create `conductor/` itself. Capture is meant to be
- * failure-proof INSIDE a Conductor project; run from anywhere else it would
+ * It will NOT create `carja/` itself. Capture is meant to be
+ * failure-proof INSIDE a Carja project; run from anywhere else it would
  * otherwise silently scatter a half-empty state folder into an unrelated repo,
  * which is worse than a clear refusal.
  */
@@ -731,7 +731,7 @@ export async function captureInbox(root, text) {
     }
     if (!hasInstall) {
       throw new Error(
-        `no \`conductor/\` folder in ${root} — run \`conductor init\` first, or capture from the project root`
+        `no \`carja/\` folder in ${root} — run \`carja init\` first, or capture from the project root`
       );
     }
   }
