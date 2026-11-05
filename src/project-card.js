@@ -171,6 +171,16 @@ export function staleSources(text, sources) {
   const block = cardBlock(text);
   const stamp = block && JSON.parse(SOURCES_RE.exec(block)?.[1] ?? "null");
   if (!stamp) return null;
+  // A stamp written before the rename to Carja names the old folder and config:
+  // the same file under its new name is not a change (7.0.1, F4).
+  const renamed = (k) => k.replace(/^conductor\//, "carja/").replace(/^conductor\.config\.json#/, "carja.config.json#");
+  for (const k of Object.keys(stamp)) {
+    const n = renamed(k);
+    if (n !== k && !(n in stamp)) {
+      stamp[n] = stamp[k];
+      delete stamp[k];
+    }
+  }
   const keys = new Set([...Object.keys(stamp), ...Object.keys(sources)]);
   return [...keys].filter((k) => stamp[k] !== (k in sources ? shortHash(sources[k]) : undefined)).sort();
 }

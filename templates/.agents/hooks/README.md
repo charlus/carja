@@ -82,7 +82,7 @@ carja install-hooks --uninstall
 
 If you already use a custom `core.hooksPath`, install-hooks won't override it — wire these in yourself.
 
-Each hook appends a heartbeat line (`<time> pre-commit` or `<time> pre-push`) to `.git/carja-heartbeat`, and install-hooks appends `<time> installed`. `carja status` compares these with the reflog and names the local commits and pushes that skipped the hooks. Nothing is committed.
+Each hook appends a heartbeat line (`<time> pre-commit` or `<time> pre-push`) to `.git/carja-heartbeat`, and install-hooks appends `<time> installed`. A clone that got the rename to Carja by a pull still has `.git/conductor-heartbeat`; the first hook or `carja` command renames it. `carja status` compares these with the reflog and names the local commits and pushes that skipped the hooks. Nothing is committed.
 
 **Outer layout** (Carja in an outer folder, the team's code in a gitignored nested repository): install-hooks also sets each nested repository's `core.hooksPath` to this folder by absolute path, in local git config only. The gates then judge the code commits. The library, the config and the ship-log come from the outer repository, and the library from its *committed* copy, which no commit in the code repository can change. Each code repository has its own push check, in `carja.config.json`:
 

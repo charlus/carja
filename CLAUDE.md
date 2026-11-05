@@ -34,7 +34,7 @@ carja/          ← You are here (package source)
 │   ├── detect.js               # Tech stack detection (used by init for skill recommendations)
 │   ├── registry.js             # Remote skill registry client (fetch index, download, glab/gh auth)
 │   ├── names.js                # The two names after the rename to Carja: writers use CURRENT, readers also accept the 6.x name through 7.x
-│   ├── rename-migration.js     # `carja upgrade` on a 6.x install: conductor/ → carja/ in two commits (rename, then knowledge paths)
+│   ├── rename-migration.js     # `carja upgrade` on a 6.x install: conductor/ → carja/ in two commits (rename, then knowledge paths); the project card and .git/conductor-* follow (7.0.1)
 │   ├── selective-copy.js       # Interactive/selective template copy for init
 │   ├── kebab.js                 # kebab-case rename + checksum-key migration (used by upgrade)
 │   ├── update.js                # Diffs installed vs. latest templates for upgrade
