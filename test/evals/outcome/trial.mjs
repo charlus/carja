@@ -16,6 +16,14 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, copyFileSync, createWriteStream } from "node:fs";
 import { dirname, join, basename } from "node:path";
 import { pytest } from "./task-check-lib.mjs";
+import { classifyBeatResult } from "../../../src/loop/driver.js";
+import { parseResetTime } from "../../../src/loop/quota.js";
+
+// A session the usage limit, a login failure or an API outage cut short says
+// nothing about the arm: it is not graded, the run waits, and the trial runs
+// again (pre-registration: "waits on the usage limit as the loop does").
+let pausedUntil = 0;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const arg = (k, d = null) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
 const CMD = process.argv[2];
@@ -113,7 +121,20 @@ function grade(dir, id, start = "HEAD") {
   };
 }
 
-function trial({ task, arm, label, run: n }) {
+async function trial(x, attempt = 1) {
+  while (Date.now() < pausedUntil) await sleep(Math.min(60_000, pausedUntil - Date.now()));
+  const row = await attemptTrial(x);
+  if (!row.infra) return row;
+  appendFileSync(join(WORK, "infra.jsonl"), JSON.stringify({ ts: new Date().toISOString(), ...x, attempt, kind: row.infra, note: row.note }) + "\n");
+  if (attempt >= 6) { console.log(`${x.task} ${x.label} #${x.run}: given up after ${attempt} infra failures (${row.infra})`); return row; }
+  const reset = parseResetTime(row.note);
+  const until = Math.max(pausedUntil, reset ? reset + 60_000 : Date.now() + 15 * 60_000);
+  pausedUntil = until;
+  console.log(`${x.task} ${x.label} #${x.run}: ${row.infra}, not graded; waiting until ${new Date(until).toLocaleTimeString()}`);
+  return trial(x, attempt + 1);
+}
+
+function attemptTrial({ task, arm, label, run: n }) {
   return new Promise((resolve) => {
     const dir = join(WORK, "runs", `${task}-${label}-${n}`);
     rmSync(dir, { recursive: true, force: true });
@@ -131,6 +152,9 @@ function trial({ task, arm, label, run: n }) {
     p.on("close", (code) => {
       clearTimeout(timer); log.end();
       const result = last.split("\n").reverse().map((l) => { try { return JSON.parse(l); } catch { return null; } }).find((o) => o?.type === "result") || {};
+      const verdict = classifyBeatResult({ stdout: `${last}\n${result.result ?? ""}`, stderr: "", exitCode: code, apiErrorStatus: result.api_error_status });
+      const outage = !capped && (result.type !== "result" || (result.is_error && /overloaded|api error|\b5\d\d\b|rate.?limit/i.test(String(result.result ?? ""))));
+      if (verdict.dead || outage) return resolve({ infra: verdict.dead ? verdict.kind : "api_outage", note: `${result.result ?? ""}\n${last.slice(-2000)}` });
       const g = grade(dir, task, start);
       const commits = Number(git(dir, "rev-list", "--count", `${start}..HEAD`).stdout.trim());
       const row = { ts: new Date().toISOString(), task, arm, label, run: n, model: MODEL, exit: code, capped,
