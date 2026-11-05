@@ -8,6 +8,16 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.0.2] — 2026-11-05 — The loop's run lock and the heartbeat history follow the rename
+
+Compatibility: upgrade only
+
+### Fixed
+- **The loop's run lock follows the rename.** `.git/conductor-holder` is now adopted as `.git/carja-holder` with the other machine files, so a 7.x loop sees a lock a 6.x loop left (seen on autopportunity).
+- **No heartbeat history is left behind.** When `install-hooks` had already written `.git/carja-heartbeat`, the old `.git/conductor-heartbeat` stayed apart, as in a nested code repository. The old lines now go first into the new file, by any `carja` command and by the `pre-commit` and `pre-push` hooks.
+
+---
+
 ## [7.0.1] — 2026-11-05 — What the rename missed
 
 Compatibility: upgrade only

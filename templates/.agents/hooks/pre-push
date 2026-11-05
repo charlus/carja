@@ -21,9 +21,15 @@ for _k in $(compgen -e); do case "$_k" in CARJA_*) _n="CONDUCTOR_${_k#CARJA_}"; 
 HB_DIR="$(git rev-parse --git-common-dir 2>/dev/null || true)"
 case "$HB_DIR" in "") ;; /*) ;; *) HB_DIR="$(pwd)/$HB_DIR" ;; esac
 # A clone that got the rename to Carja by a pull still has the 6.x names (7.0.1).
-if [ -n "$HB_DIR" ]; then for _f in heartbeat loop-logs loop-ready.json; do
+if [ -n "$HB_DIR" ]; then for _f in heartbeat loop-logs loop-ready.json holder; do
   [ -e "$HB_DIR/conductor-$_f" ] && [ ! -e "$HB_DIR/carja-$_f" ] && mv "$HB_DIR/conductor-$_f" "$HB_DIR/carja-$_f" 2>/dev/null || true
-done; fi
+done
+  # Both heartbeats (install-hooks wrote the new one first): old history first (7.0.2).
+  if [ -f "$HB_DIR/conductor-heartbeat" ] && [ -f "$HB_DIR/carja-heartbeat" ]; then
+    cat "$HB_DIR/conductor-heartbeat" "$HB_DIR/carja-heartbeat" > "$HB_DIR/carja-heartbeat.tmp" 2>/dev/null \
+      && mv "$HB_DIR/carja-heartbeat.tmp" "$HB_DIR/carja-heartbeat" && rm -f "$HB_DIR/conductor-heartbeat" || true
+  fi
+fi
 [ -n "$HB_DIR" ] && printf '%s pre-push\n' "$(date +%s)" >> "$HB_DIR/carja-heartbeat" 2>/dev/null || true
 
 # ---- The project root: where .agents/, carja/ and the config live -------
@@ -55,7 +61,7 @@ carja_find_project_root
 # pre-commit that lands on exactly this content is an upgrade, not a neutering,
 # and needs no waiver at push. Forging a match means editing pre-push as well —
 # both entry scripts, the stated limit. Pinned by test/hooks-registry-drift.test.js.
-CARJA_OFFICIAL_PRECOMMIT_SHA256="d0d4447abf018fcbafd94c3e748f96846d08dfebf9e08a5331a353907870831c"
+CARJA_OFFICIAL_PRECOMMIT_SHA256="3dd682650bb30f6905c6e644b0955b914d132df76bd01bb4cd48969ec012bdd1"
 
 # git feeds one line per pushed ref: <local ref> <local sha> <remote ref> <remote sha>.
 PUSH_LINES="$(cat)"

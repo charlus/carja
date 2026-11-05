@@ -30,7 +30,7 @@ export const NUMBERED = ["0-compass", "1-workbench", "2-backlog", "3-product-are
 const OLD_PATH_RE = new RegExp(`(^|[^\\w.-])${OLD}/(${NUMBERED.join("|")})/`, "gm");
 
 /** Machine state in the git dir, renamed so the new hooks and the loop find it. */
-const GIT_DIR_FILES = ["heartbeat", "loop-logs", "loop-ready.json"].map((s) => [`${OLD}-${s}`, `${CURRENT}-${s}`]);
+const GIT_DIR_FILES = ["heartbeat", "loop-logs", "loop-ready.json", "holder"].map((s) => [`${OLD}-${s}`, `${CURRENT}-${s}`]);
 
 async function git(args, cwd, env) {
   try {
@@ -75,8 +75,16 @@ export function adoptOldGitFiles(gitCommonDir) {
   const moved = [];
   for (const [from, to] of GIT_DIR_FILES) {
     const src = join(gitCommonDir, from);
-    if (existsSync(src) && !existsSync(join(gitCommonDir, to))) {
-      renameSync(src, join(gitCommonDir, to));
+    if (!existsSync(src)) continue;
+    const dest = join(gitCommonDir, to);
+    if (!existsSync(dest)) {
+      renameSync(src, dest);
+      moved.push(to);
+    } else if (to.endsWith("-heartbeat")) {
+      // `install-hooks` wrote the new file first: the old history goes before it,
+      // so the earlier `installed` floor still holds (7.0.2, F7).
+      writeFileSync(dest, readFileSync(src, "utf8") + readFileSync(dest, "utf8"));
+      rmSync(src);
       moved.push(to);
     }
   }
