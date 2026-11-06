@@ -8,6 +8,23 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.3.0] — 2026-11-06 — Slimmer Spec-It and Build
+
+Compatibility: upgrade only
+
+A longitudinal benchmark measured Carja at 3.3 times the cost and 6.6 times the wall time of a bare session. Half the extra wall time was the full suite, run about 6 times per session because Build asked for it after every task. A fifth was a reviewer started in the background and never noticed. This release removes that cost and keeps every gate. Plan and measurement: `docs/roadmap/Slimming.md`.
+
+### Changed
+- **Tests run when they prove something (O1).** Per behaviour, the targeted test runs once RED and once GREEN, and REFACTOR re-runs the targeted tests only. RED must fail on an assertion: an import error, a missing name or a syntax error is not a RED. The full suite runs once, at the end of the change, as `carja evidence run --label verify -- <verify command>`, and again only when code changed after it. `pre-push` then skips its own run for the same tree. In `rules/test-driven-law.md`, `workflows/tdd-cycle.md`, Build and Quick-Path.
+- **The reviewer runs in the foreground (O2).** The author waits for the verdict and never starts the reviewer with `run_in_background`. Independence is unchanged.
+- **Shorter Spec-It and Build (O3).** `build.md` from 16,187 to 7,947 bytes, `spec-it.md` from 10,057 to 5,886 bytes. Every step, gate, output and stop rule is kept. Build has no batches any more.
+- **Less state traffic (O4).** Build reads `feature-spec.md`, `implementation-plan.md` and `carja/4-context/technical/coding-patterns.md`, other files only when the plan names them, and `DESIGN.md` and the UX/UI Brief for UI tasks. `task-tracker.md` is written once, at the end. During the run each task's commit carries the task number, and after a context reset `git log` since the branch base shows what is done. Analyze-Tests runs only when the plan names no test seams.
+- **One review per change, scaled to its size (O5).** Build runs one Diff review for the whole change, before the final verify run, not one per batch. The 50-line and risk-path skip rule stays. Spec-It runs the Feature Spec + Plan review only when the plan has more than 3 tasks or touches a risk path.
+
+Not yet validated: the benchmark re-run on the Carja arm (pass at a hidden-test share of 99.6% or more) has not run.
+
+---
+
 ## [7.2.0] — 2026-11-06 — No change of consequence leaves unreviewed
 
 Compatibility: upgrade only
