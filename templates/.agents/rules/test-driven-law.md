@@ -8,16 +8,18 @@ description: Red before green. No implementation code without a failing test fir
 
 **RED BEFORE GREEN. NO IMPLEMENTATION CODE WITHOUT A FAILING TEST FIRST.**
 
-This applies to every task in the Build workflow's per-task loop (`.agents/workflows/build.md`). For each increment of behavior:
+For each increment of behavior in a Build task (`.agents/workflows/build.md`):
 
-1. **RED** — Write a test for the next increment. Run it. Confirm it fails, and fails for the expected reason. Do not write implementation code yet.
-2. **GREEN** — Write the minimum code needed to make it pass. Run it. Confirm it passes.
-3. **REFACTOR** — Clean up the code and test without changing behavior. Run the suite again to confirm it's still GREEN.
+1. **RED** — Write a test for the next increment. Run only that test and see it fail on an assertion. An import error, a missing name or a syntax error is not a RED. Do not write implementation code yet.
+2. **GREEN** — Write the minimum code to pass. Run the targeted test once.
+3. **REFACTOR** — Clean up without changing behavior. Re-run the targeted tests only.
+
+The full suite runs once, at the end of the change: `carja evidence run --label verify -- <verify command>`, again only if code changed after it.
 
 Full mechanics: `.agents/workflows/tdd-cycle.md`. Enforced by the `pre-commit` hook: a commit that stages implementation code without a test change is rejected, and so is one whose test change adds or changes no assertion.
 
 ## The one exception
 
-Some changes have no meaningful test surface — pure config, documentation, static copy, generated code. For these, and only these, skip the cycle — but say so explicitly in the task tracker (`no test: config-only change`), never silently. If you're unsure whether a change is testable, assume it is and write the test.
+Pure config, documentation, static copy and generated code have no test surface. Only these skip the cycle, and the commit message says so (`no test: config-only change`). Unsure? Write the test.
 
 Where this law sits among the test layers, and how the unattended loop splits it across two agents: `.agents/how-it-works.md` (Test-Driven by Default) and `.agents/workflows/unattended-loop.md`.

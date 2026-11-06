@@ -112,11 +112,11 @@ Tests aren't a Build task like the others — they're how every other Build task
 
 | Layer | When | Question it answers |
 |---|---|---|
-| **Analyze-Tests** skill | Before Build starts | What's the test strategy for this whole implementation? |
+| **Analyze-Tests** skill | Before Build starts, when the plan names no test seams | What's the test strategy for this whole implementation? |
 | **Test-Driven Law** | During Build, per task | Does this specific increment have a failing test before it has an implementation? |
 | **Ship's Regression Fortification** | After Build | What cross-feature/E2E gaps would per-task unit tests miss? |
 
-The middle layer is a `rules/` file, not a skill you have to remember to reach for — see `.agents/rules/test-driven-law.md`. It's as non-negotiable as the Verification Iron Law, by design.
+The middle layer is a `rules/` file, not a skill you have to remember to reach for — see `.agents/rules/test-driven-law.md`. It's as non-negotiable as the Verification Iron Law, by design. Each increment runs only its targeted tests (RED must fail on an assertion). The full suite runs once, at the end of the change, as `carja evidence run --label verify -- <verify command>`, and `pre-push` skips its own run for the same tree.
 
 ### Eval-Driven Law (for the apps you build)
 Tests verify the **deterministic** parts; **evals** verify the **non-deterministic** LLM-output surface of the app you're building. If a feature calls an LLM provider, a passing unit test is not enough — it needs an evalset. Enforced in two stages, mirroring TDD + Verification: `pre-commit` gates **presence** (provider-calling code staged without an eval — an `evals/` file or `*.eval.*` — is blocked, like TDD blocks impl-without-test), and `pre-push` gates **passing** (if the repo has evalsets, the configured `eval` command must pass — set `"eval"` in `carja.config.json`). The gates are independent; waiving one (`CARJA_NO_EVAL` / `CARJA_SKIP_EVAL`, both logged) never skips the other. The *how* — three grading modes (rubric/LM-judge, property/assertion, reference) — lives in the on-demand `skills/writing-evals/` skill, loaded by Build when a task touches LLM-feature code. It is **not** an always-on rule: evals matter only to LLM-feature projects, so the enforcement is the (silent-when-irrelevant) hook, not static-context prose. Design: [Eval-Driven-Law](https://github.com/charlus/carja/blob/master/docs/roadmap/Eval-Driven-Law.md).
@@ -394,7 +394,7 @@ The reusable "how" that discovery/blueprint/spec workflows load instead of re-im
 |---|---|
 | `analyze-tests` | Test strategy before any implementation code is written |
 | `verification-gate` | Evidence-before-assertions gate — the Iron Law, operationalized |
-| `task-tracker` | Live task tracker maintained through Build |
+| `task-tracker` | Task tracker table. Build writes it once, at the end: during the run the per-task commits are the state |
 | `code-review` | Two-stage review after implementing: spec compliance, then code quality against a Fowler smell baseline |
 | `independent-review` | The fresh-context review gate — a reviewer that did *not* produce the artifact (PRD, architecture, spec, carved plan, diff) decides whether it's ready before save/handoff. Loaded by the blueprint workflows; Ship Phase 4 is its reference implementation Conflicting findings are settled in a fixed order: security and data integrity, acceptance criteria, architecture, performance, design. |
 | `behavior-validator` | Source-blind, black-box validation of the *running* artifact with adversarial anti-cheat probes — the dynamic complement to `verification-gate` (author-run) and `independent-review` (static). Used at Ship / loop execution when a change has a runtime surface |

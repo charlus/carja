@@ -1,54 +1,33 @@
 ---
 name: task-tracker
-description: Use during Build workflow execution to maintain a live task tracker. Update at every state change.
+description: Build writes the task tracker once, at the end. Until then, per-task commits are the state.
 ---
 
 # Task Tracker
 
-## Purpose
-
-Maintain a live table of tasks during execution. Updated at **every** state change — not at the end, not when convenient, at EVERY change.
+Build writes `task-tracker.md` in the active Implementation folder once, at the end (Build Phase 3). During the run, each task's commit carries its task number in the subject, so `git log` since the branch base shows what is done after a context reset.
 
 ## Format
 
-The tracker lives inside the active Implementation folder as `task-tracker.md`.
-
 ```markdown
-| # | Task | Status | Evidence |
-|---|------|--------|----------|
-| 1 | Create user model | done | Tests: 5/5 pass |
-| 2 | Add auth middleware | in_progress | |
-| 3 | Build login endpoint | not_started | |
-| 4 | Write integration tests | not_started | |
+| # | Task | Status | Commit | Evidence |
+|---|------|--------|--------|----------|
+| 1 | Create user model | done | a1b2c3d | Tests: 5/5 pass |
+| 2 | Add auth middleware | blocked | | Needs the IdP client secret |
 ```
+
+Below the table: the deviations from the plan and the review verdict.
 
 ## Status Values
 
 | Status | Meaning |
 |--------|---------|
-| `not_started` | Task hasn't begun |
-| `in_progress` | Currently working on this task |
-| `done` | Completed with verification evidence |
-| `blocked` | Cannot proceed — explain why in Evidence column |
-| `cancelled` | Deliberately skipped — explain why in Evidence column |
+| `done` | Committed, with verification evidence |
+| `blocked` | Cannot proceed: say why in Evidence |
+| `cancelled` | Deliberately skipped: say why in Evidence |
 
 ## Rules
 
-1.  **One `in_progress` at a time.** Never have two active tasks
-2.  **Evidence is mandatory for `done`.** No evidence = not done
-3.  **Update immediately.** Don't batch updates. Change status the moment it changes
-4.  **Table only.** No prose, no instructions — just the table and a header
-5.  **Location:** Always inside the active Implementation folder, never a global file
-
-## When to Create
-
-* At the start of the **Build** workflow (Phase 0)
-* At the start of **Quick-Path** Phase 3 (Build)
-* Whenever executing a multi-step implementation plan
-
-## When to Update
-
-* Task starts → `in_progress`
-* Task verification passes → `done` + evidence
-* Task hits a blocker → `blocked` + explanation
-* Task is deliberately skipped → `cancelled` + reason
+1. **Evidence is mandatory for `done`.** No evidence, not done.
+2. **Table, deviations, verdict.** No other prose.
+3. **Location:** inside the active Implementation folder, never a global file.

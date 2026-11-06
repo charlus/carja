@@ -14,7 +14,7 @@ category: core
 
 Run this gate **once, when a consequential artifact is complete and about to be saved or handed to the next phase** — not per paragraph, not per step.
 
-- **Run it for:** a Grand PRD, a Technical Vision, a Feature Spec + Implementation Plan, a Carve slicing, a shippable diff — anything a later phase will *build on* or a reader will *trust without re-deriving*.
+- **Run it for:** a Grand PRD, a Technical Vision, a Feature Spec + Implementation Plan whose plan has more than 3 tasks or touches a risk path, a Carve slicing, a shippable diff (once for the whole change, not per task) — anything a later phase will *build on* or a reader will *trust without re-deriving*.
 - **Skip it for a diff** that is under **50 changed non-test lines** *and* touches no risk path (auth/session, payments, migrations or schema, API contracts, security, secrets, CI or hooks). The author's two-stage self-review plus a green suite plus the human's own PR read is the gate. Say you skipped it and why.
 - **Skip it entirely for** trivial or fully-reversible artifacts (a one-line copy fix, a scratch note).
 - **Proportionality is a measured effect, not a preference.** For work comfortably inside the model's capability an independent reviewer is overhead; it earns its cost at the edge — a risky diff, an unfamiliar subsystem, a high-stakes artifact. Scale the reviewer's model tier to the stakes (`skills/model-routing/SKILL.md`); a weak verifier on a high-stakes artifact is a false safety signal.
@@ -22,7 +22,7 @@ Run this gate **once, when a consequential artifact is complete and about to be 
 ## The gate
 
 **1. Spawn the reviewer in isolation.** Per `skills/subagent-isolation/SKILL.md`, it runs in a separate, clean context so it isn't biased by the reasoning that produced the artifact:
-- **Claude Code:** launch a subagent (Task tool).
+- **Claude Code:** launch a subagent (Task tool) in the foreground: wait for its verdict, never `run_in_background`.
 - **Antigravity / others:** use the platform's sub-agent primitive.
 - **No sub-agent primitive (graceful degradation):** do a deliberate fresh-context pass yourself — re-read **only** the artifact and its source-of-truth inputs, not the conversation that produced it. The gate always runs; only its isolation strength scales with the platform.
 

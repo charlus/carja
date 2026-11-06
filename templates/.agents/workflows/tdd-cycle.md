@@ -9,18 +9,18 @@ This workflow enforces the strict Test-Driven Development (TDD) cycle for all fe
 
 ## The Loop
 
-1. **RED Phase**: 
+1. **RED Phase**:
    - Write a failing test for the next increment of functionality based on the specification.
-   - Run the test and explicitly verify that it fails for the expected reason. Do not write implementation code yet.
+   - Run only that test and see it fail on an assertion, for the expected reason. An import error, a missing name or a syntax error is not a RED: fix it and run again. Do not write implementation code yet.
 
 2. **GREEN Phase**:
    - Write the *minimum* amount of code necessary to make the failing test pass.
-   - Run the test and explicitly verify that it passes.
+   - Run the targeted test once and see it pass.
 
 3. **REFACTOR Phase**:
    - Review the newly written code and test for quality, readability, and adherence to clean code standards.
    - Refactor without changing behavior.
-   - Run the test suite again to ensure it remains GREEN.
+   - Re-run the targeted tests only. The full suite runs once, at the end of the change (`carja evidence run --label verify -- <verify command>`).
    - This per-increment refactor is **mandatory and not deferrable** — it is not replaced by review. A *second*, cross-cutting refactoring look also happens later at review stage (`skills/code-review`, Stage 2), which catches duplication/abstractions only visible once the whole change is assembled. The two are complementary: refactor small here every increment, refactor broad there once.
 
 ## Before the loop: agree the seams
