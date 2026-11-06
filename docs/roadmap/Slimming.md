@@ -1,6 +1,6 @@
 # Slimming
 
-> **Status (2026-11-06):** O1–O5 built in 7.3.0 (branch `feat/slimming`), full local suite green. Not yet validated: the re-run of the longitudinal benchmark, Carja arm only, has not run.
+> **Status (2026-11-06):** O1–O5 built in 7.3.0 (branch `feat/slimming`), full local suite green. Not validated: the owner skipped the benchmark re-run (2026-11-06), so the saving and the quality bar are expected, not measured.
 
 ## Why
 
