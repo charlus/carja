@@ -37,7 +37,7 @@ describe("D1 — Build never stops to ask permission to continue", () => {
     assert.match(BUILD, /never ask (permission )?to continue|do not ask (permission )?to continue/i);
   });
 
-  test("a batch is the unit of independent review, and the review still runs", () => {
+  test("the whole change is the unit of independent review, and the review still runs", () => {
     assert.match(BUILD, /unit of (independent )?review/i);
     assert.match(BUILD, /independent-review\/SKILL\.md/);
   });
