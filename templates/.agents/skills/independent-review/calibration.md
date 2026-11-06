@@ -135,3 +135,24 @@ approves the rest against the criteria that exist, and lets the human decide.
 **Anti-pattern this replaces:** re-expressing "the spec is wrong" as a fresh
 implementation finding every round, which makes the change unfailable and hides the one
 question a human actually has to answer.
+
+---
+
+### C8 — IMPORTANT, not BLOCKER: real, but normal use does not reach it
+
+Three findings from one review of a production app (the 2026-11-06 audit of 142 logged
+blockers found 42 like these):
+
+- Two writers editing the same target at once: the loser gets a 500 instead of a 409.
+- A queue section with no empty-state text: an empty list shows a blank panel.
+- A spec criterion worded "should" where the plan reads "must", and a builder would read
+  both the same way.
+
+**Verdict:** the first is `[IMPORTANT]`: a real defect, but only a race reaches it. The
+second is `[NIT]` (ui). The third is not a finding: a competent builder resolves it one
+way. None withholds APPROVE.
+
+**Contrast with C1:** a quotable defect that normal use reaches is a BLOCKER however
+small the fix. Severity follows who hits it, not how sure you are that it exists.
+Naming, wording and documentation are never BLOCKERs: `carja review-log` refuses to
+record one.

@@ -8,6 +8,23 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.2.0] — 2026-11-06 — No change of consequence leaves unreviewed
+
+Compatibility: upgrade only
+
+Carja's measured value is in two places: the TDD gate, which code enforces, and the independent review, which only the workflow text asked for. Agents skipped the review most of the time when nothing enforced it. An audit of one production project's review records found the review rarely wrong (1 wrong finding in 142 blockers), but about 30% of its blockers overstated. This release enforces the review at push and tightens its severity.
+
+### Added
+- **The review gate.** `pre-push` refuses a change with 50 or more changed non-test lines of code, or one that touches a risk path (auth, sessions, permissions, security, secrets, payments, billing, migrations, CI), unless an independent APPROVE is recorded for the pushed commit. It is the review skill's own threshold, now computed by the hook. Code added after the approval needs a new review only when that addition alone reaches the threshold, so a small fix after the verdict and the ship-log commit pass. `carja/`, `.agents/`, Markdown and test files never count. Waiver: `CARJA_NO_REVIEW="why"`, logged.
+- **`carja review-log verdict APPROVE [--repo <dir>]`** records the approval of HEAD, in the repository's own git folder: nothing is committed, and every worktree of the repository sees it. Ship Phase 4 runs it after the reviewer's APPROVE. The loop records its Checker's approval itself before it pushes.
+
+### Changed
+- **Severity follows who hits the defect.** In the reviewer brief, a defect blocks only when normal use reaches it. A race, a 500 that should be a 409, or a missing test for a criterion the code meets is IMPORTANT. An empty-state text or wording is a NIT. New calibration case C8. `carja review-log` refuses a consistency finding (naming, wording, docs) as a BLOCKER.
+
+Limit: a verdict line written by hand passes the gate as well as one a reviewer earned. The gate makes the review the default path. It does not prove that a reviewer ran.
+
+---
+
 ## [7.1.0] — 2026-11-05 — Gates that cannot be switched off from inside
 
 Compatibility: upgrade only

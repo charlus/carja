@@ -1,6 +1,6 @@
 {
   "name": "carja",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "description": "Carja — an AI Software Engineering framework for the full development lifecycle. Workflows, skills, and personas for AI-assisted product engineering.",
   "type": "module",
   "bin": {
@@ -40,7 +40,8 @@
     "test:hooks:nocode": "node scripts/with-test-tmp.mjs bash test/hooks-no-code.sh",
     "test:hooks:merge": "node scripts/with-test-tmp.mjs bash test/hooks-merge-upgrade.sh",
     "test:hooks:stable": "node scripts/with-test-tmp.mjs bash test/hooks-verify-stable-tree.sh",
-    "test:hooks:integrity": "node scripts/with-test-tmp.mjs bash test/hooks-integrity-gates.sh"
+    "test:hooks:integrity": "node scripts/with-test-tmp.mjs bash test/hooks-integrity-gates.sh",
+    "test:hooks:review": "node scripts/with-test-tmp.mjs bash test/hooks-review-gate.sh"
   },
   "keywords": [
     "carja",

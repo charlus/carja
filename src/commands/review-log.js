@@ -28,6 +28,8 @@ import { join, dirname, resolve, relative, isAbsolute } from "node:path";
 import { PRECEDENCE, outranks } from "../personas.js";
 import { ignoredNestedRepos } from "../nested-repos.js";
 import { statePath } from "../names.js";
+import { spawnSync } from "node:child_process";
+import { recordApproval } from "../review-verdict.js";
 
 export const REVIEW_LOG_REL = "carja/1-workbench/review-log.jsonl";
 
@@ -96,6 +98,11 @@ export function normalizeFinding(raw, { now = () => Date.now() } = {}) {
   const category = canonicalCategory(raw.category);
   if (!category) {
     return { ok: false, error: `category must be one of ${CATEGORIES.join(", ")} (got "${raw.category ?? ""}")` };
+  }
+  // 7.2.0 calibration: an audit of a production project's review records found naming, wording and
+  // documentation logged as blockers. A consistency finding never blocks.
+  if (severity === "BLOCKER" && category === "consistency") {
+    return { ok: false, error: "a consistency finding (naming, wording, docs, style) is never a BLOCKER: record it as IMPORTANT or NIT" };
   }
   const detail = raw.detail
     ? String(raw.detail).slice(0, 200)
@@ -339,10 +346,35 @@ export async function reviewLogCommand(args, { cwd, stdout, stderr }) {
     return 0;
   }
 
+  if (sub === "verdict") {
+    const verdict = args[args.indexOf("verdict") + 1];
+    if (verdict !== "APPROVE") {
+      stderr.write(
+        "usage: carja review-log verdict APPROVE [--repo <dir>]\n" +
+          "Records that the independent reviewer approved HEAD. Only APPROVE is recorded:\n" +
+          "a change with blockers left is fixed and reviewed again, or pushed with CARJA_NO_REVIEW=\"why\".\n",
+      );
+      return 1;
+    }
+    const repo = args.includes("--repo") ? resolve(cwd, args[args.indexOf("--repo") + 1] ?? ".") : cwd;
+    const git = (a) => {
+      const r = spawnSync("git", a, { cwd: repo, encoding: "utf8" });
+      return { ok: r.status === 0, stdout: r.stdout ?? "" };
+    };
+    const res = await recordApproval({ git, cwd: repo, source: "review-log verdict" });
+    if (!res.ok) {
+      stderr.write(`review-log: ${res.reason}\n`);
+      return 1;
+    }
+    stdout.write(`recorded APPROVE for ${res.sha.slice(0, 9)} (${relative(root, repo) || "."}): the review gate lets this commit push\n`);
+    return 0;
+  }
+
   stderr.write(
-    "usage: carja review-log <append|summary>\n\n" +
+    "usage: carja review-log <append|summary|verdict>\n\n" +
       "  append '<json>'   record one finding + its disposition\n" +
-      "  summary [--since <ISO date>]\n\n" +
+      "  summary [--since <ISO date>]\n" +
+      "  verdict APPROVE [--repo <dir>]   record that the independent reviewer approved HEAD\n\n" +
       "Fields: severity (BLOCKER|IMPORTANT|NIT|SCOPE), action (fixed|dismissed|known-gap|deferred),\n" +
       "        category, file, line, quote, confidence, reason, round, brief_bytes,\n" +
       "        persona, overridden_by, po_decision (a conflict between two personas' findings).\n" +

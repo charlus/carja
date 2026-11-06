@@ -11,6 +11,8 @@
 // The `git(args) -> {ok, stdout}` runner is injected so the decision + command
 // shape are testable without a real remote.
 
+import { recordApproval } from "../review-verdict.js";
+
 /** Pure: what should happen on completion at this level/phase? */
 export function planMergeAction({ autonomyLevel, phase }) {
   const rank = { L0: 0, L1: 1, L2: 2, L3: 3 }[autonomyLevel] ?? 1;
@@ -115,6 +117,16 @@ export async function openPullRequest({ branch, title, body, git, run, forge, ba
   title = prTitle(title);
   if (!forge) {
     return { ok: false, reason: "no forge resolved to open a PR (set loop.forge in carja.config.json)" };
+  }
+
+  // The driver opens a PR only after the independent Checker approved this
+  // state: record it, so the push's review gate (7.2.0) lets it through.
+  // Best effort: a failed write leaves the gate to block the push, which the
+  // run reports as a failed push.
+  try {
+    await recordApproval({ git, source: "loop checker" });
+  } catch {
+    /* the push's gate decides */
   }
 
   // Push the branch (set upstream). Never touch a protected branch directly.

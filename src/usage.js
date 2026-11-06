@@ -213,10 +213,10 @@ export const COMMANDS = Object.freeze([
     examples: [["carja search react", ""]],
   },
   {
-    name: "review-log", group: "measure", summary: "Record review findings, and see which rules reviewers dismiss",
-    usage: "carja review-log append '<json>' | carja review-log summary [--since <date>]",
-    flags: [["--since <date>", "With summary: only findings after this date"]],
-    examples: [["carja review-log summary", ""]],
+    name: "review-log", group: "measure", summary: "Record review findings and approvals, and see which rules reviewers dismiss",
+    usage: "carja review-log append '<json>' | carja review-log summary [--since <date>] | carja review-log verdict APPROVE [--repo <dir>]",
+    flags: [["--since <date>", "With summary: only findings after this date"], ["--repo <dir>", "With verdict: the code repository whose HEAD was approved (outer layout)"]],
+    examples: [["carja review-log summary", ""], ["carja review-log verdict APPROVE", "after the independent review approved HEAD: the push gate lets it through"]],
   },
   {
     name: "context-bill", group: "measure", summary: "What the framework costs an agent per session",

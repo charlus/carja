@@ -101,6 +101,9 @@ Never rush to a solution. Read `carja/4-context/` and `carja/3-product-areas/` b
 ### Verification Iron Law
 No completion claims without fresh verification evidence. Applies to every workflow and skill, globally. See `.agents/rules/verification-iron-law.md`.
 
+### Review gate
+A change of consequence (50 or more changed non-test lines of code, or a risk path: auth, sessions, permissions, security, secrets, payments, billing, migrations, CI) does not push without an independent APPROVE recorded for it. Ship Phase 4 records it with `carja review-log verdict APPROVE`; the loop records its Checker's. `pre-push` enforces it; the waiver is `CARJA_NO_REVIEW="why"`, logged. See `.agents/hooks/README.md`.
+
 ### Live State Law
 `carja/` is history. MR, pipeline, deploy and branch status are live: the human changes them outside the conversation. Check them when you state them (`carja status --live`, which runs the project's `deployCheck`), or say "not checked" and ask. See `.agents/rules/live-state-law.md`.
 
@@ -236,7 +239,7 @@ The other commands, for setup, gates and measurement:
 | `carja install-hooks` | Wire the git hooks in `.agents/hooks/` (TDD and eval presence, Goodhart boundary, protected paths on commit; verify and evals on push) |
 | `carja verify [--set <cmd>]` | Show or set the command `git push` must pass |
 | `carja evidence run\|check\|list` | Run the verify command and record the result against the exact working tree; `pre-push` and the loop driver accept fresh evidence instead of re-running, and fails a run that changed files while it ran (`--stable-tree`) |
-| `carja review-log append\|summary` | Record review findings and how each was handled, in 13 fixed classes. A class dismissed more than half the time is a rubric defect |
+| `carja review-log append\|summary\|verdict` | Record review findings and how each was handled, in 13 fixed classes. A class dismissed more than half the time is a rubric defect. `verdict APPROVE` records the independent reviewer's approval of HEAD, which the push's review gate reads |
 | `carja context-bill` | What the framework costs every session before an agent reads project code (always-on vs on-demand bytes) |
 | `carja agents-md facts\|write\|check` | The project card in `AGENTS.md`: print the facts the code states, refresh them in the card, check the card (exit 0 = complete and current, then stamped) |
 | `carja trust-verify` | Record your consent to this repo's verify command. The opt-in Claude Code Stop hook runs it only after that, because the command comes from a file anyone can edit |

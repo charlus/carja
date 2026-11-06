@@ -151,8 +151,14 @@ carja review-log append '{"round":1,"severity":"BLOCKER","category":"error-handl
 
 Then re-review **once**: a fresh reviewer, given round-1 findings *plus your disposition of each*, and `git diff` of the **fix commits only**. Its only job is whether the named classes are closed and whether the fix introduced a new blocker.
 
-- Delta round returns `APPROVE` → Phase 5.
-- Blockers remain → only **security and data-loss blockers** go to the human, batched into a **single question** with each quote, your recommendation per item, and an overall recommendation. Fix every other remaining blocker or record it under **Known gaps** in the PR body. Do not spawn a third reviewer.
+- Delta round returns `APPROVE` → record it, then Phase 5.
+- Blockers remain → only **security and data-loss blockers** go to the human, batched into a **single question** with each quote, your recommendation per item, and an overall recommendation. Fix every other remaining blocker or record it under **Known gaps** in the PR body. Do not spawn a third reviewer. Push such a change with `CARJA_NO_REVIEW="blockers recorded as known gaps in the MR"`: it is logged.
+
+**Record the APPROVE** on the commit the reviewer approved, before Phase 5 (in the outer layout, add `--repo <code_dir>`):
+```bash
+carja review-log verdict APPROVE
+```
+The push gate refuses a change of 50 or more changed non-test lines, or one that touches a risk path, without it. Phase 5's commits under `carja/` and in Markdown keep it valid, and so does a small fix after it (under 50 changed non-test lines, no risk path); more than that needs a new review. A change the proportionality rule let you skip needs no record.
 - **Never escalate an unreviewed fix round** — if you fixed blockers, the delta review runs before you report anything back, or you are handing back work you never looked at.
 - Other brakes (stop and surface): the fix has grown the diff past ~2× its frozen scope, or the best fix needs a canonical-contract change first.
 
