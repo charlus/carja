@@ -78,3 +78,52 @@ Otherwise the confirmatory run's size is set from the pilot's discordant-pair ra
 - **Public result, private data:** a reader cannot rerun the eval. The hash shows the task list was fixed before the runs; the data is available to whoever has access to the project.
 - **Grader bias:** the hidden tests are fixed before any trial; the exploratory reviewer is blind to the arm.
 - **Small n:** the pilot can show a large effect or none. A small real effect needs the confirmatory run.
+
+## 2026-11-05 — Step 2, before any pilot trial
+
+Recorded before the first pilot session. The specifics are in the private record (pushed to the project's repository the same day).
+
+**Task check.** All twelve candidates pass the mechanical check (`test/evals/outcome/task-check.mjs`). The reference is the base plus the task's commits, cherry-picked. Where a conflict touched only Carja's own state files, the base side was kept. Where other commits of the same area sit between the task's commits, the task's files are taken as they are at its last commit ("range mode", recorded per task). Hidden tests are the tests that fail on the base with the hidden files and pass on the reference. Three tasks are dropped: two whose range-mode reference was not clean (an existing test broken, or tests failing on the reference), and one whose hidden tests assert an output vocabulary the real fix invented, which no task text could state without giving the solution.
+
+**Deviations from the pre-registration:**
+
+1. **Nine tasks, not ten.** No clean tenth candidate without new spec work. The pilot is 9 × 3 × 2 = 54 sessions.
+2. **Interface lines instead of rewritten tests.** 254 of the 307 hidden test ids need only names that exist at the base or appear in the task's documents. For the rest, the task text names the module, the name and the signature the tests call (12 names across 7 tasks), never the behaviour. This fixes the names, which is what "rewrite at the interface" was for, without rewriting tests by hand. Both arms get the same lines.
+3. **Run settings.** Claude Code 2.1.317, `claude-sonnet-5-5`, the loop's sandbox profile, no MCP servers, a 45-minute wall cap and no turn cap (this CLI has no `--max-turns`). The operator's user-level instructions load in both arms alike. One virtual environment, built from the lock file every task base shares.
+
+**Arms as built.** The bare arm is the task base with every Carja file removed (`.agents/`, `.claude/`, the state folder, the root instruction files, the config) and no git hooks. The carja arm is the same base upgraded to 7.1.0 from the install it had then (6.1 to 6.8), with the git hooks wired. The prompt is the same text in both.
+
+**Grader controls.** 36 of 36 correct: every untouched tree fails, and every tree with the reference implementation copied in passes, in both arms.
+
+**Noise floor.** Two tasks drawn with seed 20261105 (`mulberry32`), 3 runs × two identical bare arms = 12 sessions, run before the pilot. The pilot order is drawn with the same generator, and which arm of a pair starts first is random.
+
+**Smoke trial.** One bare session on the smallest task passed in 44 s, 6 turns, about $0.14 at list price. It is not part of the results.
+
+## 2026-11-05 — Deviation 4, after 10 noise-floor sessions, before any carja-arm session
+
+The noise floor caught a fault in deviation 2. On one task, all six bare runs scored exactly the same fraction of the hidden tests. Cause: the tests call a function whose name the plan gives, but with a signature the real build chose. The interface check compared names only. The interface lines now give the full signature (decorators, enum members, dataclass fields, the new fields of an existing class) of every name the hidden tests reference that is new or changed since the base, including the private helpers the tests call. Still names and signatures, never behaviour.
+
+The 10 noise-floor sessions run under the old prompts are discarded and the noise floor is run again. No carja-arm session had run, so no comparison between the arms had been seen. Quota on those 10 sessions: $5.27 at list price, 24 minutes of session time.
+
+## 2026-11-05 — Pilot results
+
+66 sessions (12 noise floor, 54 pilot), no session cut by the usage limit or an outage, none capped by the time limit. Total: $25.64 at list price. Analysis: `test/evals/outcome/analyze.mjs`, committed before the first pilot result (`dca9a43`).
+
+**Primary metric: no difference.** Bare 3/27, carja 3/27. All six passes are on one task, in both arms. Not one pair is discordant, so McNemar's test has nothing to work with (p = 1). The noise-floor stop rule is triggered, so by the pre-registration there is no confirmatory run.
+
+**Cost: Carja costs more** (carja/bare, bootstrap 95% interval):
+
+| | Ratio | Interval |
+|---|---|---|
+| Turns | 1.20× | 1.11–1.31 |
+| Tokens | 1.39× | 1.27–1.54 |
+| Wall time | 1.37× | 1.19–1.57 |
+| List price | 1.29× | 1.22–1.36 |
+
+**Secondary: hidden tests passed.** Bare 76%, carja 71%, a paired difference of −4.7 points (95% interval −9.8 to −0.5). It comes from two tasks. On the larger gap, the spec does not say how the service decides that it runs in production; the arms chose differently, and the hidden tests encode the real build's choice. That is a guess about an ambiguous spec, not a defect.
+
+**What the pilot measured, and what it did not.** The carja arm had the root `AGENTS.md` in context (checked by a probe session) and Carja's 31 skills, and it kept the task tracker up to date. It never entered a Carja workflow: given "implement this, commit when done" headless, it built and committed directly, as the bare arm did, in about 12 turns. So the pilot measured **Carja installed**, not **Carja's Build workflow used**. For a direct prompt, the install adds about 30% cost and no measured benefit.
+
+**The tasks sit near the floor.** Eight of nine tasks failed in all 54 sessions. On the five tasks that have later fix commits, no run in either arm passed all the tests of a fix: each arm avoided some of the defects the real build shipped, never all of them. The binary metric cannot separate arms when almost every trial fails; the fraction of hidden tests passed is the more sensitive measure.
+
+**Not concluded:** whether Carja's Build workflow, invoked as the owner uses it, changes outcomes. That needs a new pre-registration.
