@@ -112,3 +112,22 @@ describe("O5 — one review per change, scaled to its size", () => {
     assert.doesNotMatch(REVIEW, /per batch/i);
   });
 });
+
+describe("O4 everywhere: nothing else asks for a tracker update after every task", () => {
+  test("the loop's slice brief makes the commits the memory across beats", async () => {
+    const { ROUTING } = await import("../src/loop/harvester.js");
+    const brief = ROUTING.slice.brief;
+    assert.doesNotMatch(brief, /current after every task/i);
+    assert.match(brief, /git log/);
+    assert.match(brief, /task number/i);
+  });
+
+  test("the task-tracker skill and its registry entry say: written once, at the end", () => {
+    const skill = read("skills", "task-tracker", "SKILL.md");
+    const entry = JSON.parse(read("registry.json")).skills.find((s) => s.dir === "task-tracker");
+    for (const text of [skill, entry.description]) {
+      assert.doesNotMatch(text, /every state change/i);
+      assert.match(text, /once/i);
+    }
+  });
+});

@@ -182,7 +182,7 @@ export const ROUTING = Object.freeze({
   slice: {
     workflow: stageWorkflowPath("build"),
     brief:
-      "Build this slice following the Build workflow, from implementation-plan.md and feature-spec.md in its folder, one task per TDD cycle. Keep task-tracker.md current after every task: it is your memory across beats. Write `{ \"done\": true }` only when the whole slice is ship-ready; until then end each beat with the tracker current and no signal.",
+      "Build this slice following the Build workflow, from implementation-plan.md and feature-spec.md in its folder, one task per TDD cycle. Commit each task with its task number in the subject: `git log` since the branch base is your memory across beats. Write task-tracker.md once, when the slice is done. Write `{ \"done\": true }` only when the whole slice is ship-ready; until then end each beat with every finished task committed and no signal.",
   },
 });
 
