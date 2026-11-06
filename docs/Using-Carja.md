@@ -429,17 +429,19 @@ Reads: `registry`.
 
 #### `carja review-log`
 
-Record review findings, and see which rules reviewers dismiss.
+Record review findings and approvals, and see which rules reviewers dismiss.
 
 ```
-carja review-log append '<json>' | carja review-log summary [--since <date>]
+carja review-log append '<json>' | carja review-log summary [--since <date>] | carja review-log verdict APPROVE [--repo <dir>]
 ```
 
 | Option | What it does |
 |---|---|
 | `--since <date>` | With summary: only findings after this date |
+| `--repo <dir>` | With verdict: the code repository whose HEAD was approved (outer layout) |
 
 - `carja review-log summary`
+- `carja review-log verdict APPROVE`: after the independent review approved HEAD: the push gate lets it through
 
 #### `carja context-bill`
 

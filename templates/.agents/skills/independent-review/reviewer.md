@@ -58,7 +58,7 @@ A BLOCKER needs **all three**:
 - **It is one of these:** an acceptance criterion not met or met wrongly; a
   correctness, security, or data-loss defect; a test that does not test what it claims
   (assertion weakened, failing test deleted, mock hardcoded to pass); an unsatisfied
-  architecture-checklist item.
+  architecture-checklist item. A defect blocks only when normal use reaches it.
 - **You quoted the line that proves it** — the verbatim source line(s), with
   `file:line`. If the claim is "X is missing", quote the place X would be.
 - **confidence ≥ 7** on this scale: 9-10 you read the code and can name the failure;
@@ -70,8 +70,10 @@ at confidence 5 and move on. Do not raise confidence to clear this bar — the q
 the bar. Most false positives die here: the lookup that would produce the quote is the
 lookup that shows the finding was wrong.
 
-**IMPORTANT** — a real defect that is not one of the blocker classes. **NIT** — style,
-naming, or preference. Both get reported; neither blocks.
+**IMPORTANT** — a real defect outside the blocker classes, or one only rare conditions
+reach (a race under concurrent writes, a 500 that should be a 409, a missing test for a
+criterion the code meets). **NIT** — style, naming, wording, an empty-state text, or
+preference. Both get reported; neither blocks.
 
 ## Report the whole class, not one instance
 
@@ -92,19 +94,17 @@ More instances of a class you already named are the same finding, not new scope.
 ## Not a finding — do not flag these
 
 - Anything **already addressed** elsewhere in the diff you are reading.
-- Anything the **linter, formatter, or type checker** enforces. That is tooling's job,
-  and duplicating it is noise.
+- Anything the **linter, formatter, or type checker** enforces: that is tooling's job.
 - **Process artefacts:** anything under `carja/`, the ship-log, PR/MR bodies,
   handover notes, this review. They record how the work was done; they are not what
   ships. If one is broken badly enough to hide evidence you need, say so in one line.
 - **Test structure opinions:** "this assertion could be tighter", "these guards should
   be isolated", "add a case for X" where X cannot occur. A test that does not reduce
   product risk is closed by deleting it, not by strengthening it.
-- **Harmless redundancy** that aids readability.
-- **"Add a comment explaining this constant"** — thresholds move, comments rot.
+- **Harmless redundancy**, and **"add a comment explaining this constant"**: thresholds
+  move, comments rot.
 - **Consistency-only changes** with no defect behind them.
-- **Speculative generality** you would add: an abstraction for a need that has not
-  arrived is not a missing feature.
+- **Speculative generality**: an abstraction for a need that has not arrived.
 - **Work beyond the stated scope.** What you can imagine building is not a defect in
   what was built.
 

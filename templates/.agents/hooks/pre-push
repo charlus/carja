@@ -5,8 +5,9 @@
 # was gated at commit; passing is gated here. No "should work" — proof or no push.
 # Zero-run: a green verify whose output says no test ran is not green (A3).
 # Integrity: a pushed commit whose message says [skip ci] is refused (A5).
+# Review: a change of consequence needs a recorded independent APPROVE (7.2.0).
 # Escapes (logged): CARJA_SKIP_VERIFY / CARJA_SKIP_EVAL / CARJA_NO_TESTS_RAN /
-# CARJA_NO_INTEGRITY. Disable: CARJA_HOOKS=off.
+# CARJA_NO_INTEGRITY / CARJA_NO_REVIEW. Disable: CARJA_HOOKS=off.
 set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
@@ -312,6 +313,100 @@ if [ -n "$skip_ci" ]; then
     echo ""
     echo "  Reword them (git rebase, then reword), or if skipping CI is deliberate:"
     echo "    CARJA_NO_INTEGRITY=\"why\" git push …"
+    echo ""
+    exit 1
+  fi
+fi
+
+# ---- Review gate (7.2.0): no unreviewed change of consequence leaves -------
+# The independent review is the step that catches most (an audit of one
+# production project's review records, 2026-11-06: 1 wrong finding in 142
+# blockers), and the step agents skipped most when only prose asked for it. A change above the
+# review skill's own threshold (50 changed non-test lines, or any risk path)
+# needs an APPROVE recorded for the pushed commit, or for an earlier commit
+# when everything after it is carja/ state or Markdown (the ship-log commit
+# after the review). `carja review-log verdict APPROVE` records it; the loop
+# records its Checker's approval itself. Inline, not in lib.sh: the push of
+# an upgrade loads the remote's older library.
+REVIEW_FILE="${HB_DIR:+$HB_DIR/carja-review-verdicts}"
+REVIEW_REMOTE="${1:-origin}"
+carja_review_ignored() { grep -Ev '^(carja|conductor|\.agents)/|(^|/)AGENTS\.md$|\.md$|^$'; }
+carja_review_is_test() { grep -Eq '(^|/)(tests?|__tests__|specs?|e2e)/|(^|/)test_[^/]*$|_test\.[A-Za-z]+$|\.(test|spec)\.[A-Za-z]+$|(^|/)conftest\.py$'; }
+carja_review_risk() { grep -Ei '(^|/)(auth|authn|authz|oauth|authentication|authorization|login|sessions?|permissions?|security|secrets?|payments?|billing|migrations?|alembic)([/._-]|$)|(^|/)\.github/workflows/|(^|/)\.gitlab-ci\.yml$' | head -1; }
+# carja_review_size <from> <to>: "<changed non-test lines of code>\t<first risk path>".
+carja_review_size() {
+  local a d f lines=0 files
+  files="$(git -C "$ROOT" diff --name-only "$1" "$2" 2>/dev/null | carja_review_ignored)"
+  while IFS=$'\t' read -r a d f; do
+    [ -z "${f:-}" ] && continue
+    printf '%s\n' "$f" | carja_review_ignored | grep -q . || continue
+    printf '%s\n' "$f" | carja_review_is_test && continue
+    case "$a$d" in *-*) continue ;; esac   # binary
+    lines=$((lines + a + d))
+  done <<< "$(git -C "$ROOT" diff --numstat "$1" "$2" 2>/dev/null)"
+  printf '%s\t%s' "$lines" "$(printf '%s\n' "$files" | carja_review_risk)"
+}
+carja_review_needed() { local n r; IFS=$'\t' read -r n r <<< "$1"; [ "${n:-0}" -ge 50 ] || [ -n "$r" ]; }
+carja_review_approved() {
+  # $1 = pushed sha. An APPROVE for it, or for an ancestor after which the
+  # added code alone is below the threshold (an IMPORTANT fixed after the
+  # verdict, the ship-log commit): what the review skill would not review.
+  local lsha="$1" sha rest
+  [ -n "$REVIEW_FILE" ] && [ -f "$REVIEW_FILE" ] || return 1
+  while IFS=$'\t' read -r sha rest; do
+    case "$rest" in APPROVE*) ;; *) continue ;; esac
+    [ "$sha" = "$lsha" ] && return 0
+    git -C "$ROOT" merge-base --is-ancestor "$sha" "$lsha" 2>/dev/null || continue
+    carja_review_needed "$(carja_review_size "$sha" "$lsha")" || return 0
+  done < "$REVIEW_FILE"
+  return 1
+}
+review_missing=""
+review_default="$(git -C "$ROOT" symbolic-ref --short "refs/remotes/$REVIEW_REMOTE/HEAD" 2>/dev/null)"
+if [ -z "$review_default" ]; then
+  for _b in main master; do
+    git -C "$ROOT" rev-parse --verify -q "refs/remotes/$REVIEW_REMOTE/$_b" >/dev/null 2>&1 && { review_default="$REVIEW_REMOTE/$_b"; break; }
+  done
+fi
+while read -r _lref lsha rref rsha; do
+  [ -z "${lsha:-}" ] || [ "$lsha" = "$ZERO" ] && continue
+  # The change under review: since the default branch, or since the remote's
+  # tip when the push goes to the default branch itself.
+  base=""
+  if [ -n "$review_default" ] && [ "$rref" != "refs/heads/${review_default#*/}" ]; then
+    base="$(git -C "$ROOT" merge-base "$lsha" "$review_default" 2>/dev/null)"
+  fi
+  if [ -z "$base" ]; then
+    base="$rsha"
+    { [ -z "${base:-}" ] || [ "$base" = "$ZERO" ]; } && base="$TRUSTED_REF"
+  fi
+  { [ -z "$base" ] || [ "$base" = "HEAD" ]; } && continue   # nothing to compare: a first push
+  [ "$base" = "$lsha" ] && continue
+  size="$(carja_review_size "$base" "$lsha")"
+  carja_review_needed "$size" || continue
+  carja_review_approved "$lsha" && continue
+  IFS=$'\t' read -r lines risk <<< "$size"
+  review_missing="$review_missing\n    - ${lsha:0:9}: $lines changed lines of code since ${base:0:9}${risk:+, risk path $risk}"
+done <<< "$PUSH_LINES"
+if [ -n "$review_missing" ]; then
+  if [ -n "${CARJA_NO_REVIEW:-}" ]; then
+    carja_log_waiver "$PROJECT_ROOT" "Review" "$CARJA_NO_REVIEW"
+    echo "⚠️  Carja review gate WAIVED: $CARJA_NO_REVIEW"
+    echo "    (logged to carja/0-compass/ship-log.md)"
+  else
+    echo ""
+    echo "🛑 Carja review gate — no independent review recorded; push blocked."
+    echo -e "$review_missing"
+    echo ""
+    echo "  Run Ship's independent review (.agents/workflows/ship.md, Phase 4)."
+    echo "  When it returns APPROVE, record it and push again:"
+    if [ -n "$NESTED_REPO" ]; then
+      echo "    carja review-log verdict APPROVE --repo $NESTED_REPO"
+    else
+      echo "    carja review-log verdict APPROVE"
+    fi
+    echo "  Or say why this change ships unreviewed:"
+    echo "    CARJA_NO_REVIEW=\"why\" git push …"
     echo ""
     exit 1
   fi

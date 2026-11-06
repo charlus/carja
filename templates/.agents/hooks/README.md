@@ -14,6 +14,7 @@
 | `pre-commit` | **Protected paths** | `git commit` | the change edits `.agents/hooks/`, `.agents/rules/`, `.agents/sandbox/` or the reviewer brief (waiver: `CARJA_NO_PROTECTED="reason"`) |
 | `pre-push` | **Verification Iron Law** | `git push` | the configured verification command exits non-zero, or exits 0 with output that says no test ran (waiver: `CARJA_NO_TESTS_RAN="reason"`) |
 | `pre-push` | **Gate integrity** | `git push` | a pushed commit's message says `[skip ci]`, `[ci skip]`, `[no ci]` or `[skip actions]` (waiver: `CARJA_NO_INTEGRITY="reason"`) |
+| `pre-push` | **Review gate** | `git push` | the change has 50 or more changed non-test lines of code, or touches a risk path (auth, sessions, permissions, security, secrets, payments, billing, migrations, CI), and no independent APPROVE is recorded for the pushed commit. `carja review-log verdict APPROVE` records one (Ship Phase 4); the loop records its Checker's. Code added after the approval needs a new one only when it alone reaches the same threshold. `carja/`, `.agents/`, Markdown and test files never count (waiver: `CARJA_NO_REVIEW="reason"`) |
 | `post-merge` | cleanup, not a gate | `git pull` (a merge) | never: it removes `carja loop` and `carja work` worktrees and local branches already merged into the default branch, and keeps any worktree with uncommitted changes |
 | `verification-stop-hook.sh` | Verification Iron Law (interactive) | Claude Code `Stop` | **opt-in** — code changed since HEAD and verify is red |
 | `pretooluse-no-bypass.sh` | every gate above | Claude Code `PreToolUse` | **opt-in** — a Bash call tries to skip the git hooks (`--no-verify`, `-n`, `-c core.hooksPath=`) |
@@ -178,6 +179,7 @@ CARJA_ON_DEFAULT="hotfix agreed" git commit …        # code on the default bra
 CARJA_SKIP_VERIFY="hotfix, tests offline" git push … # verify gate (pre-push)
 CARJA_SKIP_EVAL="eval infra down" git push …         # Eval run-gate (pre-push)
 CARJA_NO_TESTS_RAN="tests run in CI only" git push … # verify ran no test (pre-push)
+CARJA_NO_REVIEW="known gaps in the MR" git push …    # review gate (pre-push)
 CARJA_HOOKS=off git commit …                         # disable all Carja hooks
 ```
 

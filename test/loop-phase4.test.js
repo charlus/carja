@@ -266,6 +266,10 @@ test("F4: openPullRequest with forge glab pushes then opens the MR with glab", a
   });
   assert.equal(res.ok, true);
   assert.equal(res.prUrl, "https://code.example/g/p/-/merge_requests/7");
-  assert.equal(calls[0][0], "git");
-  assert.deepEqual(calls[1].slice(0, 3), ["glab", "mr", "create"]);
+  // 7.2.0: the Checker's approval is recorded (git rev-parse) before the push.
+  const push = calls.findIndex((c) => c[0] === "git" && c[1] === "push");
+  const mr = calls.findIndex((c) => c[0] === "glab");
+  assert.ok(push >= 0, "pushed");
+  assert.equal(mr, push + 1, "the MR opens right after the push");
+  assert.deepEqual(calls[mr].slice(0, 3), ["glab", "mr", "create"]);
 });
