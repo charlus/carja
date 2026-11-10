@@ -1,6 +1,6 @@
 # Slimming
 
-> **Status (2026-11-06):** O1–O5 built in 7.3.0 (branch `feat/slimming`), full local suite green. Not validated: the owner skipped the benchmark re-run (2026-11-06), so the saving and the quality bar are expected, not measured.
+> **Status (2026-11-10):** O1–O5 shipped in 7.3.0 (PR #125). Benchmark re-run on 2026-11-10: quality passed (100%), cost per session rose 14% instead of falling, because the review and Build now run as intended. Accepted by the owner. Next levers: whole-suite runs and commits per session (see Result).
 
 ## Why
 
@@ -57,3 +57,33 @@ The TDD and Eval gates at commit, the review gate and the verify gate at push, `
 - `test/fixtures/context-budget.json`: the lowered ceilings fail on the current text, then pass.
 - The full local suite.
 - Re-run of the longitudinal benchmark on the Carja arm only (about $20), compared with the stored bare results. Pass: hidden-test share at or above 99.6%. Expected: about 150 s and $0.39 per session.
+
+## Result (2026-11-10)
+
+Re-run of the longitudinal benchmark: Carja 7.3.0 (`a1ffbca`), 5 chains × 8 steps, the same material (manifest `a10d9251365b913a`), compared with the stored 7.1.0 and bare results. Spend $22.96.
+
+| Per session, 40 sessions | bare | 7.1.0 | 7.3.0 |
+|---|---|---|---|
+| Final hidden-test share | 95.0% | 99.6% | 100% (5/5 chains) |
+| Cost | $0.15 | $0.50 | $0.57 |
+| Sessions with an independent review | 0 | 11 | 24 |
+| Sessions that read Build | 0 | 31 | 38 |
+| API calls (main thread) | 6.2 | 13.4 | 18.6 |
+
+- Quality: pass. Every chain passed every hidden test at every step. Against bare: +5.0 points, exact permutation p = 0.008.
+- Cost: +14%, not the expected −22%. The mix changed: 7.1.0 skipped the review in 29 of 40 sessions. Within one kind of session 7.3.0 is cheaper: reviewed $0.71 against $0.80, unreviewed $0.37 against $0.39. At 7.1.0's review rate, 7.3.0 costs about $0.47 (−8%).
+- The review subagent itself costs $0.07 per session, as in 7.1.0. A reviewed session is expensive because its change is larger, not because of the reviewer.
+- Main-thread cost grew in two activities, from the zero-token breakdown of the transcripts:
+
+  | Per session | 7.1.0 | 7.3.0 |
+  |---|---|---|
+  | Test commands, targeted | 1.9 | 5.6 |
+  | Test commands, whole suite | 4.0 | 3.5 |
+  | Of which through `carja evidence run` | 0 | 0.75 |
+  | `git commit` | 1.9 | 4.7 |
+  | Cost of test runs | $0.073 | $0.081 |
+  | Cost of git commands | $0.028 | $0.058 |
+
+  Targeted runs and per-task commits rose as O1 and O4 intend. The whole suite still runs 3.5 times, not once: the benchmark sets no `verify` command, so `carja evidence run` has nothing to run and the agent runs `pytest` itself. The counts come from pattern matching on commands and are approximate.
+- Wall time: 456 s against 303 s, not reliable. Plain file edits took 40 to 120 s, a sign of load on the machine with 5 chains in parallel.
+
