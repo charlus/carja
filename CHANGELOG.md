@@ -8,6 +8,15 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.4.3] — 2026-11-13 — The loop recognises Claude Code's new usage-limit message
+
+Compatibility: upgrade only
+
+### Fixed
+- **The loop missed a usage limit.** Claude Code now says "You've hit your 5-hour limit" (or "weekly limit"), which none of the loop's patterns matched. A beat stopped by the limit counted as a normal beat, the failure the patterns exist to prevent. The loop now also reads the machine field `"api_error": "usage_limit_reached"`. Found live: the release-gate runner, which uses the same check, graded four sessions that never ran as 0% and recorded a false FAIL. The runner now also treats an HTTP 429 as an outage.
+
+---
+
 ## [7.4.2] — 2026-11-13 — Release gate on the longitudinal benchmark
 
 Compatibility: upgrade only
