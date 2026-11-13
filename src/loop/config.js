@@ -16,9 +16,10 @@
 //   blank_env        ["GEMINI_API_KEY", …] → set empty in every beat's environment (default: the
 //                    common provider keys, minus the engine's own); [] turns it off
 //   cost_aware       true → budget.max_cost_usd halts the run (off: cost is shown, never acts)
-//   profile          "quality" | "balanced" → the model of every role (carja loop profile)
-//   models           { maker, maker_escalation, checker, spec, blueprint, ship } → one role's model, over the profile
-//                    (claude engine); maker_escalation runs a Maker beat after two rejections
+//   profile          7.x: "quality" | "balanced". Still read; the top-level models block
+//                    (src/models.js) replaces it
+//   models           7.x: { maker, maker_escalation, checker, spec, blueprint, ship } → one beat
+//                    kind's model. Still read; a role set in the top-level models block wins
 //   install          shell command the driver runs, outside the sandbox, after the dependency gate
 //                    passed a new dependency (I4); a package registry is never in allowed_domains
 //   dependency_min_age_days  a new dependency's version must be at least this old (default 7)
@@ -32,29 +33,26 @@
 import { DEFAULT_BLANK_ENV } from "./beat-env.js";
 import { REGISTRY_HOSTS } from "./deps.js";
 import { DEFAULT_QUOTA_MAX_WAIT_MIN } from "./quota.js";
+import { BUILTIN_PRESETS, LOOP_ROLE, MODEL_RE, loopRoleModels } from "../models.js";
 
 const FORGES = ["gh", "glab"];
 // A hostname, optionally with one leading "*." wildcard label. No scheme, path,
 // port or bare "*": a domain entry widens the sandbox, so it must be exact.
-// A model id or alias: `sonnet`, `claude-opus-5-5`, `claude-opus-5-5[1m]`. No
-// spaces and no leading dash, so the value can never be read as another flag.
-const MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._:\[\]-]*$/;
-const ROLES = ["maker", "checker", "maker_escalation", "spec", "blueprint", "ship"];
+const ROLES = Object.keys(LOOP_ROLE);
 
-// Owner decisions D1–D5 (2026-10-21). `balanced` follows the measured
-// planner–executor practice: the strong model writes specs and designs and
-// reviews; the cheaper one writes code and the ship bookkeeping, and the loop
-// moves it to the strong model after two rejections (where the difficulty is).
-export const PROFILES = Object.freeze({
-  quality: Object.freeze({ maker: "opus", maker_escalation: "opus", checker: "opus", spec: "opus", blueprint: "opus", ship: "opus" }),
-  balanced: Object.freeze({ maker: "sonnet", maker_escalation: "opus", checker: "opus", spec: "opus", blueprint: "opus", ship: "sonnet" }),
-});
+// The 7.x profiles, as the loop's beat kinds: the built-in presets of src/models.js.
+export const PROFILES = Object.freeze(
+  Object.fromEntries(Object.entries(BUILTIN_PRESETS).map(([name, p]) => [name, Object.freeze(Object.fromEntries(Object.entries(LOOP_ROLE).map(([kind, role]) => [kind, p[role]])))]))
+);
 
-/** The model each role runs on: the profile, then `loop.models` per role. {} when neither is set. */
+/** The model each beat kind runs on (src/models.js: models.<role>, loop.models, models.preset, loop.profile). {} when nothing is set. */
 export function effectiveModels(cfg) {
-  const out = { ...(PROFILES[cfg?.profile] ?? {}) };
-  for (const [role, model] of Object.entries(cfg?.models ?? {})) if (model) out[role] = model;
-  return out;
+  return { ...(cfg?.roleModels?.models ?? {}) };
+}
+
+/** The effort of each beat kind that has one. {} when none is set: the engine's default. */
+export function effectiveEfforts(cfg) {
+  return { ...(cfg?.roleModels?.efforts ?? {}) };
 }
 const DOMAIN_RE = /^(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
 
@@ -147,6 +145,10 @@ export function parseLoopConfig(config) {
   };
   count("dependency_min_age_days", "dependencyMinAgeDays");
   count("quota_max_wait_min", "quotaMaxWaitMin");
+  // Model roles (src/models.js): the top-level models block, then the 7.x loop.models and loop.profile.
+  out.roleModels = loopRoleModels(config, { legacyProfile: out.profile, legacyModels: out.models });
+  out.modelRank = out.roleModels.rank;
+  errors.push(...out.roleModels.errors);
   return out;
 }
 
@@ -209,20 +211,18 @@ export function mergeSandboxSettings(template, extraDomains = [], extraWrites = 
   return out;
 }
 
-/** The adapter with each loop role's model passed to its beats. Returns the
- *  adapter itself when no model is set, so an unset `loop.models` changes nothing. */
-export function withRoleModels(adapter, models = {}) {
-  const on = (model) => (opts) => adapter.runBeat(model ? { ...opts, model } : opts);
+/** The adapter with each loop role's model and effort passed to its beats. Returns
+ *  the same calls unchanged when nothing is set: the engine's defaults run. */
+export function withRoleModels(adapter, models = {}, efforts = {}) {
+  const pass = (opts, kind) => ({ ...opts, ...(models[kind] ? { model: models[kind] } : {}), ...(efforts[kind] ? { effort: efforts[kind] } : {}) });
+  const on = (kind) => (opts) => adapter.runBeat(pass(opts, kind));
   return {
     ...adapter,
-    runBeat: (opts) => {
-      const model = opts?.escalateModel && models.maker_escalation ? models.maker_escalation : models.maker;
-      return adapter.runBeat(model ? { ...opts, model } : opts);
-    },
-    runChecker: (opts) => adapter.runChecker(models.checker ? { ...opts, model: models.checker } : opts),
+    runBeat: (opts) => adapter.runBeat(pass(opts, opts?.escalateModel && models.maker_escalation ? "maker_escalation" : "maker")),
+    runChecker: (opts) => adapter.runChecker(pass(opts, "checker")),
     // G1: specs and designs are their own roles, never the Maker's model by default.
-    runSpecBeat: on(models.spec),
-    runBlueprintBeat: on(models.blueprint),
-    runShipBeat: on(models.ship),
+    runSpecBeat: on("spec"),
+    runBlueprintBeat: on("blueprint"),
+    runShipBeat: on("ship"),
   };
 }

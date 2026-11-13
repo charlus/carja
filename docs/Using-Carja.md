@@ -190,6 +190,31 @@ carja personas [paths…] [options]
 
 - `carja personas --base master`: personas for this branch
 
+#### `carja models`
+
+The model and effort of each role (plan, build, review, bookkeeping, escalate), and switching preset.
+
+```
+carja models [dir]
+carja models use <preset> [dir]
+carja models set <role> <model|default> [--effort <level>] [dir]
+carja models rank <strongest> <next> … [--dir <dir>]
+carja models save <preset> [dir]
+```
+
+| Option | What it does |
+|---|---|
+| `--effort <level>` | With set: the role's reasoning effort, as the engine names it (for example high) |
+| `--dir <dir>` | With rank: the project folder |
+
+Reads: `models`, `models.preset`, `models.presets`, `models.rank`.
+
+- `carja models`: each role's model, where it comes from, and the /model command for an interactive step
+- `carja models use balanced`: switch preset; your own presets live in models.presets
+- `carja models set plan claude-fable-5-2 --effort high`: plan on Fable; `default` instead of a model unsets the role
+- `carja models rank claude-fable-5-2 claude-opus-5-5`: your models, strongest first, for the doctor's reviewer check
+- `carja models save frontier`: keep the roles you set as a preset of your own, and use it
+
 #### `carja work`
 
 The hidden worktree an interactive Spec-It, Build or Ship works in, so your folder stays on its default branch.
@@ -254,8 +279,8 @@ carja loop doctor [dir] [--beat]
 | `take "<item>"` | Give the loop one open backlog item (its title or a unique part of it). Kept in .git, so no tracked file changes |
 | `take` | List the items the loop has been given and not yet shipped |
 | `take --drop "<item>"` | Take an item back |
-| `profile` | Show the model profile, each role's model and the last run's cost per role |
-| `profile quality|balanced` | Pick the models by budget: Opus everywhere, or Sonnet for code with Opus for review, specs and designs |
+| `profile` | Show the model preset, each beat kind's model and the last run's cost per role |
+| `profile <preset>` | Switch preset, as carja models use does: quality, balanced, or one of your models.presets |
 | `doctor` | Check the project before an unattended run |
 | `doctor --beat` | Also run one real beat to prove the engine and sandbox |
 
@@ -481,6 +506,10 @@ Reads: `verify`, `eval`.
 | `deployCheck` | A command that says whether the latest merge is deployed (`status --live`) |
 | `registry` | The skill registry URL for add, list and search |
 | `repos` | Per nested code repository: { "<dir>": { "verify": …, "deployCheck": … } } |
+| `models` | Per role: { "plan": "<model>", "build": { "model": "<model>", "effort": "xhigh" }, … }. Roles: plan, build, review, bookkeeping, escalate. Unset: the engine's default. Read by the workflows and the loop, on every engine |
+| `models.preset` | The preset in use: quality, balanced, or one of models.presets (set it with carja models use) |
+| `models.presets` | Your own presets: { "<name>": { "plan": …, "build": …, "rank": […] } } |
+| `models.rank` | Your models, strongest first. The loop doctor uses it to check the reviewer is not weaker than the builder |
 | `loop.forge` | "gh" \| "glab" (default: from the origin host) |
 | `loop.setup` | Shell command run once in each new worktree, before the first beat |
 | `loop.allowed_domains` | Extra hosts the sandbox may reach; never a package registry (refused) |
@@ -488,8 +517,8 @@ Reads: `verify`, `eval`.
 | `loop.priorities` | ["P1"]: only backlog items under these headings |
 | `loop.inbox` | false: never take inbox lines |
 | `loop.allow_nested_repo` | true: run although a gitignored nested git repository exists |
-| `loop.profile` | "quality" (Opus everywhere) or "balanced" (Sonnet for code and ship, Opus for review, specs and designs): set it with carja loop profile |
-| `loop.models` | { "maker": "sonnet", … }: one role's model over the profile (roles: maker, maker_escalation, checker, spec, blueprint, ship; claude engine) |
+| `loop.profile` | 7.x: "quality" or "balanced". Still read; models.preset replaces it (carja loop profile now writes models.preset) |
+| `loop.models` | 7.x: { "maker": "sonnet", … } per beat kind (maker, maker_escalation, checker, spec, blueprint, ship). Still read; a role set in models wins |
 | `loop.cost_aware` | true: budget.max_cost_usd in loop-state.json stops a run |
 | `loop.slices` | ["<Project>"] or true: the project's carved slices are loop work, from spec to MR |
 | `loop.blueprint` | ["<Project>"] or true: after Discovery, the project's Blueprint is loop work, one MR |

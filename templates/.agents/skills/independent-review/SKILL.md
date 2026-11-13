@@ -17,7 +17,7 @@ Run this gate **once, when a consequential artifact is complete and about to be 
 - **Run it for:** a Grand PRD, a Technical Vision, a Feature Spec + Implementation Plan whose plan has more than 3 tasks or touches a risk path, a Carve slicing, a shippable diff (once for the whole change, not per task) — anything a later phase will *build on* or a reader will *trust without re-deriving*.
 - **Skip it for a diff** that is under **50 changed non-test lines** *and* touches no risk path (auth/session, payments, migrations or schema, API contracts, security, secrets, CI or hooks). The author's two-stage self-review plus a green suite plus the human's own PR read is the gate. Say you skipped it and why.
 - **Skip it entirely for** trivial or fully-reversible artifacts (a one-line copy fix, a scratch note).
-- **Proportionality is a measured effect, not a preference.** For work comfortably inside the model's capability an independent reviewer is overhead; it earns its cost at the edge — a risky diff, an unfamiliar subsystem, a high-stakes artifact. Scale the reviewer's model tier to the stakes (`skills/model-routing/SKILL.md`); a weak verifier on a high-stakes artifact is a false safety signal.
+- **Proportionality is a measured effect, not a preference.** For work comfortably inside the model's capability an independent reviewer is overhead; it earns its cost at the edge — a risky diff, an unfamiliar subsystem, a high-stakes artifact. Run the reviewer on the project's `review` model (`carja models`; `skills/model-routing/SKILL.md`): a verifier weaker than the author is a false safety signal.
 
 ## The gate
 
@@ -95,7 +95,7 @@ Hitting a brake is a successful outcome of the gate: it has found that the work 
 
 - This gate is the natural **blueprint (L2) review step**: when a Maker beat produces a spec or architecture, run the gate before the driver accepts the artifact.
 - For **diffs in execution (L3)**, the same split is enforced out-of-process by the independent Checker (`workflows/loop-checker.md`, verdict via `checker-verdict.json`) above the driver's green-verify floor — same rubric, deterministic wiring, and the driver's fail-safe on a missing or malformed verdict is unchanged.
-- Route the reviewer's model tier by stakes (`skills/model-routing/SKILL.md`); record it in `0-compass/ship-log.md` so the gate stays auditable.
+- Run the reviewer on the `review` model (`carja models`); record the model in `0-compass/ship-log.md` so the gate stays auditable.
 
 ## Anti-patterns
 

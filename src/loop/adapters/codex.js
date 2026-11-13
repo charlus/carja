@@ -18,6 +18,9 @@ import { readFile } from "node:fs/promises";
 
 export const name = "codex";
 
+/** D5: this engine takes a model (`-m`) and an effort (`model_reasoning_effort`) per beat. */
+export const takesModel = true;
+
 /** The CLI binary. */
 export const CLI = "codex";
 
@@ -29,9 +32,13 @@ export function mapMode(permissionMode) {
 }
 
 /** Pure argv builder for one beat — unit-testable without spawning a process. */
-export function beatArgs({ prompt, permissionMode = "acceptEdits" } = {}) {
+export function beatArgs({ prompt, permissionMode = "acceptEdits", model = null, effort = null } = {}) {
   // Flags first, then `--`, then the prompt, so a dash-leading prompt is never an option.
-  return ["exec", "-s", mapMode(permissionMode), "--", prompt];
+  const argv = ["exec", "-s", mapMode(permissionMode)];
+  if (model) argv.push("-m", model);
+  // A TOML string: src/models.js admits only lowercase letters and dashes, so nothing to escape.
+  if (effort) argv.push("-c", `model_reasoning_effort="${effort}"`);
+  return [...argv, "--", prompt];
 }
 
 /** True if the `codex` CLI is on PATH. */
@@ -44,10 +51,10 @@ export async function isAvailable() {
 }
 
 /** Run one beat: `codex exec <prompt> -s <read-only|workspace-write>` in `cwd`. */
-export async function runBeat({ promptPath, cwd = process.cwd(), permissionMode = "acceptEdits", env = null }) {
+export async function runBeat({ promptPath, cwd = process.cwd(), permissionMode = "acceptEdits", model = null, effort = null, env = null }) {
   const prompt = await readFile(promptPath, "utf8");
   return await new Promise((resolve, reject) => {
-    const child = spawn(CLI, beatArgs({ prompt, permissionMode }), { cwd, env: env ?? process.env, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(CLI, beatArgs({ prompt, permissionMode, model, effort }), { cwd, env: env ?? process.env, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (d) => (stdout += d.toString()));

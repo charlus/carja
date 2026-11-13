@@ -53,7 +53,7 @@ test("`carja loop profile` shows the models and the cost basis, and switches wit
     assert.match(out, /balanced/);
     assert.match(out, /Maker +sonnet \(opus after 2 rejections\)/);
     assert.match(out, /Checker +opus/);
-    assert.equal(JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).loop.profile, "balanced");
+    assert.equal(JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).models.preset, "balanced", "D2: a profile is a preset of the models block");
     assert.match(run(), /subscription/, "without an API key, the cost is quota use at list price, not money");
   } finally {
     rmSync(root, { recursive: true, force: true });

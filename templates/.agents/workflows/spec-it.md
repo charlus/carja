@@ -42,4 +42,4 @@ description: Spec-It (Detailed Implementation Specs)
 ## Completion Protocol
 
 1. **Status:** set this Implementation to "Specced" in `project-documentation.md` (confirm first).
-2. **Next step:** delete any `handoff.md` you read at the start. Write a new one into the folder the next command names only for open questions no document records (`.agents/skills/handoff/SKILL.md`, *Between workflows*). Then: *"Start a fresh session (Claude Code: `/clear`), then run `/build carja/2-backlog/project-backlog/[ProjectName]/implementations/[NN-Name]`."* To spec the next Implementation first, give `/spec-it` with that folder instead.
+2. **Next step:** delete any `handoff.md` you read at the start. Write a new one into the folder the next command names only for open questions no document records (`.agents/skills/handoff/SKILL.md`, *Between workflows*). Then: *"Start a fresh session (Claude Code: `/clear`, then `/model <build model>` when `carja models` names one), then run `/build carja/2-backlog/project-backlog/[ProjectName]/implementations/[NN-Name]`."* To spec the next Implementation first, give `/spec-it` with that folder instead.

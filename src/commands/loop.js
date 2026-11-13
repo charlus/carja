@@ -46,7 +46,7 @@ import { pruneMergedLoopWorktrees, LOOP_PREFIX, WORK_PREFIX, remoteLoopBranches,
 import { forgeMergedHead } from "../live-state.js";
 import { readReady } from "../loop/ready-queue.js";
 import { gitCommonDir as gitDirOf } from "./loop-take.js";
-import { parseLoopConfig, parsePriorities, resolveForge, mergeSandboxSettings, withRoleModels, effectiveModels } from "../loop/config.js";
+import { parseLoopConfig, parsePriorities, resolveForge, mergeSandboxSettings, withRoleModels, effectiveModels, effectiveEfforts } from "../loop/config.js";
 import { describeModels } from "../loop/profiles.js";
 import { makeEmitter } from "../loop/events.js";
 import { positionals, looksLikeProject, runKey, scopedState, scopeLoopConfig, RUNS_DIR } from "../loop/scope.js";
@@ -1009,7 +1009,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         `  checker:  ${state.checker_votes > 1 ? `${state.checker_votes}-vote (adversarial, majority)` : "single verdict"}`,
         `  platform: ${platformPref ?? "(auto-detect)"}`,
         `  adapter:  ${adapterError ? `ERROR: ${adapterError}` : resolved.name ?? "(none available)"}`,
-        ...(Object.keys(effectiveModels(loopConfig)).length ? [`  models:   ${loopConfig.profile ? `profile ${loopConfig.profile} — ` : ""}${describeModels(effectiveModels(loopConfig), { inline: true })}${resolved.name === "claude" ? "" : "  (only applies to the claude engine)"}`] : []),
+        ...(Object.keys(effectiveModels(loopConfig)).length ? [`  models:   ${describeModels(effectiveModels(loopConfig), { inline: true })}${!resolved.adapter || resolved.adapter.takesModel ? "" : "  ⚠ this engine ignores models: every beat runs on its default (carja models)"}`] : []),
         `  detected: ${detected.length ? detected.join(", ") : "none on PATH"}`,
         `  worktree: ${state.phase === "execution" ? "created for execution phase (isolated Maker)" : "n/a (not execution phase)"}`,
         ...(loopConfig.codeDir ? [`  code:     ${loopConfig.codeDir}/ (nested repository: a code worktree per item, from its default branch; code MR first, then the state MR)`] : []),
@@ -1097,10 +1097,13 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     return result;
   };
   const models = effectiveModels(loopConfig);
-  const roleModels = resolved.adapter.name === "claude" ? models : {};
+  // D5: every engine that declares takesModel gets each role's model and effort.
+  const roleModels = resolved.adapter.takesModel ? models : {};
+  const roleEfforts = resolved.adapter.takesModel ? effectiveEfforts(loopConfig) : {};
+  if (!resolved.adapter.takesModel && Object.keys(models).length) stderr.write(`[CARJA LOOP] ⚠️  ${resolved.adapter.name} ignores models: every beat runs on its default model.\n`);
   // P4: the app's provider keys are empty in every beat (loop.blank_env), never the engine's own.
   const blanked = blankedNames(loopConfig.blankEnv, resolved.adapter.name);
-  const modelled = withRoleModels(withBeatEnv(resolved.adapter, blanked.length ? beatEnv(blanked) : null), roleModels);
+  const modelled = withRoleModels(withBeatEnv(resolved.adapter, blanked.length ? beatEnv(blanked) : null), roleModels, roleEfforts);
   // I2: a beat that hit the usage limit waits for the announced reset, then runs again.
   const quota = (run) =>
     withQuotaWait(run, {
