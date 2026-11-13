@@ -8,6 +8,28 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.4.0] — 2026-11-13 — Carja names roles, the project names models
+
+Compatibility: upgrade only
+
+Model names, strengths and prices were hardcoded in four places and went stale with each model release. Planning on one model and building on another was possible only in the loop, only on Claude Code. Design: `docs/roadmap/Model-Roles.md`.
+
+### Added
+- **The `models` block in `carja.config.json` (D1).** Roles `plan` (Spec-It, Technical Vision, Carve; the loop's spec and design beats), `build`, `review`, `bookkeeping` and `escalate`, each a model id or `{ "model": …, "effort": … }`. Read by the interactive workflows and by the loop. A role left unset runs on the engine's default.
+- **Presets (D2).** `models.preset` picks one; `models.presets` holds your own. `quality` and `balanced` are built in, on the engine's aliases.
+- **`carja models`** shows each role, its effort, where it comes from, the rank and the `/model` command for an interactive step. `carja models use <preset>` switches preset.
+- **Effort per role, on every engine (D5).** The loop passes `--model` and `--effort` to `claude` and `agy`, and `-m` and `model_reasoning_effort` to `codex`. Before, only Claude got a model and no engine got an effort. Not live-proven on `codex` or `agy`.
+
+### Changed
+- **The doctor ranks with your list (D3).** `models.rank`, strongest first. With two different models for build and review and no rank, it says it cannot tell, and how to fix it. The built-in `haiku < sonnet < opus` ranking is gone.
+- **`model-routing` lost its model table (D4).** It keeps the roles and the principles, and sends you to your provider's model list. The reviewer runs on the `review` model, and Spec-It's last line names the `/model` for Build.
+- **`carja loop profile <preset>`** now writes `models.preset`, as `carja models use` does.
+
+### Compatibility
+- `loop.profile` and `loop.models` are still read through 7.x. A role set in `models` wins over them.
+
+---
+
 ## [7.3.0] — 2026-11-06 — Slimmer Spec-It and Build
 
 Compatibility: upgrade only

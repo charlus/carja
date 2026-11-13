@@ -14,6 +14,9 @@ import { readFile } from "node:fs/promises";
 
 export const name = "claude";
 
+/** D5: this engine takes a model and an effort per beat. */
+export const takesModel = true;
+
 /** True if the `claude` CLI is on PATH (used for default adapter auto-detect). */
 export async function isAvailable() {
   return await new Promise((resolve) => {
@@ -36,11 +39,11 @@ export async function isAvailable() {
  * input (E4, `src/loop/untrusted.js`). Every published bypass of this class of
  * agent defeated a *blocklist*, so there is deliberately no blocklist path here.
  *
- * `--model` is passed only when `loop.models` names one for this role; without it
- * the CLI's own default model runs.
+ * `--model` and `--effort` are passed only when the project's `models` block sets
+ * them for this role (src/models.js); without them the CLI's own defaults run.
  *
  * @param {{prompt: string, permissionMode?: string, settingsPath?: string|null,
- *          allowedTools?: string[]|null, model?: string|null}} opts
+ *          allowedTools?: string[]|null, model?: string|null, effort?: string|null}} opts
  * @returns {string[]}
  */
 export function buildArgv({
@@ -49,6 +52,7 @@ export function buildArgv({
   settingsPath = null,
   allowedTools = null,
   model = null,
+  effort = null,
 }) {
   // A14: the result carries the text plus tokens and cost (a list-price
   // estimate on a subscription login). parseClaudeResult turns it back into text.
@@ -58,6 +62,7 @@ export function buildArgv({
   // dash (ship.md opens with its `---` frontmatter) was read as an option.
   const argv = ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", permissionMode];
   if (model) argv.push("--model", model);
+  if (effort) argv.push("--effort", effort);
   if (settingsPath) argv.push("--settings", settingsPath);
   // An empty array is NOT passed: `--allowed-tools` with no values would be a
   // dangling flag that swallows the next argument.
@@ -161,12 +166,13 @@ export async function runBeat({
   settingsPath = null,
   allowedTools = null,
   model = null,
+  effort = null,
   onStep = null, // ({tool, detail}) → void: each tool step, while the beat runs (Loop Monitor M3)
   env = null, // the beat's environment (src/loop/beat-env.js); null inherits the driver's
 }) {
   const prompt = await readFile(promptPath, "utf8");
   return await new Promise((resolve, reject) => {
-    const argv = buildArgv({ prompt, permissionMode, settingsPath, allowedTools, model });
+    const argv = buildArgv({ prompt, permissionMode, settingsPath, allowedTools, model, effort });
     const child = spawn("claude", argv, { cwd, env: env ?? process.env, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";

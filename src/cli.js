@@ -21,6 +21,7 @@ import { personasCommand } from "./commands/personas.js";
 import { designCommand } from "./commands/design.js";
 import { watchCommand } from "./commands/watch.js";
 import { workCommand } from "./commands/work.js";
+import { modelsCommand } from "./commands/models.js";
 import { mainHelp, commandHelp } from "./usage.js";
 import { nextAfterStatus } from "./next-step.js";
 
@@ -129,6 +130,8 @@ export async function runCli(rawArgs, io = process) {
       return watchCommand(rest, context);
     case "work":
       return workCommand(rest, context);
+    case "models":
+      return modelsCommand(rest, context);
     default:
       io.stderr.write(`Unknown command: ${command}\n${helpText()}\n`);
       return 1;

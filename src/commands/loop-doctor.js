@@ -124,6 +124,7 @@ export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd
   const loopConfig = parseLoopConfig(rawConfig);
   facts.configErrors = [...(facts.configErrors ?? []), ...loopConfig.errors];
   facts.models = effectiveModels(loopConfig);
+  facts.modelRank = loopConfig.modelRank;
 
   const state = normalizeState(await readJson(statePath));
   facts.state = state;

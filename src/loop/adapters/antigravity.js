@@ -20,6 +20,9 @@ import { readFile } from "node:fs/promises";
 
 export const name = "antigravity";
 
+/** D5: this engine takes a model and an effort per beat (`--model`, `--effort`). */
+export const takesModel = true;
+
 /** The actual CLI binary (the platform is "antigravity"; the binary is "agy"). */
 export const CLI = "agy";
 
@@ -45,8 +48,10 @@ export function mapMode(permissionMode) {
  *  project (~/.gemini/antigravity-cli/scratch/), so the maker's work would never
  *  land in the loop's git worktree (verified live: cwd alone → scratch;
  *  --add-dir → cwd). runBeat always passes the beat's cwd as addDir. */
-export function beatArgs({ prompt, permissionMode = "acceptEdits", sandbox = false, addDir = null } = {}) {
+export function beatArgs({ prompt, permissionMode = "acceptEdits", sandbox = false, addDir = null, model = null, effort = null } = {}) {
   const argv = ["--print", prompt, "--mode", mapMode(permissionMode)];
+  if (model) argv.push("--model", model);
+  if (effort) argv.push("--effort", effort);
   if (permissionMode !== "plan") argv.push("--dangerously-skip-permissions");
   if (addDir) argv.push("--add-dir", addDir);
   if (sandbox) argv.push("--sandbox");
@@ -67,11 +72,11 @@ export async function isAvailable() {
  * The prompt BODY is passed (agy has no workflow-file discovery), mirroring the
  * codex adapter. `sandbox: true` adds agy's `--sandbox` (terminal restrictions).
  */
-export async function runBeat({ promptPath, cwd = process.cwd(), permissionMode = "acceptEdits", sandbox = false, env = null }) {
+export async function runBeat({ promptPath, cwd = process.cwd(), permissionMode = "acceptEdits", sandbox = false, model = null, effort = null, env = null }) {
   const prompt = await readFile(promptPath, "utf8");
   return await new Promise((resolve, reject) => {
     // addDir: cwd anchors agy's workspace to the loop's worktree (see beatArgs).
-    const child = spawn(CLI, beatArgs({ prompt, permissionMode, sandbox, addDir: cwd }), {
+    const child = spawn(CLI, beatArgs({ prompt, permissionMode, sandbox, addDir: cwd, model, effort }), {
       cwd,
       env: env ?? process.env,
       stdio: ["ignore", "pipe", "pipe"],

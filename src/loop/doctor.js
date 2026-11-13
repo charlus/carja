@@ -12,12 +12,6 @@
 
 const ICON = { pass: "✔", warn: "⚠", fail: "✖" };
 
-/** Claude model families ranked by strength; null for a default or a family not ranked here. */
-const TIERS = [["haiku", 1], ["sonnet", 2], ["opus", 3]];
-export function modelTier(model) {
-  const m = String(model ?? "").toLowerCase();
-  return TIERS.find(([family]) => m.includes(family))?.[1] ?? null;
-}
 
 function check(id, level, title, detail = "", fix = "") {
   return { id, level, title, detail, fix };
@@ -116,10 +110,15 @@ export function diagnose(f) {
 
   // F4 (Harness Engineering 101 harvest): the loop acts on the Checker's approval
   // without a second look, so the Checker must not be weaker than the Maker.
-  const makerTier = modelTier(f.models?.maker);
-  const checkerTier = modelTier(f.models?.checker);
-  if (makerTier !== null && checkerTier !== null && checkerTier < makerTier) {
-    out.push(check("models", "warn", `the Checker runs on ${f.models.checker}, a weaker model than the Maker's ${f.models.maker}`, "The loop opens an MR on the Checker's approval alone. A weaker reviewer passes mistakes the Maker made.", "Use a profile: `carja loop profile quality` or `balanced` both review on Opus. Or give `loop.models.checker` the Maker's model or a stronger one."));
+  // D3 (Model-Roles.md): ranked only with the project's own list, never a built-in one.
+  const maker = f.models?.maker;
+  const checker = f.models?.checker;
+  if (maker && checker && maker !== checker) {
+    const rank = f.modelRank ?? [];
+    const [mi, ci] = [rank.indexOf(maker), rank.indexOf(checker)];
+    const fix = `Rank your models in carja.config.json, strongest first: models.rank, for example ["${checker}", "${maker}"] if ${checker} is the stronger one. \`carja models\` shows each role.`;
+    if (mi < 0 || ci < 0) out.push(check("models", "warn", `cannot tell whether the Checker's ${checker} is as strong as the Maker's ${maker}`, "The loop opens an MR on the Checker's approval alone. A weaker reviewer passes mistakes the Maker made.", fix));
+    else if (ci > mi) out.push(check("models", "warn", `the Checker runs on ${checker}, a weaker model than the Maker's ${maker} (models.rank)`, "The loop opens an MR on the Checker's approval alone. A weaker reviewer passes mistakes the Maker made.", "Give models.review the Maker's model or one ranked above it."));
   }
 
   if (f.dotenv?.present && !f.dotenv.copiedBySetup) {

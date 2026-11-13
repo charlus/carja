@@ -12,6 +12,7 @@
 //   isAvailable(): Promise<boolean>                       // is the CLI on PATH?
 //   runBeat({ promptPath, cwd, permissionMode }): Promise<{ exitCode, stdout, stderr?, tokens? }>
 //   runChecker(opts): Promise<...>                        // separate process (Phase 3)
+//   takesModel: boolean                                   // D5: runBeat honours { model, effort }
 
 import * as claude from "./claude.js";
 import * as antigravity from "./antigravity.js";
