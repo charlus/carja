@@ -130,6 +130,10 @@ export const USAGE_LIMIT_PATTERNS = Object.freeze([
   /you've hit your (?:session|usage) limit/i,
   /\bhit your (?:session|usage) limit\b/i,
   /\busage limit reached\b/i,
+  // Claude Code 2026-11: "You've hit your 5-hour limit", "... your weekly limit".
+  /\bhit your (?:\d+-hour|weekly) limit\b/i,
+  // The result event's machine field, when the stream-json line is in the output.
+  /"api_error"\s*:\s*"usage_limit_reached"/,
 ]);
 
 /**

@@ -163,7 +163,7 @@ function session(dir, arm, step) {
       clearTimeout(timer); log.end();
       const result = last.split("\n").reverse().map((l) => { try { return JSON.parse(l); } catch { return null; } }).find((o) => o?.type === "result") || {};
       const verdict = classifyBeatResult({ stdout: `${last}\n${result.result ?? ""}`, stderr: "", exitCode: code, apiErrorStatus: result.api_error_status });
-      const outage = !capped && (result.type !== "result" || (result.is_error && /overloaded|api error|\b5\d\d\b|rate.?limit/i.test(String(result.result ?? ""))));
+      const outage = !capped && (result.type !== "result" || result.api_error_status === 429 || (result.is_error && /overloaded|api error|\b5\d\d\b|rate.?limit/i.test(String(result.result ?? ""))));
       resolve({ code, capped, result, wallMs: Date.now() - t0, infra: verdict.dead ? verdict.kind : outage ? "api_outage" : null, note: `${result.result ?? ""}\n${last.slice(-2000)}` });
     });
   });

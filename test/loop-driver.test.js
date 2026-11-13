@@ -318,6 +318,11 @@ test("classifyBeatResult flags a usage-limit banner and extracts the reset hint"
   assert.equal(dead.resetHint, "1:20am");
   // The banner may arrive on stderr instead of stdout.
   assert.equal(classifyBeatResult({ exitCode: 1, stderr: "hit your usage limit" }).dead, true);
+  // Claude Code 2026-11 wording, seen live on the release gate: 4 dead sessions graded as real work.
+  const hour = classifyBeatResult({ exitCode: 1, stdout: "You've hit your 5-hour limit · resets 2:40pm (Europe/Brussels)" });
+  assert.deepEqual([hour.dead, hour.kind, hour.resetHint], [true, "usage_limit", "2:40pm"]);
+  assert.equal(classifyBeatResult({ exitCode: 1, stdout: "You've hit your weekly limit" }).dead, true);
+  assert.equal(classifyBeatResult({ exitCode: 1, stdout: '{"is_error":true,"api_error":"usage_limit_reached"}' }).dead, true);
   // Ordinary beat output is not a dead beat.
   assert.equal(classifyBeatResult({ exitCode: 0, stdout: "created src/foo.ts and committed" }).dead, false);
   assert.equal(classifyBeatResult(null).dead, false);
