@@ -197,12 +197,23 @@ The model and effort of each role (plan, build, review, bookkeeping, escalate), 
 ```
 carja models [dir]
 carja models use <preset> [dir]
+carja models set <role> <model|default> [--effort <level>] [dir]
+carja models rank <strongest> <next> … [--dir <dir>]
+carja models save <preset> [dir]
 ```
+
+| Option | What it does |
+|---|---|
+| `--effort <level>` | With set: the role's reasoning effort, as the engine names it (for example high) |
+| `--dir <dir>` | With rank: the project folder |
 
 Reads: `models`, `models.preset`, `models.presets`, `models.rank`.
 
 - `carja models`: each role's model, where it comes from, and the /model command for an interactive step
 - `carja models use balanced`: switch preset; your own presets live in models.presets
+- `carja models set plan claude-fable-5-2 --effort high`: plan on Fable; `default` instead of a model unsets the role
+- `carja models rank claude-fable-5-2 claude-opus-5-5`: your models, strongest first, for the doctor's reviewer check
+- `carja models save frontier`: keep the roles you set as a preset of your own, and use it
 
 #### `carja work`
 

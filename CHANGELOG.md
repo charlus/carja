@@ -17,7 +17,7 @@ Model names, strengths and prices were hardcoded in four places and went stale w
 ### Added
 - **The `models` block in `carja.config.json` (D1).** Roles `plan` (Spec-It, Technical Vision, Carve; the loop's spec and design beats), `build`, `review`, `bookkeeping` and `escalate`, each a model id or `{ "model": …, "effort": … }`. Read by the interactive workflows and by the loop. A role left unset runs on the engine's default.
 - **Presets (D2).** `models.preset` picks one; `models.presets` holds your own. `quality` and `balanced` are built in, on the engine's aliases.
-- **`carja models`** shows each role, its effort, where it comes from, the rank and the `/model` command for an interactive step. `carja models use <preset>` switches preset.
+- **`carja models`** shows each role, its effort, where it comes from, the rank and the `/model` command for an interactive step. `carja models use <preset>` switches preset. `carja models set <role> <model|default> [--effort <level>]`, `carja models rank <strongest> …` and `carja models save <preset>` write the block, so the owner never edits JSON.
 - **Effort per role, on every engine (D5).** The loop passes `--model` and `--effort` to `claude` and `agy`, and `-m` and `model_reasoning_effort` to `codex`. Before, only Claude got a model and no engine got an effort. Not live-proven on `codex` or `agy`.
 
 ### Changed

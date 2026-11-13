@@ -21,7 +21,7 @@ The codex adapter ignored the model, no engine received an effort, and interacti
 
 **D3. The project ranks its own models.** `models.rank`, strongest first; a preset may carry one. The doctor warns when the reviewer ranks below the builder, and, with two different models and no rank, says it cannot tell and how to fix it.
 
-**D4. Interactive use through files.** The main session runs one model at a time. Spec-It's last line names `/model <build model>` before `/build`; `carja models` prints the `/model` command for each step. The reviewer runs on the `review` model. The `model-routing` skill keeps the roles and the principles and sends the reader to the provider's model list.
+**D4. Interactive use through files.** The main session runs one model at a time. Spec-It's last line names `/model <build model>` before `/build`; `carja models` prints the `/model` command for each step. `carja models set`, `rank`, `save` and `use` write the block: the owner never edits JSON. The reviewer runs on the `review` model. The `model-routing` skill keeps the roles and the principles and sends the reader to the provider's model list.
 
 **D5. Every engine takes the model and the effort.** `claude`: `--model`, `--effort`. `agy`: `--model`, `--effort`. `codex`: `-m`, `-c model_reasoning_effort="…"`. Each adapter declares `takesModel`; an engine without it gets a warning, never a silent default.
 

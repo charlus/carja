@@ -163,3 +163,33 @@ test("`carja models` shows each role, and `carja models use` switches preset wit
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("`carja models set` and `carja models rank` write the block, so the owner never edits JSON", () => {
+  const REPO = new URL("..", import.meta.url).pathname;
+  const root = mkdtempSync(join(tmpdir(), "models-set-"));
+  try {
+    execFileSync("node", [join(REPO, "bin/carja.js"), "init", root, "--all", "--no-detect"], { stdio: "pipe" });
+    const run = (...a) => execFileSync("node", [join(REPO, "bin/carja.js"), "models", ...a, root], { stdio: ["ignore", "pipe", "pipe"] }).toString();
+    run("set", "plan", "claude-fable-5-2", "--effort", "high");
+    run("set", "build", "claude-opus-5-5");
+    const out = run("rank", "claude-fable-5-2", "claude-opus-5-5");
+    const m = JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).models;
+    assert.deepEqual(m.plan, { model: "claude-fable-5-2", effort: "high" });
+    assert.equal(m.build, "claude-opus-5-5");
+    assert.deepEqual(m.rank, ["claude-fable-5-2", "claude-opus-5-5"]);
+    assert.match(out, /Rank: +claude-fable-5-2 > claude-opus-5-5/);
+    run("set", "build", "default");
+    assert.equal(JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).models.build, undefined, "`default` unsets a role");
+    run("set", "build", "claude-opus-5-5");
+    run("save", "frontier");
+    const saved = JSON.parse(readFileSync(join(root, "carja.config.json"), "utf8")).models;
+    assert.deepEqual(saved.presets.frontier, { plan: { model: "claude-fable-5-2", effort: "high" }, build: "claude-opus-5-5", rank: ["claude-fable-5-2", "claude-opus-5-5"] });
+    assert.equal(saved.preset, "frontier", "save also puts the preset in use");
+    assert.equal(saved.plan, undefined, "the roles move into the preset");
+    assert.match(run(), /plan +claude-fable-5-2 +high +preset frontier/);
+    assert.throws(() => run("set", "planner", "x"), /unknown role/);
+    assert.throws(() => run("set", "plan", "--x"), /not a model id/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
