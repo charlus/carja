@@ -9,7 +9,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { ROLES, MODEL_RE, parseModels } from "../models.js";
+import { ROLES, MODEL_RE, BUILTIN_PRESETS, parseModels } from "../models.js";
 import { configPath as configPathOf } from "../names.js";
 import { exists } from "./loop.js";
 
@@ -82,8 +82,15 @@ export async function savePreset(root, name) {
 export function renderModels(raw) {
   const m = parseModels(raw);
   const legacy = raw?.loop?.profile || (raw?.loop?.models && Object.keys(raw.loop.models).length);
+  // What the loop runs from the 7.x settings, in the loop's order (src/models.js
+  // loopRoleModels): loop.models beats a preset, loop.profile comes last.
+  const KIND = { plan: "spec", build: "maker", review: "checker", bookkeeping: "ship", escalate: "maker_escalation" };
+  const legacyModels = raw?.loop?.models && typeof raw.loop.models === "object" ? raw.loop.models : {};
+  const legacyProfile = BUILTIN_PRESETS[raw?.loop?.profile] ?? null;
   const rows = ROLES.map((r) => {
-    const e = m.roles[r];
+    let e = m.roles[r];
+    if ((!e || e.source.startsWith("preset")) && typeof legacyModels[KIND[r]] === "string") e = { model: legacyModels[KIND[r]], effort: null, source: "loop.models (7.x, loop only)" };
+    else if (!e && legacyProfile?.[r]) e = { model: legacyProfile[r], effort: null, source: `loop.profile ${raw.loop.profile} (7.x, loop only)` };
     return [r, e?.model ?? "engine default", e?.effort ?? (e ? "default" : ""), e?.source ?? "", WHAT[r]];
   });
   const w = [0, 1, 2, 3].map((i) => Math.max(...rows.map((row) => row[i].length)));

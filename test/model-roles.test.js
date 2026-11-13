@@ -193,3 +193,13 @@ test("`carja models set` and `carja models rank` write the block, so the owner n
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("`carja models` shows what the loop runs from the 7.x settings, not \"engine default\"", async () => {
+  const { renderModels } = await import("../src/commands/models.js");
+  const out = renderModels({ loop: { models: { maker: "sonnet", checker: "opus" } } });
+  assert.match(out, /build +sonnet +default +loop\.models \(7\.x, loop only\)/);
+  assert.match(out, /review +opus +default +loop\.models \(7\.x, loop only\)/);
+  assert.match(out, /plan +engine default/);
+  assert.match(renderModels({ loop: { profile: "balanced" } }), /build +sonnet +default +loop\.profile balanced \(7\.x, loop only\)/);
+  assert.doesNotMatch(out, /\/model sonnet/, "a loop-only setting gives no interactive hint");
+});

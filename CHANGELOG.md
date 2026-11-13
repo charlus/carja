@@ -8,6 +8,15 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.4.1] — 2026-11-13 — `carja models` shows the 7.x loop settings
+
+Compatibility: upgrade only
+
+### Fixed
+- **`carja models` showed "engine default" for a role the loop runs from `loop.models` or `loop.profile`.** It now shows that model, marked `loop.models (7.x, loop only)` or `loop.profile <name> (7.x, loop only)`, in the loop's own order. Display only: the loop already used those models. Found while upgrading two projects that set `loop.models`.
+
+---
+
 ## [7.4.0] — 2026-11-13 — Carja names roles, the project names models
 
 Compatibility: upgrade only
