@@ -17,6 +17,7 @@
   "scripts": {
     "test": "node scripts/with-test-tmp.mjs bash templates/.agents/tests/check-carja.sh",
     "test:unit": "node scripts/with-test-tmp.mjs node --test test/*.test.js",
+    "eval:release": "node test/evals/longitudinal/gate.mjs",
     "test:smoke": "node scripts/with-test-tmp.mjs bash test/smoke-loop.sh",
     "test:hooks": "node scripts/with-test-tmp.mjs bash test/hooks-eval-gate.sh",
     "test:trust": "node scripts/with-test-tmp.mjs bash test/hooks-trust-store.sh",
