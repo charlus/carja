@@ -8,6 +8,15 @@ All notable changes to the Conductor Framework will be documented in this file.
 
 ---
 
+## [7.4.2] — 2026-11-13 — Release gate on the longitudinal benchmark
+
+Compatibility: upgrade only
+
+### Added
+- **A release gate for this repository.** A change to `templates/` ships only when the longitudinal benchmark (Roombook, 8 dependent features, 5 chains, carja arm) keeps a mean final share of at least 98%, every chain at least 95%, and a cost per chain no more than 1.25× the last release that passed. `npm run eval:release` runs it (about $20–25, 1–2 hours) and records the verdict in `test/evals/longitudinal/releases.jsonl`. `test/release-gate.test.js` fails while the `templates/` tree has no passing or waived row. The benchmark material moved into `test/evals/longitudinal/fixture/`. 7.1.0 and 7.3.0 recorded from their stored runs. Nothing changes in installed projects. Design: `docs/roadmap/Release-Gate.md`.
+
+---
+
 ## [7.4.1] — 2026-11-13 — `carja models` shows the 7.x loop settings
 
 Compatibility: upgrade only

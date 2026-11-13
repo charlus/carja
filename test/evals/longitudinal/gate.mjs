@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Release gate (docs/roadmap/Outcome-Eval.md, "Release gate"). Runs the
+// Release gate (docs/roadmap/Release-Gate.md). Runs the
 // longitudinal benchmark on the carja arm of a committed Carja version, judges
 // it against THRESHOLDS (gate-lib.mjs) and appends the verdict to
 // releases.jsonl. test/release-gate.test.js fails while the templates/ on disk
 // have no passing or waived row.
 //
-//   npm run eval:release                      # run on HEAD, about $25 and 1-2 h
+//   npm run eval:release                      # run on HEAD, about $20-25 and 1-2 h
 //   npm run eval:release -- run --ref <sha> [--work <dir>] [--parallel 5]
 //   npm run eval:release -- record --work <dir> [--ref <sha>]   # judge a finished run again
 //   npm run eval:release -- status            # is the current templates/ covered?

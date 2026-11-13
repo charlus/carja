@@ -1,6 +1,6 @@
 // Release gate: every templates/ tree that ships has a passing (or waived)
 // longitudinal benchmark run in test/evals/longitudinal/releases.jsonl.
-// Run one with `npm run eval:release` (docs/roadmap/Outcome-Eval.md).
+// Run one with `npm run eval:release` (docs/roadmap/Release-Gate.md).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";

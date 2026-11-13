@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Longitudinal eval (docs/roadmap/Outcome-Eval.md, "Longitudinal benchmark
+// Longitudinal eval (docs/roadmap/Release-Gate.md; pre-registered in the outcome eval, "Longitudinal benchmark
 // pre-registration"). One product grown from an empty repository over a fixed
 // sequence of feature requests, one fresh headless session per request, the
 // repository the only thing carried from one session to the next. After each

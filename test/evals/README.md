@@ -191,3 +191,13 @@ that control was not master, so the arms are now branch against master. The
 measure does not separate the rule from the hint. User-level settings are
 excluded (`--setting-sources project,local`); not verified that this excludes
 the user's own CLAUDE.md.
+
+## release gate (longitudinal)
+
+Not behind `CARJA_EVALS=1`: `test/release-gate.test.js` in `test:unit` reads the
+recorded verdicts and spends nothing. The run itself is `npm run eval:release`:
+5 chains of 8 dependent features on the carja arm, judged against the last
+passing release. Thresholds, limits and the waiver: `docs/roadmap/Release-Gate.md`.
+Its sensitivity is shown on real data: one 7.1.0 bare chain missed a convention
+written only in the brief and scored 90.4%, which the gate fails (minimum 95%).
+
