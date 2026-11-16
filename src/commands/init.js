@@ -207,7 +207,7 @@ export async function initCommand(args, { cwd, stdout, stderr }) {
       // from the project's files, or warn in words that name the fix.
       await ensureVerifyCommand(targetDir, stdout);
 
-      stdout.write(`\n🎼 Carja Framework v${packageVersion()} initialized!\n`);
+      stdout.write(`\n🧵 Carja Framework v${packageVersion()} initialized!\n`);
 
       // Deterministic enforcement (ADR-0001 D1): wire git hooks when in a repo.
       if (await exists(join(targetDir, ".git"))) {

@@ -1,4 +1,4 @@
-# 🎼 Carja Framework
+# 🧵 Carja Framework
 
 **Carja** — a framework for **disciplined, verifiable, autonomous AI software engineering**.
 

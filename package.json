@@ -1,7 +1,7 @@
 {
   "name": "carja",
-  "version": "7.4.3",
-  "description": "Carja — an AI Software Engineering framework for the full development lifecycle. Workflows, skills, and personas for AI-assisted product engineering.",
+  "version": "7.4.4",
+  "description": "Carja (jacquard in verlan) — run AI coding agents inside an engineering discipline enforced by code: tests before code, evals for LLM output, PR-gated unattended loop across Claude Code, agy and codex.",
   "type": "module",
   "bin": {
     "carja": "bin/carja.js",

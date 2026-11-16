@@ -1,10 +1,19 @@
 # Changelog
 
-All notable changes to the Conductor Framework will be documented in this file.
+All notable changes to Carja (named Conductor until 6.x) will be documented in this file.
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [7.4.4] — 2026-11-16 — Name and description match Carja
+
+Compatibility: upgrade only
+
+### Changed
+- **The music emoji is gone.** It came from the Conductor name. The README title and the `init` and `upgrade` messages now show a thread (🧵), after the Jacquard loom that *Carja* refers to. The package description now says what Carja does instead of the old Conductor line.
 
 ---
 
