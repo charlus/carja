@@ -381,7 +381,7 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
     const shape = stamp ? `stamped ${stamp.frameworkVersion}` : detectShape(targetDir);
     const doesStructuralMigration = hasLegacyAgent || hasLegacyConductor || hasRootFolders;
 
-    stdout.write(`🎼 Carja Framework — Upgrade${dryRun ? " (dry run)" : ""}\n\n`);
+    stdout.write(`🧵 Carja Framework — Upgrade${dryRun ? " (dry run)" : ""}\n\n`);
     stdout.write(`  Detected: ${shape}  →  target ${version}\n`);
     if (stamp && stamp.frameworkVersion === version && !doesStructuralMigration) {
       stdout.write(`  Already on ${version}; refreshing derived artifacts only.\n`);
@@ -591,7 +591,7 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
     // still off. Derive it if the files allow, otherwise say so — never silently.
     await ensureVerifyCommand(targetDir, stdout);
 
-    stdout.write("\n🎼 Upgrade complete!\n");
+    stdout.write("\n🧵 Upgrade complete!\n");
     const structural = renamedUncommitted
       ? renamedUncommitted
       : doesStructuralMigration
