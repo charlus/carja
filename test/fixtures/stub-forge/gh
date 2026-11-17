@@ -3,7 +3,8 @@
 // run test (test/loop-stacked-run.test.js). PRs live in $STUB_FORGE_DB, keyed by
 // the repository (its origin URL), so the outer and the code repository each
 // have their own. A test closes a PR by editing that file. Supports only what
-// the loop calls: auth status, pr create, pr list, pr close.
+// the loop calls: auth status, pr create, pr list, pr close, and what
+// `carja merge-stack` calls: pr view, pr merge, pr edit, a branch delete.
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
@@ -54,6 +55,50 @@ if (argv[0] === "pr" && argv[1] === "close") {
   const p = d.prs.find((x) => x.url === argv[2] || String(x.n) === argv[2]);
   if (p) p.state = "CLOSED";
   save(d);
+  process.exit(0);
+}
+// `carja merge-stack` (test/merge-stack-cli.test.js): view, merge, retarget, delete a branch.
+// A PR's checks come from its `checks` field ("SUCCESS" when absent).
+const byUrl = (d) => d.prs.find((x) => x.url === argv[2] || String(x.n) === argv[2]);
+if (argv[0] === "pr" && argv[1] === "view") {
+  const p = byUrl(load());
+  if (!p) process.exit(1);
+  const conclusion = p.checks ?? "SUCCESS";
+  console.log(JSON.stringify({
+    state: p.state,
+    baseRefName: p.base,
+    headRefName: p.head,
+    headRefOid: headOf(p.head),
+    mergeable: p.conflict ? "CONFLICTING" : "MERGEABLE",
+    statusCheckRollup: [{ status: conclusion === "PENDING" ? "IN_PROGRESS" : "COMPLETED", conclusion: conclusion === "PENDING" ? "" : conclusion }],
+  }));
+  process.exit(0);
+}
+if (argv[0] === "pr" && argv[1] === "merge") {
+  const d = load();
+  const p = byUrl(d);
+  if (!p || p.state !== "OPEN" || !argv.includes("--merge") || argv.includes("--squash") || argv.includes("--delete-branch")) process.exit(1);
+  if (flag("--match-head-commit") !== headOf(p.head)) {
+    console.error("head branch was modified");
+    process.exit(1);
+  }
+  p.state = "MERGED";
+  p.merged = { method: "merge", sha: flag("--match-head-commit") };
+  save(d);
+  process.exit(0);
+}
+if (argv[0] === "pr" && argv[1] === "edit") {
+  const d = load();
+  const p = byUrl(d);
+  if (!p) process.exit(1);
+  p.base = flag("--base");
+  save(d);
+  process.exit(0);
+}
+if (argv[0] === "api" && argv[1] === "-X" && argv[2] === "DELETE") {
+  const m = argv[3].match(/^repos\/\{owner\}\/\{repo\}\/git\/refs\/heads\/(.+)$/);
+  if (!m) process.exit(1);
+  execFileSync("git", ["--git-dir", repo, "update-ref", "-d", `refs/heads/${m[1]}`]);
   process.exit(0);
 }
 console.error(`stub gh: unsupported ${argv.join(" ")}`);

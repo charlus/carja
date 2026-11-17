@@ -52,7 +52,7 @@ test("what the loop writes for the owner leaves `git status` clean, and the file
 
     const status = cli(root, "status");
     assert.match(status.stdout, new RegExp(`2 loop messages in ${MESSAGES_REL.replace(/\./g, "\\.")}\\. Newest: Questions: task slice:km/09`));
-    assert.match(status.stdout, /Loop report: carja\/1-workbench\/loop-report-km\.md\. Merge with \/merge-stack <project>\./);
+    assert.match(status.stdout, /Loop report: carja\/1-workbench\/loop-report-km\.md\. Merge with `carja merge-stack <project>`, or \/merge-stack <project> in your agent\./);
     const inbox = cli(root, "inbox", "list");
     assert.match(inbox.stdout, /2 loop messages — carja\/1-workbench\/loop-messages\.md/);
     assert.match(inbox.stdout, /· Escalation — awaiting_review: task slice:km\/08 would conflict on merge\./);

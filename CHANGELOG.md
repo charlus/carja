@@ -8,6 +8,18 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.5.0] — 2026-11-17 — `carja merge-stack` merges a loop run's MRs
+
+Compatibility: upgrade only
+
+### Added
+- **`carja merge-stack <project>`.** Merging a stacked run took one owner turn per item, even for items with nothing to do. The command now merges the stack in order through the forge: bottom first, the code MR then the state MR, no squash, the source branch deleted, only the head it checked, and only on a green pipeline (it waits for a running one, `--wait <min>`, 20 by default). It moves an MR that still targets the item below to the default branch. It stops before an item with owner actions, documents merged from both sides or a high-risk decision; `--confirm <n>` merges that item once its steps before the merge are done, then stops for the steps after it. It also stops at a red pipeline, a conflict or a closed MR. `--dry-run` lists each item as ready, blocked or needs you. The loop never calls it: only the owner, or their agent when asked. GitHub through `gh`, GitLab through `glab api`. Proven with a fake forge (`test/merge-stack.test.js`) and through the real CLI with the stub `gh` (`test/merge-stack-cli.test.js`); not yet run against GitLab.
+
+### Changed
+- **`/merge-stack` runs the command.** The workflow checks the stack once with `--dry-run`, asks one question, runs the merges, and gives each item's actions as one list before and one after the merge. One line per item, each rule given once. The end of `carja loop <project>`, the loop report and `carja status` name the command.
+
+---
+
 ## [7.4.4] — 2026-11-16 — Name and description match Carja
 
 Compatibility: upgrade only

@@ -145,7 +145,7 @@ test("two projects from the same folder at once: each builds its own, nothing la
     for (const r of [a, b]) {
       assert.match(r.stdout, /finished: completed/);
       assert.doesNotMatch(r.stdout, /removed the merged/, "neither run removed the other's worktree");
-      assert.match(r.stdout, /Next: merge the 2 item\(s\) in the order of carja\/1-workbench\/loop-report-(notes|board)\.md/);
+      assert.match(r.stdout, /Next: `carja merge-stack (notes|board)` merges the 2 item\(s\) in order and stops where you must act \(`--dry-run` lists them first\)\. The list is in carja\/1-workbench\/loop-report-(notes|board)\.md/);
     }
     assert.equal(G(f.root, "rev-parse", "master"), before, "nothing was committed on the owner's branch");
     assert.equal(G(f.root, "status", "--porcelain", "--", "carja/1-workbench/loop-state.json"), "", "the owner's loop-state.json is untouched");

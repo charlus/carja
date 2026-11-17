@@ -162,6 +162,21 @@ export const COMMANDS = Object.freeze([
     examples: [["carja watch --all", "every product's run, beat, last news and waiting questions"], ["carja watch", "this product only, every project run going on in it"]],
   },
   {
+    name: "merge-stack", group: "loop", summary: "Merge the MRs of a `carja loop <project>` run in order, through the forge, and stop where you must act",
+    usage: "carja merge-stack [project] [dir] [--dry-run] [--confirm <n>] [--wait <min>]",
+    flags: [
+      ["[project]", "The project whose stack to merge. Optional when only one project has MRs waiting"],
+      ["--dry-run", "Check every MR on the forge and list each item: ready, blocked, or needs you. Merge nothing"],
+      ["--confirm <n>", "You did the steps of item n that come before its merge: merge it, then stop for its steps after the merge"],
+      ["--wait <min>", "How long to wait for a running pipeline before it stops (default 20)"],
+    ],
+    examples: [
+      ["carja merge-stack notes --dry-run", "what can be merged now, and what needs you"],
+      ["carja merge-stack notes", "merge bottom first: code MR, then state MR, no squash, source branch deleted. Stops before an item with owner actions, at a red pipeline, a conflict or a closed MR"],
+      ["carja merge-stack notes --confirm 2", "after the backup that item 2 asked for"],
+    ],
+  },
+  {
     name: "verify", group: "gates", summary: "Show or set the command `git push` must pass",
     usage: "carja verify [options]",
     flags: [
