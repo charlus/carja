@@ -27,15 +27,13 @@ Live State Law: the command reads the forge each time it runs. Do not repeat its
 
 1. Read `carja/1-workbench/loop-messages.md` for anything the run said after the report. A question round waiting in `carja/1-workbench/questions/` comes first: the owner answers it before anything is merged.
 2. Run `carja merge-stack <project> --dry-run`. It lists each item: ready, blocked, or needs you.
-3. Show the owner its list as it is. Then one question: "Merge up to item <n>?" (the first item that needs them, or all of them).
-
-The owner's "merge the stack" or "go" before this step is the same answer: run the dry run, show it, and go on to step 2 without asking again, unless the dry run shows a blocked item.
+3. Nothing blocked: go to step 2 without asking. The owner's trigger is the go-ahead. Blocked: show that line and stop.
 
 ## 2. Merge
 
 1. Run `carja merge-stack <project>`. It merges every item it can and stops at the first item that needs the owner.
-2. **It stopped before an item with owner actions.** Split its steps into "before the merge" (a backup, reading changed deployment files, a decision to overrule) and "after the merge" (run the migration, set an environment variable, install a dependency, deploy). Give the "before" steps as one numbered list with exact commands. When the owner says done, run `carja merge-stack <project> --confirm <n>`.
-3. **It stopped after a confirmed item.** Give the "after" steps as one numbered list. When the owner says done, run `carja merge-stack <project>` again.
+2. **It stopped before an item with owner actions.** Split its steps into "before the merge" (a backup, reading changed deployment files, a decision to overrule) and "after the merge" (run the migration, set an environment variable, install a dependency, deploy). Do yourself each step that needs only a file, a command or a commit in this project. Give the owner one numbered list of the rest (a production backup, a deploy, a test in the app), with exact commands. When they say done, run `carja merge-stack <project> --confirm <n>`.
+3. **It stopped after a confirmed item.** Same rule for the "after" steps: do yours, list theirs. When the owner says done, run `carja merge-stack <project>` again.
 4. **It stopped on a red pipeline, a conflict or a closed MR.** Give its line and its `Next:` line. A conflict in Carja documents only: the owner can resolve it on the forge, keeping both sides. A conflict in code: the owner decides.
 
 Items with no owner action are merged together. Tell the owner they can deploy once at the end, unless an item's steps say otherwise.

@@ -15,8 +15,14 @@ Compatibility: upgrade only
 ### Added
 - **`carja merge-stack <project>`.** Merging a stacked run took one owner turn per item, even for items with nothing to do. The command now merges the stack in order through the forge: bottom first, the code MR then the state MR, no squash, the source branch deleted, only the head it checked, and only on a green pipeline (it waits for a running one, `--wait <min>`, 20 by default). It moves an MR that still targets the item below to the default branch. It stops before an item with owner actions, documents merged from both sides or a high-risk decision; `--confirm <n>` merges that item once its steps before the merge are done, then stops for the steps after it. It also stops at a red pipeline, a conflict or a closed MR. `--dry-run` lists each item as ready, blocked or needs you. The loop never calls it: only the owner, or their agent when asked. GitHub through `gh`, GitLab through `glab api`. Proven with a fake forge (`test/merge-stack.test.js`) and through the real CLI with the stub `gh` (`test/merge-stack-cli.test.js`); not yet run against GitLab.
 
+- **Claude Code may edit `carja/` and run `carja` without asking.** Auto mode blocked the agent from writing the owner's answer in a question file, and the agent asked the owner to edit the file. `init` and `upgrade` now add three allow rules to the project's `.claude/settings.json`: `Edit(/carja/**)`, `Write(/carja/**)` and `Bash(carja *)`, next to the owner's own rules, never over a rule the owner denies or asks for. An allow rule is decided before auto mode's check, once the owner trusts the folder. The trade, chosen by the owner: an agent can now start `carja loop` (model budget) and `carja merge-stack` (merges) without that check. Not verified in a live Claude Code session.
+
+### Fixed
+- **An answer under `Answer:` was ignored.** The owner wrote the answer on the next line; the loop read only the `Answer:` line and asked again, three times. Both readers (question rounds and the dependency gate) now take the next non-empty line when `Answer:` is empty.
+- **The agent handed the answer back to the owner.** The routing table now says: when the owner answers a loop question in chat, the agent writes the answer in the question file and commits the `carja/` edits it relies on.
+
 ### Changed
-- **`/merge-stack` runs the command.** The workflow checks the stack once with `--dry-run`, asks one question, runs the merges, and gives each item's actions as one list before and one after the merge. One line per item, each rule given once. The end of `carja loop <project>`, the loop report and `carja status` name the command.
+- **`/merge-stack` runs the command, without asking first.** The workflow checks the stack once with `--dry-run` and merges unless an item is blocked. Around an item with owner actions, the agent does every step it can (a file, a command, a commit) and lists only the rest: a production backup, a deploy, a test in the app. One line per item, each rule given once. The end of `carja loop <project>`, the loop report and `carja status` name the command.
 
 ---
 
