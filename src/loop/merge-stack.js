@@ -90,7 +90,8 @@ export async function walkStack({ project, entries, forges, defaults, confirm = 
     if (needs.length && !confirmed) {
       const block = [`${label}: needs you before the merge:`, ...needs.map((a) => `   - ${a}`)].join("\n");
       if (!dryRun) return stop(2, block, `Next: do the steps above that come before the merge, then run \`${cmd} --confirm ${n}\`.`);
-      lines.push(block);
+      // The dry run details the first item the walk will stop at; the others come one at a time.
+      lines.push(next ? `${label}: needs you before the merge (${needs.length} step${sp(needs.length)}).` : block);
       code = Math.max(code, 2);
       next ??= `Next: \`${cmd}\` merges up to item ${n}. Do its steps before the merge, then \`${cmd} --confirm ${n}\`.`;
       continue;

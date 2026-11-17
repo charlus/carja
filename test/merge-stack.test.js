@@ -168,6 +168,20 @@ test("--dry-run merges and retargets nothing, and lists every item", async () =>
   assert.equal(r.code, 2);
 });
 
+test("--dry-run gives the steps of the first item that needs the owner, and only a count for the items above it", async () => {
+  const entries = [entry(1, { ownerActions: ["Back up.", "Run the migration."] }), entry(2, { ownerActions: ["Set FOO.", "Set BAR.", "Run the script."] })];
+  const { io } = setup(entries);
+  const out = (await walkStack({ project: "p", entries, dryRun: true, ...io })).lines.join("\n");
+  assert.match(out, /1\. slice 01: needs you before the merge:\n {3}- Back up\.\n {3}- Run the migration\.\n2\. slice 02: needs you before the merge \(3 steps\)\.$/);
+});
+
+test("the driver's migration hint is not said twice when the Ship beat already names the backup and the migration", async () => {
+  const { ownerActionsOf } = await import("../src/loop/stack.js");
+  const hint = "Back up the database, then run the new migration where the product runs: `backend/migrations/versions/x.py`.";
+  assert.deepEqual(ownerActionsOf({ ownerActions: ["Back up the CMS database before the deploy. The container runs `alembic upgrade head`, which applies migration `x`."], detected: [hint] }).length, 1);
+  assert.deepEqual(ownerActionsOf({ ownerActions: ["Set FOO."], detected: [hint] }), ["Set FOO.", hint]);
+});
+
 test("an item with no code MR (the Carve) merges its state MR only", async () => {
   const entries = [entry(1, { code: false }), entry(2)];
   const { calls, io } = setup(entries);

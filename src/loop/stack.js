@@ -153,11 +153,14 @@ export function stackNote({ below }) {
 
 /**
  * I1: the owner actions of an item, from the Ship beat and from the diff. A
- * driver hint about dependencies the Ship beat already names is not said twice.
+ * driver hint the Ship beat already covers is not said twice: dependencies it
+ * names, and the backup-then-migration hint when it names a backup and a migration.
  */
 export function ownerActionsOf(e) {
   const said = (e.ownerActions ?? []).join(" ").toLowerCase();
+  const namesMigration = /back(ed)? ?up|backup/.test(said) && /migrat|alembic|upgrade head/.test(said);
   const hints = (e.detected ?? []).filter((h) => {
+    if (namesMigration && /^Back up the database, then run the new migration/.test(h)) return false;
     const deps = [...h.matchAll(/([\w.@/:-]+) [\w.+!-]+ \((?:npm|pypi|go|cargo|maven|rubygems|composer|nuget)\)/g)].map((m) => m[1].toLowerCase());
     return !deps.length || !deps.every((d) => said.includes(d));
   });
