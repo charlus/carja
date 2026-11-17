@@ -1,3 +1,4 @@
+import { writeClaudeSettings, SETTINGS_REL } from "../claude-settings.js";
 import { access, cp, mkdir, rename, rm, readFile, writeFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -565,6 +566,8 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
       if (written === 0) stdout.write("  ⏭️  No workflows found; skipped .claude/commands/\n");
       const shims = await generateClaudeSkills(targetDir, { stdout });
       skillPaths = [...shims.writtenNames, ...shims.removedNames].map((n) => `.claude/skills/${n}`);
+      // F7: Carja's allow rules, next to the owner's own.
+      if ((await writeClaudeSettings(targetDir, { stdout })).status === "written") skillPaths.push(SETTINGS_REL);
 
       // ---- Step 8: Enforcement hooks ----
       stdout.write("\nStep 8: Enforcement hooks...\n");

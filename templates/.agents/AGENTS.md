@@ -41,6 +41,7 @@ Classify what the user needs before acting:
 | "How does this framework work?" | `personas/carja-assistant.md` |
 | **"Inbox: X", "Add to inbox: X"** | **`carja inbox add "X"`, else append `X` verbatim to `carja/1-workbench/inbox.md`. One-line confirm, stop.** |
 | **"Scratchpad: X"** | **Append `X` verbatim to `carja/1-workbench/scratchpad.md`. Same rule.** |
+| **The owner answers a loop question ("1", "allow it")** | **Write it after `Answer:` in its file in `carja/1-workbench/questions/` yourself, and commit any `carja/` document edit the answer relies on. Never hand the edit back.** |
 | **"What's on our plate", "status"** | **`carja status`; show its output verbatim. `--live` for MR or deploy status.** |
 | Small fix, bug, quick task (already well-scoped) | Add to `carja/2-backlog/task-backlog.md` |
 | Not sure? | Default to `workflows/genesis.md` — it will help find the right scope |

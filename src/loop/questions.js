@@ -14,7 +14,8 @@
 //   **If wrong:** <what a wrong choice costs>
 //   Answer:
 //
-// The owner writes a number, or "your pick", after `Answer:`. All pure.
+// The owner writes a number, or "your pick", after `Answer:`, or on the line
+// under an empty `Answer:`. All pure.
 
 import { parseRulings } from "./rulings.js";
 
@@ -25,6 +26,25 @@ export function roundKey(id) {
   return String(id ?? "round").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+/**
+ * The answer at `lines[i]`, a line that starts with `Answer:`. When nothing
+ * follows it on that line, the next non-empty line is the answer (owner,
+ * 2026-11-17: an answer written under `Answer:` was ignored and the loop asked
+ * again), with its own `Answer:` taken off, unless it starts another question
+ * or field. null when there is none.
+ */
+export function answerAt(lines, i) {
+  const same = String(lines[i] ?? "").replace(/^Answer:\s*/, "").trim();
+  if (same) return same;
+  for (let j = i + 1; j < lines.length; j++) {
+    const t = lines[j].trim();
+    if (!t) continue;
+    if (/^#|^\*\*/.test(t)) return null;
+    return t.replace(/^Answer:\s*/, "").trim() || null;
+  }
+  return null;
+}
+
 /** Parse a round file. Unknown lines are ignored. */
 export function parseRound(text) {
   const lines = String(text ?? "").split("\n");
@@ -32,7 +52,7 @@ export function parseRound(text) {
   const hm = head.match(/^# Questions:\s*(.+?)\s*(?:\(([^)]*)\))?\s*$/);
   const round = { task: hm?.[1] ?? null, stage: hm?.[2] ?? null, questions: [] };
   let q = null;
-  for (const line of lines) {
+  for (const [i, line] of lines.entries()) {
     const qm = line.match(/^## Q(\d+)\.?\s*(.*)$/);
     if (qm) {
       q = { n: Number(qm[1]), title: qm[2].trim(), options: [], recommendation: null, ifWrong: null, answer: null };
@@ -46,8 +66,7 @@ export function parseRound(text) {
     if (rm) q.recommendation = (rm[1].match(/^\s*(\d+)/)?.[1]) ?? null;
     const wm = line.match(/^\*\*If wrong:\*\*\s*(.+)$/);
     if (wm) q.ifWrong = wm[1].trim();
-    const am = line.match(/^Answer:\s*(.*)$/);
-    if (am) q.answer = am[1].trim() ? am[1].trim() : null;
+    if (/^Answer:/.test(line) && q.answer == null) q.answer = answerAt(lines, i);
   }
   return round;
 }

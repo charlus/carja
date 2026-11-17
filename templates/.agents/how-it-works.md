@@ -182,6 +182,7 @@ task-backlog.md → Do it → ship-log.md
 | "How does this framework work?" | Navigation | → load `carja-assistant` persona |
 | "Inbox: X", "Add to inbox: X" | Capture | → `carja inbox add "X"`, else append verbatim to `carja/1-workbench/inbox.md`, no workflow |
 | "Scratchpad: X" | Capture | → append verbatim to `carja/1-workbench/scratchpad.md`, no workflow |
+| The owner answers a loop question ("1", "allow it") | Answer | → write it after `Answer:` in its file in `carja/1-workbench/questions/` yourself, and commit any `carja/` document edit the answer relies on; never hand the edit back |
 | "What's on our plate", "status" | Status | → `carja status`; show its output verbatim. `--live` for MR or deploy status |
 | Small fix, bug, quick task (already well-scoped) | Task | → add to `carja/2-backlog/task-backlog.md` |
 
