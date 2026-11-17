@@ -195,3 +195,9 @@ test("live: the real deps.dev and OSV answer for a known package and a known-vul
   const ghost = await checkPackage({ ecosystem: "pypi", name: "surely-not-a-real-pkg-zz9", spec: "==1.0.0" }, { now: Date.now(), minAgeDays: 7 });
   assert.match(ghost.reasons.join("; "), /does not exist/);
 });
+
+// F4 (owner, 2026-11-17): the dependency answer on the line under `Answer:` was ignored.
+test("approvalsFromRound reads an answer on the line under an empty `Answer:`", () => {
+  const text = "# Questions: x (build)\n\n## Q1. New dependency: npm dompurify 3.4.17\nWhy.\n1. Allow\n2. Refuse\n**Recommendation:** 1, because.\n**If wrong:** cost.\n\nAnswer:\nAnswer: 1\n\n## Q2. New dependency: npm left 1.0.0\n1. Allow\n2. Refuse\n**Recommendation:** 1\nAnswer:\n2\n";
+  assert.deepEqual(approvalsFromRound(text), { approved: ["npm dompurify 3.4.17"], refused: ["npm left 1.0.0"] });
+});

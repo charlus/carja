@@ -364,7 +364,7 @@
     {
       "name": "merge-stack",
       "file": "merge-stack.md",
-      "description": "Merge Stack (Walk the Owner Through a Loop Run's MRs, in Order)",
+      "description": "Merge Stack (Merge a Loop Run's MRs in Order, Stop Only Where the Owner Must Act)",
       "category": "core",
       "default": true
     },

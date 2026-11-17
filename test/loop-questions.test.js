@@ -230,3 +230,15 @@ test("F20: resuming an interrupted run restarts its wall clock; the beats it spe
   assert.equal(state.budget.started_at, null, "the night the laptop was closed does not count");
   assert.equal(state.iterations.current, 3);
 });
+
+// F4 (owner, 2026-11-17): "I already replied." The answer was on the line under
+// `Answer:`, and the loop asked again.
+test("an answer on the line under an empty `Answer:` counts, with or without its own `Answer:`", () => {
+  const round = (tail) => `# Questions: slice:p/08 (build)\n\n## Q1. New dependency\nWhy.\n1. Allow\n2. Refuse\n**Recommendation:** 1, because.\n**If wrong:** cost.\n\n${tail}\n`;
+  for (const tail of ["Answer:\n1", "Answer:\n\n  1, fine\n", "Answer:\nAnswer: 1", "Answer:\nyour pick"]) {
+    const r = parseRound(round(tail));
+    assert.ok(roundAnswered(r), JSON.stringify(tail));
+  }
+  assert.equal(parseRound(round("Answer: 2\n1")).questions[0].answer, "2", "the same line wins");
+  assert.equal(parseRound(`${round("Answer:")}\n## Q2. Next\n1. a\n2. b\n`).questions[0].answer, null, "the next question is not an answer");
+});

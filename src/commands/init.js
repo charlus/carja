@@ -8,6 +8,7 @@ import { resolveRegistry, fetchRegistryIndex, readLocalSkills } from "../registr
 import { runInteractiveSetup } from "../prompt.js";
 import { selectiveCopy, syncSelections, readSelections } from "../selective-copy.js";
 import { generateClaudeCommands, generateClaudeSkills } from "../claude-commands.js";
+import { writeClaudeSettings } from "../claude-settings.js";
 import { installHooksCommand } from "./install-hooks.js";
 import { ensureUnionMerge } from "../gitattributes.js";
 import { writeVersionStamp, packageVersion } from "../version.js";
@@ -166,6 +167,7 @@ export async function initCommand(args, { cwd, stdout, stderr }) {
     // Claude Code slash-command bridge (ADR-0001 D5): shim per installed workflow.
     await generateClaudeCommands(targetDir, { stdout });
     await generateClaudeSkills(targetDir, { stdout });
+    await writeClaudeSettings(targetDir, { stdout });
 
     // Copy carja/ (project state folders)
     if (!parsed.agentOnly) {

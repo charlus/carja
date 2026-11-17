@@ -1,41 +1,49 @@
 ---
-description: Merge Stack (Walk the Owner Through a Loop Run's MRs, in Order)
+description: Merge Stack (Merge a Loop Run's MRs in Order, Stop Only Where the Owner Must Act)
 ---
 
-# Workflow: Merge Stack — Walk the Owner Through a Loop Run's MRs, in Order
+# Workflow: Merge Stack — Merge a Loop Run's MRs in Order
 
 > **System Instruction:** Upon triggering this workflow, you MUST read the entire content of this file again to load the latest protocols. Do not rely on previous memory.
 
-**Trigger:** "/merge-stack <project>", "Help me merge the loop's MRs", "Guide me through the loop report", or after `carja loop <project>` ends with MRs to merge.
-**Goal:** The owner merges every MR of a stacked run in the right order, and does each manual step (backup, migration, environment variable, install, command) at the right moment, without reading the report alone.
-**Output:** The MRs merged, or the first one the owner stopped at, and nothing done in the owner's place.
+**Trigger:** "/merge-stack <project>", "Merge the stack", "Help me merge the loop's MRs", "Guide me through the loop report", or after `carja loop <project>` ends with MRs to merge.
+**Goal:** Every MR of a stacked run is merged in the right order, with the fewest turns from the owner. The owner acts only where a person must: the steps around an item's merge, a deploy, a production test, a red pipeline or a conflict.
+**Output:** The MRs merged, or the item the walk stopped at and the one thing the owner does next.
 
 ---
 
-You guide; the owner acts. Never merge, push, run a migration or change a production setting yourself: name the step, give the exact command, wait for the owner to say it is done. Live State Law: every state you name (open, merged, its target branch, its pipeline) is checked on the forge in the same turn, never taken from the report.
+`carja merge-stack <project>` does the merges. It checks each MR on the forge, merges bottom first (code MR, then state MR, no squash, source branch deleted, only the head it checked, only on a green pipeline), and stops before an item with owner actions, after an item the owner confirmed, and at the first red pipeline, conflict or closed MR. Never merge in another way: no `glab mr merge`, no `gh pr merge`, no push to the default branch. Run every step you have access to yourself: a query, a migration, a script, a deploy command. A step that changes production (schema, data, a deploy): one line saying what it changes, wait for "go", run it, show the result. Never hand the owner a script to read or SQL to paste.
 
-## 1. Read the report
+Live State Law: the command reads the forge each time it runs. Do not repeat its checks.
 
-1. Read `carja/1-workbench/loop-report-<project>.md`. Git does not track it; it is there after any `carja loop <project>` run. No report: say so and stop. Several projects and none named: list the reports and ask which.
-2. Read `carja/1-workbench/loop-messages.md` for anything the run said after the report (a stop, a question round). A question round waiting in `carja/1-workbench/questions/` comes first: the owner answers it before anything is merged.
-3. Tell the owner in three lines: how many items, the order, and the owner actions in the whole stack (count of migrations, environment variables, dependencies). Ask nothing yet.
+## How you write
 
-## 2. One item at a time, bottom first
+- One line per item. Detail only for an item that stops the walk.
+- Give each rule once per walk (no squash, code MR first). Do not repeat it at each item.
+- Do not say how you ran a check. Say what it found.
+- End each message with the one thing the owner does next, or "Nothing needed from you."
 
-For each item, in the report's order:
+## 1. Read and check
 
-1. **Check it live.** `glab mr view <url>` or `gh pr view <url>` for each of its MRs (the code MR first, then the Carja state MR): its state, its target branch, its pipeline. Already merged: say so and go to the next item. Closed: stop the walk and say what that means (the next `carja loop <project>` rebuilds this item and everything above it).
-2. **The target must be the default branch.** Bottom item: it is. Any other item: its target is the default branch only once the item below is merged and its source branch deleted. A target that still names the item below after that merge: tell the owner to change the target on the forge to the default branch, then check again.
-3. **Before the merge:** the item's "Owner actions" that come before a merge (a backup before a migration, reading changed deployment files, a decision taken for them they want to overrule). Give each with its exact command, one at a time, and wait for "done".
-4. **The merge:** name the MR to merge, with two rules: no squash (the items above are built on its commits) and delete the source branch (so the item above moves to the default branch). Code MR first, then the state MR. Carja documents the report says were "merged from both sides": ask the owner to read them in the MR before merging.
-5. **After the merge:** the item's other actions (run the migration, set the environment variable, install the dependency where the product runs, run the one-off command), one at a time, waiting for "done" each time. Then check the MR live again: merged.
+1. Read `carja/1-workbench/loop-messages.md` for anything the run said after the report. A question round waiting in `carja/1-workbench/questions/` comes first: the owner answers it before anything is merged.
+2. Run `carja merge-stack <project> --dry-run`. It lists each item: ready, blocked, or needs you.
+3. Nothing blocked: go to step 2 without asking. The owner's trigger is the go-ahead. Blocked: show that line and stop.
 
-## 3. When something goes wrong
+## 2. Merge
 
-- **A pipeline is red or the forge shows a conflict:** stop the walk. Say which MR and what the forge says. A conflict in Carja documents only: the owner can resolve it on the forge, keeping both sides. A conflict in code: stop; the owner decides.
-- **The owner rejects an item:** they close its MR. Everything above it is rebuilt by the next `carja loop <project>`; say that, and stop the walk.
+1. Run `carja merge-stack <project>`. It merges every item it can and stops at the first item that needs the owner.
+2. **It stopped before an item with owner actions.** Split its steps into "before the merge" (a backup, reading changed deployment files, a decision to overrule) and "after the merge" (run the migration, set an environment variable, install a dependency, deploy). Do every step you have access to, production ones after their "go". Give the owner one numbered list of the rest only: an access you lack (one line they run with `!`, whose output you read), a test in the app. When they say done, run `carja merge-stack <project> --confirm <n>`.
+3. **It stopped after a confirmed item.** Same rule for the "after" steps: do yours, list theirs. When the owner says done, run `carja merge-stack <project>` again.
+4. **It stopped on a red pipeline, a conflict or a closed MR.** Give its line and its `Next:` line. A conflict in Carja documents only: the owner can resolve it on the forge, keeping both sides. A conflict in code: the owner decides.
+
+Items with no owner action are merged together. Tell the owner they can deploy once at the end, unless an item's steps say otherwise.
+
+## 3. When the owner changes the plan
+
+- **The owner rejects an item:** they close its MR. The next `carja loop <project>` rebuilds everything above it.
 - **The owner wants to change an item:** they push to its branch. The next run keeps their change and rebuilds the items above.
+- **The owner wants to merge by hand:** give the order from the dry run and the two rules (no squash, delete the source branch), once.
 
 ## 4. At the end
 
-Say what is merged, what is not and why, and the next command: `carja loop <project>` when items are left to build, else nothing. Then `git pull` in the project folder: it removes the merged items' worktrees.
+Say what is merged and what is not, then the deploy and production test the items need, in one list. Then `git pull` in the project folder (it removes the merged items' worktrees), and `carja loop <project>` when items are left to build.

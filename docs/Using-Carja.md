@@ -312,6 +312,25 @@ carja watch --all [--once]
 - `carja watch --all`: every product's run, beat, last news and waiting questions
 - `carja watch`: this product only, every project run going on in it
 
+#### `carja merge-stack`
+
+Merge the MRs of a `carja loop <project>` run in order, through the forge, and stop where you must act.
+
+```
+carja merge-stack [project] [dir] [--dry-run] [--confirm <n>] [--wait <min>]
+```
+
+| Option | What it does |
+|---|---|
+| `[project]` | The project whose stack to merge. Optional when only one project has MRs waiting |
+| `--dry-run` | Check every MR on the forge and list each item: ready, blocked, or needs you. Merge nothing |
+| `--confirm <n>` | You did the steps of item n that come before its merge: merge it, then stop for its steps after the merge |
+| `--wait <min>` | How long to wait for a running pipeline before it stops (default 20) |
+
+- `carja merge-stack notes --dry-run`: what can be merged now, and what needs you
+- `carja merge-stack notes`: merge bottom first: code MR, then state MR, no squash, source branch deleted. Stops before an item with owner actions, at a red pipeline, a conflict or a closed MR
+- `carja merge-stack notes --confirm 2`: after the backup that item 2 asked for
+
 ### Gates and evidence
 
 #### `carja verify`

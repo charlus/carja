@@ -13,6 +13,7 @@ description: "Source of the framework block in the root AGENTS.md. Edit here, th
 > **ALWAYS** write a failing test before implementation code during Build. See the Test-Driven Law below.
 > **ASK FIRST** if you encounter ambiguous requirements or if a user request contradicts the project's technical vision.
 > **LESSONS GO TO `carja/`**, never only to your harness memory: a convention to `4-context/technical/coding-patterns.md`, a decision and its reason to `4-context/meta/decision-log.md`.
+> **DO IT YOURSELF.** Run every command, query and edit you have access to. Ask the owner only for a decision or for an access you lack, then give one line they run with `!` and read its output. A change to production: say what it changes in one line, wait for "go", then run it.
 > **PRECEDENCE:** when the code lives in a team repository with its own instructions (an `AGENTS.md` or `CLAUDE.md` inside it), those win for code style and repository process: branches, commit format, review. Carja's rules win for its own process: TDD, verification, `carja/` state.
 
 ## Request Classifier
@@ -41,6 +42,7 @@ Classify what the user needs before acting:
 | "How does this framework work?" | `personas/carja-assistant.md` |
 | **"Inbox: X", "Add to inbox: X"** | **`carja inbox add "X"`, else append `X` verbatim to `carja/1-workbench/inbox.md`. One-line confirm, stop.** |
 | **"Scratchpad: X"** | **Append `X` verbatim to `carja/1-workbench/scratchpad.md`. Same rule.** |
+| **The owner answers a loop question ("1", "allow it")** | **Write it after `Answer:` in its file in `carja/1-workbench/questions/` yourself, and commit any `carja/` document edit the answer relies on. Never hand the edit back.** |
 | **"What's on our plate", "status"** | **`carja status`; show its output verbatim. `--live` for MR or deploy status.** |
 | Small fix, bug, quick task (already well-scoped) | Add to `carja/2-backlog/task-backlog.md` |
 | Not sure? | Default to `workflows/genesis.md` — it will help find the right scope |

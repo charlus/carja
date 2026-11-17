@@ -155,7 +155,7 @@ async function releaseLock(lockPath) {
 }
 
 /** The live pid in the lock file at `path`, or null. */
-async function liveLockPid(path) {
+export async function liveLockPid(path) {
   const text = (await exists(path)) ? await readFile(path, "utf8").catch(() => "") : "";
   const d = lockDecision({ existingText: text, isAlive: isPidAlive });
   return d.acquire ? null : d.heldByPid;
@@ -311,7 +311,7 @@ export async function configVerify(root, codeDir = null) {
 }
 
 /** The raw carja.config.json from the ROOT checkout ({} if absent). Throws on bad JSON. */
-async function readRootConfig(root) {
+export async function readRootConfig(root) {
   const cfgPath = configPathOf(root);
   if (!(await exists(cfgPath))) return {};
   return readJson(cfgPath);
@@ -617,7 +617,7 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
     stdout.write(`\n${report}`);
     const open = entries.filter((e) => !e.merged).length;
     stdout.write(
-      `\n[CARJA LOOP] Next: ${stop?.status === "awaiting_answers" ? `answer the questions in carja/1-workbench/questions/, then run \`${cmd}\` again.` : stop?.status === "done" ? (open ? `merge the ${open} item(s) in the order of ${REPORT_REL(scope)}.` : "nothing.") : `read ${MESSAGES_REL}, then run \`${cmd}\` again.`}\n`
+      `\n[CARJA LOOP] Next: ${stop?.status === "awaiting_answers" ? `answer the questions in carja/1-workbench/questions/, then run \`${cmd}\` again.` : stop?.status === "done" ? (open ? `\`carja merge-stack ${scope}\` merges the ${open} item(s) in order and stops where you must act (\`--dry-run\` lists them first). The list is in ${REPORT_REL(scope)}.` : "nothing.") : `read ${MESSAGES_REL}, then run \`${cmd}\` again.`}\n`
     );
     return stop?.status === "done" || stop?.status === "awaiting_answers" ? 0 : 1;
   } finally {

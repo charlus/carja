@@ -151,6 +151,22 @@ export function stackNote({ below }) {
   return `> **Stacked run:** this MR is built on ${below}. Merge that one first, without squashing, and let its source branch be deleted: this MR then moves to the default branch.\n\n`;
 }
 
+/**
+ * I1: the owner actions of an item, from the Ship beat and from the diff. A
+ * driver hint the Ship beat already covers is not said twice: dependencies it
+ * names, and the backup-then-migration hint when it names a backup and a migration.
+ */
+export function ownerActionsOf(e) {
+  const said = (e.ownerActions ?? []).join(" ").toLowerCase();
+  const namesMigration = /back(ed)? ?up|backup/.test(said) && /migrat|alembic|upgrade head/.test(said);
+  const hints = (e.detected ?? []).filter((h) => {
+    if (namesMigration && /^Back up the database, then run the new migration/.test(h)) return false;
+    const deps = [...h.matchAll(/([\w.@/:-]+) [\w.+!-]+ \((?:npm|pypi|go|cargo|maven|rubygems|composer|nuget)\)/g)].map((m) => m[1].toLowerCase());
+    return !deps.length || !deps.every((d) => said.includes(d));
+  });
+  return [...(e.ownerActions ?? []), ...hints];
+}
+
 const money = (n) => `$${(Math.round((Number(n) || 0) * 100) / 100).toFixed(2)}`;
 
 /**
@@ -165,7 +181,7 @@ export function renderStackReport({ project, entries, stop = null, notes = [], n
   if (!open.length) lines.push("No MR waits for you.", "");
   else {
     lines.push(`## Merge these MRs in this order (${open.length} item${open.length === 1 ? "" : "s"})`, "");
-    lines.push("Merge each one without squashing, and let its source branch be deleted: the MR above it then moves to the default branch. In each item, merge the code MR first, then the Carja state MR.", "");
+    lines.push("Merge each one without squashing, and let its source branch be deleted: the MR above it then moves to the default branch. In each item, merge the code MR first, then the Carja state MR.", "", `\`carja merge-stack ${project}\` does these merges for you, and stops before an item with owner actions, at a red pipeline or a conflict.`, "");
     open.forEach((e, i) => {
       lines.push(`### ${i + 1}. ${e.title}`, "");
       if (e.code?.url) lines.push(`- Code MR: ${e.code.url}`);
@@ -174,13 +190,7 @@ export function renderStackReport({ project, entries, stop = null, notes = [], n
       if (e.adopted) lines.push("- Built by an earlier run, taken into this stack as it was.");
       if (e.changed) lines.push("- You changed this MR: your version is kept.");
       // I1: what the owner does around this merge, from the Ship beat and from the diff.
-      // A driver hint about dependencies the Ship beat already names is not said twice.
-      const said = (e.ownerActions ?? []).join(" ").toLowerCase();
-      const hints = (e.detected ?? []).filter((h) => {
-        const deps = [...h.matchAll(/([\w.@/:-]+) [\w.+!-]+ \((?:npm|pypi|go|cargo|maven|rubygems|composer|nuget)\)/g)].map((m) => m[1].toLowerCase());
-        return !deps.length || !deps.every((d) => said.includes(d));
-      });
-      const actions = [...(e.ownerActions ?? []), ...hints];
+      const actions = ownerActionsOf(e);
       if (actions.length) {
         lines.push("- Owner actions, around this merge:");
         for (const a of actions) lines.push(`  - ${a}`);

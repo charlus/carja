@@ -166,7 +166,7 @@ export async function statusCommand(args, context) {
     context.stdout.write(`  📬 ${messages.length} loop message${messages.length === 1 ? "" : "s"} in ${MESSAGES_REL}. Newest: ${last.title}${last.text ? `: ${last.text.slice(0, 160)}${last.text.length > 160 ? "…" : ""}` : ""}\n`);
   }
   const reports = (await readdir(join(root, statePath(root, "carja/1-workbench"))).catch(() => [])).filter((f) => /^loop-report-.+\.md$/.test(f));
-  if (reports.length) context.stdout.write(`  📋 Loop report${reports.length === 1 ? "" : "s"}: ${reports.map((f) => `${statePath(root, "carja/1-workbench")}/${f}`).join(", ")}. Merge with /merge-stack <project>.\n`);
+  if (reports.length) context.stdout.write(`  📋 Loop report${reports.length === 1 ? "" : "s"}: ${reports.map((f) => `${statePath(root, "carja/1-workbench")}/${f}`).join(", ")}. Merge with \`carja merge-stack <project>\`, or /merge-stack <project> in your agent.\n`);
   const answeredRounds = await Promise.all((await md(`${QUESTIONS_REL}/answered`)).map((f) => readFile(join(root, QUESTIONS_REL, "answered", f), "utf8")));
   const rulingsText = await readFile(join(root, statePath(root, "carja/1-workbench/rulings.md")), "utf8").catch(() => "");
   const st = decisionStats({ rulingsText, answeredRounds });

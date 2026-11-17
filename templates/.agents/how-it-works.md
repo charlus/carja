@@ -175,13 +175,14 @@ task-backlog.md → Do it → ship-log.md
 | "Quick path", "Just build this" | Fast Track | → `workflows/quick-path.md` (skips discovery) |
 | "Let's reflect", "Retro" | Learning | → `workflows/retrospective.md` |
 | "Loop", "Unattended", "Autonomous", "Loop-ready" | Autonomous Loop | → `workflows/unattended-loop.md` |
-| "Merge the loop's MRs", "/merge-stack <project>", "Guide me through the loop report" | Merge Stack | → `workflows/merge-stack.md` (reads `carja/1-workbench/loop-report-<project>.md`, checks each MR live, walks the owner through the merges and the manual steps; never merges itself) |
+| "Merge the loop's MRs", "Merge the stack", "/merge-stack <project>", "Guide me through the loop report" | Merge Stack | → `workflows/merge-stack.md` (`carja merge-stack <project> --dry-run`, then `carja merge-stack <project>` merges bottom first through the forge and stops before each item with owner actions, at a red pipeline, a conflict or a closed MR; the agent never merges in another way) |
 | "Update the project card", "Refresh AGENTS.md" | Project card | → `workflows/agents-md.md` (also when `carja status` says the card is a draft or stale) |
 | "Brain dump", "Refine my ideas" | Skill | → `skills/brain-dump-to-epics/` |
 | "CTO mode", "Designer mode", "PM mode", etc. | Thinking Partner | → load matching persona from `personas/` |
 | "How does this framework work?" | Navigation | → load `carja-assistant` persona |
 | "Inbox: X", "Add to inbox: X" | Capture | → `carja inbox add "X"`, else append verbatim to `carja/1-workbench/inbox.md`, no workflow |
 | "Scratchpad: X" | Capture | → append verbatim to `carja/1-workbench/scratchpad.md`, no workflow |
+| The owner answers a loop question ("1", "allow it") | Answer | → write it after `Answer:` in its file in `carja/1-workbench/questions/` yourself, and commit any `carja/` document edit the answer relies on; never hand the edit back |
 | "What's on our plate", "status" | Status | → `carja status`; show its output verbatim. `--live` for MR or deploy status |
 | Small fix, bug, quick task (already well-scoped) | Task | → add to `carja/2-backlog/task-backlog.md` |
 
@@ -355,7 +356,7 @@ Facts an agent needs when it works on, or inside, a `carja loop` run. Full guide
 - **The usage limit.** A beat that hits the agent CLI's limit waits for the reset the CLI announces, then runs again, up to `loop.quota_max_wait_min` (default 330); beyond, or with no reset time, the run stops.
 - **Dependencies.** No beat reaches a package registry. After a Build or Ship beat the driver reads the manifests it changed (npm, PyPI, Go, Cargo, Maven/Gradle, RubyGems, Composer, NuGet): a dependency the Technical Vision names is checked on its registry and in OSV (exists, pinned, at least `loop.dependency_min_age_days` old, not yanked, no known vulnerability) and installed with `loop.install`; any other is a question round; a failed check or an unreachable registry stops the item.
 - **Conflicts.** An MR that would conflict only in Carja documents is not a stop: the loop takes what it lands on, keeps both sides, verifies again and names the documents in the report. A code conflict stops the item.
-- **Merging.** `/merge-stack <project>` (`workflows/merge-stack.md`) walks the owner through the report's MRs in order, each checked live, with each item's Owner actions. The loop's messages, reports and waiting rounds are hidden from git, so the owner's folder stays clean.
+- **Merging.** `carja merge-stack <project>` merges the report's MRs in order through the forge: code MR then state MR, no squash, source branch deleted, only the head it checked, only on a green pipeline. It stops before an item with Owner actions (`--confirm <n>` once they are done), after it, and at a red pipeline, a conflict or a closed MR. `/merge-stack <project>` (`workflows/merge-stack.md`) runs it for the owner and splits each item's actions into before and after the merge. The loop's messages, reports and waiting rounds are hidden from git, so the owner's folder stays clean.
 - **Evidence after a run.** The run's cost by role in `carja status`, escalations in `carja/1-workbench/loop-messages.md` (not tracked by git; `carja status` names the newest), the trail in `0-compass/ship-log.md`, and each beat's full agent output in `.git/carja-loop-logs/`.
 
 ---

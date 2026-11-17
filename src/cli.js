@@ -22,6 +22,7 @@ import { designCommand } from "./commands/design.js";
 import { watchCommand } from "./commands/watch.js";
 import { workCommand } from "./commands/work.js";
 import { modelsCommand } from "./commands/models.js";
+import { mergeStackCommand } from "./commands/merge-stack.js";
 import { mainHelp, commandHelp } from "./usage.js";
 import { nextAfterStatus } from "./next-step.js";
 
@@ -128,6 +129,8 @@ export async function runCli(rawArgs, io = process) {
       return loopCommand(rest, context);
     case "watch":
       return watchCommand(rest, context);
+    case "merge-stack":
+      return mergeStackCommand(rest, context);
     case "work":
       return workCommand(rest, context);
     case "models":

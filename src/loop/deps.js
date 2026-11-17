@@ -14,6 +14,8 @@
 // Pure except checkPackage, whose `fetch` is injected.
 
 /** Hosts a beat must never reach: the gate installs, not the agent. */
+import { answerAt } from "./questions.js";
+
 export const REGISTRY_HOSTS = Object.freeze(
   [
     "pypi.org", "files.pythonhosted.org", "pypi.python.org", "test.pypi.org",
@@ -426,7 +428,7 @@ export function approvalsFromRound(text) {
   const lines = String(text ?? "").split("\n");
   let current = null;
   let recommendation = null;
-  for (const line of lines) {
+  for (const [i, line] of lines.entries()) {
     const q = line.match(/^## Q\d+\.\s*New dependency:\s*(\S+)\s+(.+?)\s*$/);
     if (q) {
       current = `${q[1]} ${q[2]}`;
@@ -436,9 +438,8 @@ export function approvalsFromRound(text) {
     if (!current) continue;
     const r = line.match(/^\*\*Recommendation:\*\*\s*(\d+)/);
     if (r) recommendation = r[1];
-    const a = line.match(/^Answer:\s*(.*)$/);
-    if (a) {
-      const ans = a[1].trim();
+    if (/^Answer:/.test(line)) {
+      const ans = answerAt(lines, i) ?? "";
       const n = /^your pick$/i.test(ans) ? recommendation : ans.match(/^(\d+)/)?.[1];
       if (n === "1") approved.push(current);
       else if (n === "2") refused.push(current);
