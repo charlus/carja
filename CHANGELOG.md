@@ -19,6 +19,7 @@ Compatibility: upgrade only
 
 ### Fixed
 - **An answer under `Answer:` was ignored.** The owner wrote the answer on the next line; the loop read only the `Answer:` line and asked again, three times. Both readers (question rounds and the dependency gate) now take the next non-empty line when `Answer:` is empty.
+- **The agent handed its work back to the owner.** In `/merge-stack`, a missing production column became a script to read, then SQL to paste, then a long command, because the workflow said never to run a production change. A new boundary in `AGENTS.md`: the agent runs every command, query and edit it has access to. For a production change it says what changes in one line and waits for "go". It asks the owner only for a decision or an access it lacks, as one line run with `!`.
 - **The agent handed the answer back to the owner.** The routing table now says: when the owner answers a loop question in chat, the agent writes the answer in the question file and commits the `carja/` edits it relies on.
 
 ### Changed

@@ -12,7 +12,7 @@ description: Merge Stack (Merge a Loop Run's MRs in Order, Stop Only Where the O
 
 ---
 
-`carja merge-stack <project>` does the merges. It checks each MR on the forge, merges bottom first (code MR, then state MR, no squash, source branch deleted, only the head it checked, only on a green pipeline), and stops before an item with owner actions, after an item the owner confirmed, and at the first red pipeline, conflict or closed MR. Never merge in another way: no `glab mr merge`, no `gh pr merge`, no push to the default branch. Never run a migration, a deploy or a production change yourself, unless the owner asks for that step by name.
+`carja merge-stack <project>` does the merges. It checks each MR on the forge, merges bottom first (code MR, then state MR, no squash, source branch deleted, only the head it checked, only on a green pipeline), and stops before an item with owner actions, after an item the owner confirmed, and at the first red pipeline, conflict or closed MR. Never merge in another way: no `glab mr merge`, no `gh pr merge`, no push to the default branch. Run every step you have access to yourself: a query, a migration, a script, a deploy command. A step that changes production (schema, data, a deploy): one line saying what it changes, wait for "go", run it, show the result. Never hand the owner a script to read or SQL to paste.
 
 Live State Law: the command reads the forge each time it runs. Do not repeat its checks.
 
@@ -32,7 +32,7 @@ Live State Law: the command reads the forge each time it runs. Do not repeat its
 ## 2. Merge
 
 1. Run `carja merge-stack <project>`. It merges every item it can and stops at the first item that needs the owner.
-2. **It stopped before an item with owner actions.** Split its steps into "before the merge" (a backup, reading changed deployment files, a decision to overrule) and "after the merge" (run the migration, set an environment variable, install a dependency, deploy). Do yourself each step that needs only a file, a command or a commit in this project. Give the owner one numbered list of the rest (a production backup, a deploy, a test in the app), with exact commands. When they say done, run `carja merge-stack <project> --confirm <n>`.
+2. **It stopped before an item with owner actions.** Split its steps into "before the merge" (a backup, reading changed deployment files, a decision to overrule) and "after the merge" (run the migration, set an environment variable, install a dependency, deploy). Do every step you have access to, production ones after their "go". Give the owner one numbered list of the rest only: an access you lack (one line they run with `!`, whose output you read), a test in the app. When they say done, run `carja merge-stack <project> --confirm <n>`.
 3. **It stopped after a confirmed item.** Same rule for the "after" steps: do yours, list theirs. When the owner says done, run `carja merge-stack <project>` again.
 4. **It stopped on a red pipeline, a conflict or a closed MR.** Give its line and its `Next:` line. A conflict in Carja documents only: the owner can resolve it on the forge, keeping both sides. A conflict in code: the owner decides.
 
