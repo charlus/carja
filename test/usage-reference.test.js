@@ -22,6 +22,7 @@ const src = (rel) => readFileSync(join(REPO, rel), "utf8");
 
 // Flags of other tools (git, claude) that the command files pass on, not parse.
 const NOT_OURS = {
+  checklist: ["--name-only", "--others", "--exclude-standard"],
   "install-hooks": ["--get", "--git-path", "--is-inside-work-tree", "--local", "--unset"],
   loop: ["--verify", "--is-ancestor", "--heads", "-e", "-b", "-h", "--help", "--path-format=absolute", "--path-format", "--git-common-dir", "--git-path", "--hostname", "--name-only", "--porcelain", "-q", "--beat", "--others", "--exclude-standard"],
   "loop-doctor": ["--path-format", "--git-common-dir", "-c", "--detach", "--force", "--hostname", "--output-format", "-p", "--permission-mode", "-q", "--settings"],

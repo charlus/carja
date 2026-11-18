@@ -5,6 +5,7 @@
 // file is the IO shell (read/persist state, run git + verify, pick the adapter);
 // all guarantees live in the pure driver so `node --test` can exercise them.
 
+import { CHECKLIST_REL, parseChecklist, applicableItems, renderApplicable } from "../checklist.js";
 import { readFile, writeFile, appendFile, rename, access, rm, cp, mkdir, readdir, mkdtemp } from "node:fs/promises";
 import { constants as fsConstants, rmSync, statSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -2097,13 +2098,36 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   }
 
   // The Checker's prompt plus the rulings it must review, via a scratch file.
-  async function checkerPromptWithRulings(basePath, rulings, key) {
-    const section = rulingsForChecker(rulings, risk.highMeans);
-    if (!section) return basePath;
+  // F24: for a code review, the checklist items whose trigger matches the item's diff.
+  async function checkerPromptWithRulings(basePath, rulings, key, { cwd = null } = {}) {
+    const sections = [rulingsForChecker(rulings, risk.highMeans), cwd ? await checklistForChecker(cwd) : ""].filter(Boolean);
+    if (!sections.length) return basePath;
     const p = join(tmpdir(), `carja-checker-rulings-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
     const base = (await exists(basePath)) ? await readFile(basePath, "utf8") : "";
-    await writeFile(p, `${base}\n\n---\n\n${section}\n`, "utf8");
+    await writeFile(p, `${base}${sections.map((x) => `\n\n---\n\n${x}`).join("")}\n`, "utf8");
     return p;
+  }
+
+  // Read from the base, never from the change: a change cannot edit the rules that judge it.
+  async function checklistForChecker(cwd) {
+    const outerGit = makeGit(cwd);
+    const outerBase = stack?.outerBase ?? (await defaultBranchRef(outerGit));
+    if (!outerBase) return "";
+    const text = await outerGit(["show", `${outerBase}:${CHECKLIST_REL}`]);
+    if (!text.ok || !text.stdout.trim()) return "";
+    const items = parseChecklist(text.stdout);
+    if (!items.length) return "";
+    const files = [];
+    const d = await outerGit(["diff", "--name-only", `${outerBase}...HEAD`]);
+    if (d.ok) files.push(...d.stdout.split("\n").filter(Boolean));
+    const code = codeWtOf(cwd);
+    if (code && (await exists(join(code, ".git")))) {
+      const codeGit = makeGit(code);
+      const codeBase = stack?.codeBase ?? (await defaultBranchRef(codeGit));
+      const c = codeBase ? await codeGit(["diff", "--name-only", `${codeBase}...HEAD`]) : { ok: false };
+      if (c.ok) files.push(...c.stdout.split("\n").filter(Boolean).map((f) => `${loopConfig.codeDir}/${f}`));
+    }
+    return `# Architecture checklist items for this diff\n\nThe driver selected these from \`${CHECKLIST_REL}\` as it is on the base: the items whose \`trigger:\` matches a changed file, and every item without one. Verify the diff against these, not the whole file.\n\n${renderApplicable(applicableItems(items, files))}`;
   }
 
   async function changedFilesIn(cwd, from) {
@@ -2202,7 +2226,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       },
       runVerify: (cmd) => verifyWithEvidence(cmd, workCwd),
       gitHead: () => gitHead(workCwd),
-      runChecker: async (o) => makeChecker(workCwd, await checkerPromptWithRulings(checkerPromptPath, await branchRulings(workCwd), "pair"))(o),
+      runChecker: async (o) => makeChecker(workCwd, await checkerPromptWithRulings(checkerPromptPath, await branchRulings(workCwd), "pair", { cwd: workCwd }))(o),
       readMakerDone,
       readMakerSignal: () => readSignalAt(workCwd),
       changedFiles: ({ from }) => changedFilesIn(workCwd, from),
@@ -2378,7 +2402,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
                   ? await blueprintCheckerPrompt(task, phase.slice("blueprint:".length))
                   : await checkerPromptFor(task), task.id), task.id, reviewsCode && task.evidence?.exit_code === 0 ? task.verify ?? verifyCommand : null),
             await branchRulings(cwdFor.get(task.id) ?? root),
-            task.id
+            task.id,
+            { cwd: reviewsCode ? cwdFor.get(task.id) ?? null : null }
           )
         )();
         await emit("verdict", { task: task.id, phase: phase ?? "code", approved: (c?.exitCode ?? 1) === 0, reason: c?.reasons?.[0] ?? null });

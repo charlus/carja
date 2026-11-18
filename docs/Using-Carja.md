@@ -353,6 +353,21 @@ Reads: `app.start`, `app.ready`, `app.url`, `app.dir`, `app.ready_timeout_s`.
 
 - `carja app up`: start the product; the agent then drives it at app.url
 
+#### `carja checklist`
+
+The architecture checklist items that apply to the current diff: those whose trigger matches, and those without one.
+
+```
+carja checklist [dir] [--base <ref>] [--files <a,b>]
+```
+
+| Option | What it does |
+|---|---|
+| `--base <ref>` | Compare with this ref, and read the checklist there (default: the default branch on origin) |
+| `--files <a,b>` | Use these paths, from the project root, instead of the diff |
+
+- `carja checklist`: what the reviewer must check for this branch
+
 #### `carja verify`
 
 Show or set the command `git push` must pass.

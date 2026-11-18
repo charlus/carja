@@ -1,6 +1,6 @@
 # Risk-tiered merge, and the verification backlog from Anthropic's articles
 
-> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10, F12 and F22 built in 7.6.0. Reviewer-recall eval run twice on autopportunity (20 cases, `test/evals/README.md`). F23, the auto-merge breaker, built in 7.7.0. F18 is dropped.
+> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10, F12 and F22 built in 7.6.0. Reviewer-recall eval run twice on autopportunity (20 cases, `test/evals/README.md`). F23, the auto-merge breaker, built in 7.7.0. F24, checklist triggers, built in 7.8.0. F18 is dropped.
 
 ## Why
 
@@ -31,3 +31,7 @@ PR-gated merge holds: merges go through the forge's MR API, never a push. Fail-s
 ## Step 2: the auto-merge breaker (F23, 7.7.0)
 
 The code review post plans "circuit breakers that tighten approval when revert or incident numbers move". Each item merged without the owner goes into `.git/carja-auto-merges.jsonl` (base and head per repository, MR URL). Before the next such merge, the default branch of each repository is read for the last `risk.breaker_days`; a revert counts when it names a commit of base..head, the merge commit (second parent = head) or the MR. At `risk.breaker_reverts` reverted items, medium goes back to the owner. Stateless: no reset command, the window closes it. Low stays automatic: it is only what `risk.low_paths` names.
+
+## Step 3: checklist items triggered by the diff (F24, 7.8.0)
+
+A held-out check (`test/evals/README.md`) showed a checklist rule turning a missed bug class into a found one, so the checklist will grow with each miss. `trigger:` keeps that cheap: the driver gives the Checker only the items whose globs match the changed files, plus every item without a trigger, read from the base branch. `carja checklist` does the same for interactive reviews. Globs only, no content patterns: a path says enough for the rules seen so far.

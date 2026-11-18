@@ -57,7 +57,8 @@ carja/          ← You are here (package source)
 │       ├── watch.js           # carja watch: what a loop run is doing, from its event log (src/loop/events.js)
 │       ├── models.js          # carja models: the model and effort of each role (src/models.js)
 │       ├── work.js            # carja work <item>: the hidden worktree an interactive item works in (src/work.js)
-│       └── app.js             # carja app up|check|down: start the product from the app block so an agent can drive it
+│       ├── app.js             # carja app up|check|down: start the product from the app block so an agent can drive it
+│       └── checklist.js       # carja checklist: the architecture checklist items whose trigger matches the diff (src/checklist.js)
 ├── templates/                 # THESE files get installed into user projects
 │   ├── .agents/                # Agent core (AGENTS.md, how-it-works.md, registry.json, rules, workflows, skills, personas)
 │   ├── carja/              # Project state (numbered folders 0-compass..6-archive)

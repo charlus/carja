@@ -279,6 +279,8 @@ The push gate runs one command per repository: `carja verify` shows it, `carja v
 
 Tests can pass while the feature is broken. The `app` block of `carja.config.json` says once how the product starts (`start`), how to tell it is up (`ready`) and where to reach it (`url`). `carja app up` starts it and waits until it is ready, `carja app down` stops it, so the agent drives the running product before it calls a change done (`skills/behavior-validator`).
 
+An item of `carja/0-compass/architecture-checklist.md` may carry `trigger: <glob>, <glob>`: a review then gets it only when the change touches a matching path, so the checklist can grow without every review reading every rule. `carja checklist` prints the items that apply to the current diff; the loop gives them to its Checker, read from the base branch.
+
 Every escape hatch is an environment variable with a reason (`CARJA_NO_BOUNDARY="why"`), logged to `carja/0-compass/ship-log.md`.
 
 Two **opt-in** Claude Code `PreToolUse` hooks act before the action rather than at the commit (setup in [`hooks/README.md`](templates/.agents/hooks/README.md)):
