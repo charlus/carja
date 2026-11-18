@@ -191,6 +191,7 @@ export function renderStackReport({ project, entries, stop = null, notes = [], n
   if (autoMerge) {
     const done = entries.filter((e) => e.merged && [e.outer?.url, ...(e.code ? [e.code.url] : [])].every((u) => autoMerge.merged.includes(u)));
     lines.push(`## Merged by the loop (${done.length} item${done.length === 1 ? "" : "s"})`, "");
+    if (autoMerge.breaker) lines.push(`**Auto-merge breaker:** ${autoMerge.breaker}`, "");
     lines.push(`Your risk setting reviews ${risk.ownerReview.join(", ")} only. The loop merged these through the MR API, after their review and green pipeline. Revert one on the forge if it is wrong.`, "");
     for (const e of done) lines.push(`- ${e.title}: ${[e.code?.url, e.outer?.url].filter(Boolean).join(" + ")}`, `  ${tierLine(e).slice(2)}`);
     if (autoMerge.code !== 0) lines.push("", "Where the merge stopped:", "", ...autoMerge.lines.filter((l) => /stopped|needs you|Risk |not merge/.test(l)).map((l) => `> ${l}`));

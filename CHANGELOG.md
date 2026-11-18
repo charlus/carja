@@ -8,6 +8,16 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.7.0] — 2026-11-18 — Auto-merge stops trusting itself after reverts
+
+Compatibility: upgrade only
+
+### Added
+- **The auto-merge breaker.** With a `risk` block, Carja merges low and medium items without the owner; nothing noticed when those merges went wrong. Every item merged without the owner is now recorded in `.git/carja-auto-merges.jsonl`. Before the next merge without the owner, the loop and `carja merge-stack` read the default branch of each repository: when `risk.breaker_reverts` (default 2) of those items were reverted in the last `risk.breaker_days` (default 30), medium waits for the owner again, the report and the command say why, and a dependency that passed the gate asks again. A revert counts when it names a commit of the item, its merge commit, or its merge request (`This reverts merge request !N`, `Reverts owner/repo#N`). Derived from history each time: nothing to reset. `0` turns it off. Proven through the real CLI with the stub engine and `gh` (`test/loop-risk-merge.test.js`, which fails with the breaker disabled) and in `test/auto-merge-breaker.test.js`; not run against GitLab.
+
+### Fixed
+- **The install check failed on the hidden work worktrees.** `check-carja.sh` scanned `.agents/.worktrees/`, whose copy of the code can carry an old `.agents/`, and reported FAILED on every upgrade of such a project. It now skips them (`test/check-carja-worktrees.test.js`).
+
 ## [7.6.0] — 2026-11-18 — The owner chooses which risk waits for them
 
 Compatibility: upgrade only
