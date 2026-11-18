@@ -277,6 +277,8 @@ Carja backs its laws with **code, not just prose** — deterministic git hooks (
 
 The push gate runs one command per repository: `carja verify` shows it, `carja verify --set "npm test"` sets it, and `carja trust-verify` records your consent to that command before the agent's Stop hook may run it: a cloned repository can name any command it likes.
 
+Tests can pass while the feature is broken. The `app` block of `carja.config.json` says once how the product starts (`start`), how to tell it is up (`ready`) and where to reach it (`url`). `carja app up` starts it and waits until it is ready, `carja app down` stops it, so the agent drives the running product before it calls a change done (`skills/behavior-validator`).
+
 Every escape hatch is an environment variable with a reason (`CARJA_NO_BOUNDARY="why"`), logged to `carja/0-compass/ship-log.md`.
 
 Two **opt-in** Claude Code `PreToolUse` hooks act before the action rather than at the commit (setup in [`hooks/README.md`](templates/.agents/hooks/README.md)):

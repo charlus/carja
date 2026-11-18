@@ -335,6 +335,24 @@ Reads: `risk.owner_review`, `risk.high_means`, `risk.high_paths`, `risk.low_path
 
 ### Gates and evidence
 
+#### `carja app`
+
+Start the product, wait until it is ready, and stop it, so an agent can drive it before it calls a change done.
+
+```
+carja app up|check|down [dir]
+```
+
+| Option | What it does |
+|---|---|
+| `up` | Start app.start in the background and wait for app.ready (default 120 s). Not ready in time: stopped, the end of its log shown, exit 1 |
+| `check` | Run app.ready once: exit 0 when the app is ready |
+| `down` | Stop the app up started |
+
+Reads: `app.start`, `app.ready`, `app.url`, `app.dir`, `app.ready_timeout_s`.
+
+- `carja app up`: start the product; the agent then drives it at app.url
+
 #### `carja verify`
 
 Show or set the command `git push` must pass.
@@ -531,6 +549,11 @@ Reads: `verify`, `eval`.
 | `models.preset` | The preset in use: quality, balanced, or one of models.presets (set it with carja models use) |
 | `models.presets` | Your own presets: { "<name>": { "plan": …, "build": …, "rank": […] } } |
 | `models.rank` | Your models, strongest first. The loop doctor uses it to check the reviewer is not weaker than the builder |
+| `app.start` | The command that starts the product, run in the background by carja app up (e.g. "npm run dev") |
+| `app.ready` | A command that exits 0 once the product answers (e.g. "curl -sf http://localhost:3000"), polled by carja app up |
+| `app.url` | Where the agent drives the product, printed by carja app up |
+| `app.dir` | The folder app.start runs in (default: loop.code_dir, else the project root) |
+| `app.ready_timeout_s` | How long carja app up waits for app.ready (default 120) |
 | `gates.<name>` | "observe": the pre-commit gate logs what it would have blocked and lets the commit through; carja status counts them. Names: tdd, eval, brief, report, default-branch. Read from the committed config. goodhart, integrity and protected always enforce, and so does every push gate |
 | `loop.forge` | "gh" \| "glab" (default: from the origin host) |
 | `loop.setup` | Shell command run once in each new worktree, before the first beat |

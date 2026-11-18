@@ -41,7 +41,7 @@ For most Carja work the spec's acceptance criteria (`skills/spec-it` output) *ar
 ## The procedure
 
 1. **Parse the contract** into individually testable clauses.
-2. **Get runtime access** — start/reach the artifact the way an operator would (`skills/run` / the project's run recipe). If you cannot reach it, **block** — do not infer behavior from the code.
+2. **Get runtime access** — `carja app up`, drive `app.url` (browser, `curl`, CLI), then `carja app down`. No `app` block in `carja.config.json`: propose one. Unreachable: **block**.
 3. **Stay source-blind.** Do **not** open the diff, source, or tests during validation. If you catch yourself reasoning "the code does X so it must…", stop — go observe X instead.
 4. **Exercise each user task** as an operator, capturing what actually happens.
 5. **Run the anti-cheat probes** (below) — this is the part that earns the gate its keep.

@@ -237,6 +237,7 @@ The other commands, for setup, gates and measurement:
 | Command | What it is for |
 |---|---|
 | `carja init` / `carja upgrade` | Install the framework / move an install to the latest version (replaces `.agents/`, never touches your `carja/` knowledge; backs up first) |
+| `carja app up\|check\|down` | Start the product from the `app` block of `carja.config.json`, wait until it is ready, stop it: so the agent drives it before a change is called done |
 | `carja install-hooks` | Wire the git hooks in `.agents/hooks/` (TDD and eval presence, Goodhart boundary, protected paths on commit; verify and evals on push). `gates.<name>: "observe"` makes a commit gate log instead of block (`.agents/hooks/README.md`) |
 | `carja verify [--set <cmd>]` | Show or set the command `git push` must pass |
 | `carja evidence run\|check\|list` | Run the verify command and record the result against the exact working tree; `pre-push` and the loop driver accept fresh evidence instead of re-running, and fails a run that changed files while it ran (`--stable-tree`) |
