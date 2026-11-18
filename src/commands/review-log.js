@@ -22,6 +22,7 @@
 // CARJA_HOME: unlike evidence, these findings are about the project and are
 // useful to the whole team and to the Retrospective workflow.
 
+import { ruleCandidates } from "../review-rules.js";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, dirname, resolve, relative, isAbsolute } from "node:path";
@@ -343,6 +344,36 @@ export async function reviewLogCommand(args, { cwd, stdout, stderr }) {
         stdout.write(`  ${p.name} — recalibrate the Review Lens in .agents/personas/${p.name}.md\n`);
       }
     }
+    return 0;
+  }
+
+  // F9: classes the author fixed in two or more slices are candidate rules.
+  if (sub === "rules") {
+    let text = "";
+    try {
+      text = await readFile(path, "utf8");
+    } catch {
+      stdout.write("No review findings recorded yet.\n");
+      return 0;
+    }
+    const records = text.split("\n").filter((l) => l.trim()).flatMap((l) => {
+      try {
+        return [JSON.parse(l)];
+      } catch {
+        return [];
+      }
+    });
+    const candidates = ruleCandidates(records);
+    if (!candidates.length) {
+      stdout.write("No candidate rule: no fixed class recurs in two or more slices.\n");
+      return 0;
+    }
+    stdout.write(`Candidate rules (a fixed class in two or more slices): ${candidates.length}\n\n`);
+    for (const c of candidates) {
+      stdout.write(`- ${c.category}${c.detail ? `: ${c.detail}` : ""} — ${c.count} fixed, slices ${c.slices.join(", ")}\n`);
+      for (const e of c.examples) stdout.write(`    ${e.file ?? "?"}:${e.line ?? "?"}${e.quote ? `  ${String(e.quote).slice(0, 100)}` : ""}\n`);
+    }
+    stdout.write("\nNext: for each one a diff can show, add an item to carja/0-compass/architecture-checklist.md, with a check: command when grep can find it. The owner approves it in the MR.\n");
     return 0;
   }
 

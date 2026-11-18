@@ -496,7 +496,7 @@ Reads: `registry`.
 Record review findings and approvals, and see which rules reviewers dismiss.
 
 ```
-carja review-log append '<json>' | carja review-log summary [--since <date>] | carja review-log verdict APPROVE [--repo <dir>]
+carja review-log append '<json>' | carja review-log summary [--since <date>] | carja review-log rules | carja review-log verdict APPROVE [--repo <dir>]
 ```
 
 | Option | What it does |
@@ -505,6 +505,7 @@ carja review-log append '<json>' | carja review-log summary [--since <date>] | c
 | `--repo <dir>` | With verdict: the code repository whose HEAD was approved (outer layout) |
 
 - `carja review-log summary`
+- `carja review-log rules`: classes the author fixed in two or more slices: candidate checklist rules
 - `carja review-log verdict APPROVE`: after the independent review approved HEAD: the push gate lets it through
 
 #### `carja context-bill`

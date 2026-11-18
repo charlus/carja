@@ -201,3 +201,29 @@ passing release. Thresholds, limits and the waiver: `docs/roadmap/Release-Gate.m
 Its sensitivity is shown on real data: one 7.1.0 bare chain missed a convention
 written only in the brief and scored 90.4%, which the gate fails (minimum 95%).
 
+
+## reviewer-recall
+
+Does the reviewer find the bugs that mattered in a real repository, without
+blocking clean changes? After the Claude Code team's review eval.
+
+```bash
+node test/evals/reviewer-recall/run.mjs --repo ~/Workspace/<project> --harvest-only   # the cases, no model call
+CARJA_EVALS=1 npm run eval:recall -- --repo ~/Workspace/<project> --max 10            # one reviewer call per case
+```
+
+**Cases** (`src/reviewer-recall.js`, `harvestCases`): a commit later reverted,
+named by a `Fixes: <sha>` trailer, or traced by SZZ (`git blame` on the lines a
+`fix` commit changed). A fix made in a review round is left out: the reviewer
+already caught it. Each incident gets one clean control commit, at least 30 days
+old and nearest in changed lines.
+
+**Score:** `recall_any` (a finding where the fix changed the code, within 3
+lines), `recall_blocker` (the same, as a BLOCKER) and `control_blocked` (clean
+commits that got a BLOCKER). Kept apart, so a reviewer that finds a bug and
+downgrades it, or one that blocks everything, shows. Keep a change to
+`reviewer.md` only when recall goes up and `control_blocked` does not.
+
+**Limits.** The key is a location, not the bug's meaning: a finding at the
+right lines for the wrong reason counts. SZZ blames the last commit to touch a
+line, which is sometimes not the one that introduced the bug. Not yet run.

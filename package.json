@@ -32,6 +32,7 @@
     "test:conflict": "node scripts/with-test-tmp.mjs bash test/conflict-predict-real.sh",
     "test:hooks:factgate": "node scripts/with-test-tmp.mjs bash test/hooks-fact-gate.sh",
     "eval:factgate": "node test/evals/fact-gate-eval.mjs",
+    "eval:recall": "node test/evals/reviewer-recall/run.mjs",
     "eval:factgate:sensitivity": "node test/evals/fact-gate-eval.mjs --sensitivity",
     "eval:livestate": "node test/evals/live-state-eval.mjs",
     "eval:livestate:sensitivity": "node test/evals/live-state-eval.mjs --sensitivity",
