@@ -21,6 +21,10 @@
 | `pretooluse-fact-gate.sh` | investigate before you write | Claude Code `PreToolUse` | **opt-in** — the first edit/creation of a file, and the first run of each destructive command, until the facts are stated (off: `CARJA_FACT_GATE=off`) |
 | `lib.sh` | — | sourced by the others | shared helpers |
 
+### Observe mode
+
+`"gates": { "tdd": "observe" }` in `carja.config.json` makes a pre-commit gate log what it would have blocked to `.git/carja-gate-observe.log` and let the commit through. `carja status` counts the lines (`Observed`), so a new or changed gate is judged on its false positives before it blocks anyone. Names: `tdd`, `eval`, `brief`, `report`, `default-branch`. The mode is read from the committed config (`HEAD`), so a commit cannot relax its own gate. `goodhart`, `integrity`, `protected` and every `pre-push` gate always enforce.
+
 ### Why the boundary gate exists
 
 The Test-Driven Law proves a test *changed*. It cannot tell a new test from a

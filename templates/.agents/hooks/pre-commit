@@ -192,6 +192,10 @@ if [ "$lib_ok" = "0" ] || [ -n "$missing" ]; then
   exit 0   # nothing installed yet: no gate exists to weaken
 fi
 
+# F8: a committed lib.sh older than this hook has no observe mode. Then every
+# gate enforces (fail closed), never the reverse.
+type carja_gate_blocks >/dev/null 2>&1 || carja_gate_blocks() { return 0; }
+
 # Nothing staged at all is the only early exit. The gates below must still see
 # a commit that ONLY removes files: it stages nothing under ACM, and that is
 # exactly the shape of the cheapest Goodhart move ("delete the failing test")
@@ -284,7 +288,7 @@ if [ -n "$default_branch_code" ]; then
     echo "  (agreed with the team), say why:"
     echo "    CARJA_ON_DEFAULT=\"why\" git commit …"
     echo ""
-    blocked=1
+    carja_gate_blocks default-branch && blocked=1
   fi
 fi
 
@@ -312,7 +316,7 @@ if [ "$impl" = "1" ] && [ "$tests" = "1" ] && [ "$no_assert" = "1" ]; then
     echo "    • if the behaviour does not change (a refactor, a rename, a mock),"
     echo "      record the reason:  CARJA_NO_TEST=\"why\" git commit …"
     echo ""
-    blocked=1
+    carja_gate_blocks tdd && blocked=1
   fi
 fi
 if [ "$impl" = "1" ] && [ "$tests" = "0" ]; then
@@ -332,7 +336,7 @@ if [ "$impl" = "1" ] && [ "$tests" = "0" ]; then
     echo "    • if this genuinely has no test surface (config, generated code),"
     echo "      record the reason:  CARJA_NO_TEST=\"why\" git commit …"
     echo ""
-    blocked=1
+    carja_gate_blocks tdd && blocked=1
   fi
 fi
 
@@ -465,7 +469,7 @@ if [ "$llm" = "1" ] && [ "$evals" = "0" ]; then
     echo "    • if this has no eval surface (a stub, plumbing, config),"
     echo "      record the reason:  CARJA_NO_EVAL=\"why\" git commit …"
     echo ""
-    blocked=1
+    carja_gate_blocks eval && blocked=1
   fi
 fi
 
@@ -493,7 +497,7 @@ if [ "$brief" = "1" ]; then
     echo "    • carried over from a pre-A5 spec? record the reason:"
     echo "      CARJA_NO_BRIEF=\"why\" git commit …"
     echo ""
-    blocked=1
+    carja_gate_blocks brief && blocked=1
   fi
 fi
 
@@ -521,7 +525,7 @@ if [ "$report" = "1" ]; then
     echo "    • editing an old entry, not shipping? record the reason:"
     echo "      CARJA_NO_REPORT=\"why\" git commit …"
     echo ""
-    blocked=1
+    carja_gate_blocks report && blocked=1
   fi
 fi
 

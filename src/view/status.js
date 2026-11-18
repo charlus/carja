@@ -243,6 +243,11 @@ export function renderStatus(state, { color = true, width = 78 } = {}) {
     if (d.gates.hooks !== "not-git") {
       lines.push(`  ${c("Waivers".padEnd(10), "dim")}${waiversLine(d.gates.waivers, c)}`);
     }
+    // F8: only when a gate in observe mode would have blocked something.
+    if (d.gates.observed?.count) {
+      const by = d.gates.observed.byGate.map((g) => `${g.gate} ×${g.count}`).join(", ");
+      lines.push(`  ${c("Observed".padEnd(10), "dim")}${c(`${d.gates.observed.count} in ${d.gates.observed.days} days · ${by} (would have blocked; .git/carja-gate-observe.log)`, "yellow")}`);
+    }
   }
 
   // Leads everything below the digest: across several products this is the

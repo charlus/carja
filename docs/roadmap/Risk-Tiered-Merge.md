@@ -1,6 +1,6 @@
 # Risk-tiered merge, and the verification backlog from Anthropic's articles
 
-> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F12 and F22 built in 7.6.0. F7, F8 and F9/F10 are planned, not built. F18 is dropped.
+> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F8, F12 and F22 built in 7.6.0. F7 and F9/F10 are planned, not built. F18 is dropped.
 
 ## Why
 
@@ -22,7 +22,7 @@ PR-gated merge holds: merges go through the forge's MR API, never a push. Fail-s
 ## Backlog (owner approved 2026-11-18)
 
 - **F7 A `/verify` skill that starts, drives and inspects the running app** before a change is called done. Anthropic's top lever.
-- **F8 Observe mode for gates** (off, observe, enforce): log what would have been blocked before enforcing.
+- **F8 Observe mode for gates.** Built: `gates.<name>: "observe"` for the pre-commit policy gates (`carja_gate_blocks` in `lib.sh`), read from `HEAD`, counted by `carja status`. No "off" mode: observe logs everything off would hide. The gates that protect the gates, and the push gates, always enforce.
 - **F9/F10 Turn misses into rules, and measure the reviewer** on past incidents and reverts, with clean merged changes as a control.
 - **F12 A Pre-existing finding tag.** Built: `reviewer.md` defines it, `src/loop/checker.js` (`preExistingFindings`) keeps it out of the Maker's next prompt, the loop records it in its messages.
 - **F22 merge-stack retries a red pipeline once and resolves a code conflict itself** before it stops. Built: `retryPipeline` in both forges (`src/loop/merge-stack.js`); the conflict is resolved by the agent in `workflows/merge-stack.md`, since a code merge needs judgement and a verify run.

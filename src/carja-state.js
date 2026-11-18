@@ -17,6 +17,7 @@
 // Everything here is pure except `collectState`, which is the thin IO wrapper.
 // That split is what makes the digest testable without a repo on disk.
 
+import { summariseObserved, OBSERVE_LOG } from "./gate-observe.js";
 import { readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname, basename, sep } from "node:path";
 import { execFile } from "node:child_process";
@@ -555,7 +556,7 @@ function guardsIn(raw) {
 export async function readGateWiring(root) {
   const own = await readOwnGateWiring(root);
   if (own.hooks === "not-git") return own;
-  const wiring = { ...own, skipped: await skippedHooks(root) };
+  const wiring = { ...own, skipped: await skippedHooks(root), observed: await observedBlocks(root) };
   const nested = [];
   const ours = join(root, HOOKS_REL);
   for (const entry of await ignoredNestedRepos(root)) {
@@ -576,6 +577,16 @@ export async function readGateWiring(root) {
     }
   }
   return nested.length ? { ...wiring, nested } : wiring;
+}
+
+/** F8: what gates in observe mode would have blocked (src/gate-observe.js). */
+async function observedBlocks(root) {
+  try {
+    const { stdout } = await execFileP("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd: root });
+    return summariseObserved(await readIfPresent(join(stdout.trim(), OBSERVE_LOG)));
+  } catch {
+    return null;
+  }
 }
 
 async function readOwnGateWiring(root) {

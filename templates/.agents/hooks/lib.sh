@@ -427,6 +427,33 @@ carja_stage_waiver_lines() {
   git -C "$root" add -- "$rel" 2>/dev/null || true
 }
 
+# ---------------------------------------------------------------------------
+# F8: observe mode. gates.<name> = "observe" in carja.config.json makes a policy
+# gate log what it would have blocked and let the commit through, so a new or
+# changed gate is judged on its false positives before it blocks anyone. The
+# mode comes from the COMMITTED config (HEAD): a commit cannot relax its own
+# gate. The gates that keep the gates honest always enforce.
+CARJA_CORE_GATES=" goodhart integrity protected "
+
+carja_gate_mode() {
+  local gate="$1" root="${PROJECT_ROOT:-$(carja_repo_root)}" cfg m
+  case "$CARJA_CORE_GATES" in *" $gate "*) echo enforce; return 0 ;; esac
+  cfg="$(git -C "$root" show HEAD:carja.config.json 2>/dev/null)" || { echo enforce; return 0; }
+  m="$(printf '%s' "$cfg" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const v=(JSON.parse(s).gates||{})[process.argv[1]];process.stdout.write(v==="observe"?"observe":"enforce")}catch(e){process.stdout.write("enforce")}})' "$gate" 2>/dev/null)"
+  [ "$m" = "observe" ] && echo observe || echo enforce
+}
+
+# True (0) when gate $1 must block. In observe mode: one log line in the git
+# common dir (date, gate, branch, HEAD), a notice, and false.
+carja_gate_blocks() {
+  local gate="$1" log
+  [ "$(carja_gate_mode "$gate")" = "observe" ] || return 0
+  log="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/carja-gate-observe.log"
+  printf '%s\t%s\t%s\t%s\n' "$(date '+%Y-%m-%d %H:%M')" "$gate" "$(git symbolic-ref -q --short HEAD 2>/dev/null)" "$(git rev-parse -q --short HEAD 2>/dev/null)" >> "$log"
+  echo "👁  Carja $gate gate in observe mode: this commit would have been blocked (logged to $log)."
+  return 1
+}
+
 # Append a waiver line to the ship-log so bypasses are auditable, never silent.
 carja_log_waiver() {
   local root="$1" kind="$2" reason="$3"

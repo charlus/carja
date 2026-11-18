@@ -57,7 +57,7 @@ export const COMMANDS = Object.freeze([
       ["--no-color", "Plain text (also --no-colour; --color or --colour forces colour)"],
       ["--stale-days <n>", "Days after which an item counts as stale (default 30)"],
     ],
-    config: ["deployCheck", "repos"],
+    config: ["deployCheck", "repos", "gates.<name>"],
     examples: [["carja status --live", "what is on our plate, with MR state"]],
   },
   {
@@ -273,6 +273,7 @@ export const CONFIG_KEYS = Object.freeze([
   ["models.preset", "The preset in use: quality, balanced, or one of models.presets (set it with carja models use)"],
   ["models.presets", "Your own presets: { \"<name>\": { \"plan\": …, \"build\": …, \"rank\": […] } }"],
   ["models.rank", "Your models, strongest first. The loop doctor uses it to check the reviewer is not weaker than the builder"],
+  ["gates.<name>", "\"observe\": the pre-commit gate logs what it would have blocked and lets the commit through; carja status counts them. Names: tdd, eval, brief, report, default-branch. Read from the committed config. goodhart, integrity and protected always enforce, and so does every push gate"],
   ["loop.forge", "\"gh\" | \"glab\" (default: from the origin host)"],
   ["loop.setup", "Shell command run once in each new worktree, before the first beat"],
   ["loop.allowed_domains", "Extra hosts the sandbox may reach; never a package registry (refused)"],
