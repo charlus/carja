@@ -52,8 +52,8 @@ export function parseHunks(diff) {
 
 const norm = (f) => String(f ?? "").replace(/^\.\//, "");
 
-/** Files that are not code for the answer key: documentation and Carja's own records. */
-const NOT_CODE = /(\.(md|mdx|txt|rst)$)|(^|\/)(carja|docs)\//i;
+/** Files that are not product code for the answer key: documentation, Carja's records, tests (a fix adds a test where the bug is not). */
+const NOT_CODE = /(\.(md|mdx|txt|rst)$)|(^|\/)(carja|docs|tests?|__tests__)\/|[._-](test|spec)\.[a-z0-9]+$|(^|\/)test_[^/]+\.py$/i;
 const FIX_SUBJECT = /^fix(\(|:|!)/i;
 
 /** The code hunks of a diff, without documentation. */

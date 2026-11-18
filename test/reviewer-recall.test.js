@@ -11,7 +11,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -131,13 +131,17 @@ test("SZZ: a fix: commit is traced by blame to the commit that introduced the li
     G("add", "-A");
     G("commit", "-qm", "init");
     writeFileSync(join(d, "a.js"), "one\ntwo\nbad line\nfour\n");
-    G("commit", "-qam", "feat: totals");
+    mkdirSync(join(d, "test"), { recursive: true });
+    writeFileSync(join(d, "test/a.test.js"), "expect(bad)\n");
+    G("add", "-A");
+    G("commit", "-qm", "feat: totals");
     const bad = G("rev-parse", "HEAD");
     writeFileSync(join(d, "b.js"), "clean\nclean\n");
     G("add", "-A");
     G("commit", "-qm", "feat: other");
     writeFileSync(join(d, "a.js"), "one\ntwo\ngood line\nfour\n");
     writeFileSync(join(d, "NOTES.md"), "why\n");
+    writeFileSync(join(d, "test/a.test.js"), "expect(good)\n");
     G("add", "-A");
     G("commit", "-qm", "fix(totals): rounding");
     writeFileSync(join(d, "b.js"), "clean\nfixed in review\n");
@@ -147,7 +151,7 @@ test("SZZ: a fix: commit is traced by blame to the commit that introduced the li
     assert.equal(inc.length, 1, "a review-round fix is not an incident");
     assert.equal(inc[0].bad, bad);
     assert.equal(inc[0].key, "fix(totals): rounding");
-    assert.deepEqual(inc[0].hunks, { "a.js": [[3, 3]] }, "documentation the fix touched is not part of the key");
+    assert.deepEqual(inc[0].hunks, { "a.js": [[3, 3]] }, "documentation and tests the fix touched are not part of the key");
   } finally {
     rmSync(d, { recursive: true, force: true });
   }
