@@ -1901,6 +1901,43 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         else manifests.push({ path: `${r.prefix}${path}`, before, after });
       }
     }
+    // F30 (website, 2026-11-18): an item built on a lower one inherits the dependencies
+    // the lower items added. They passed the gate there, but only that item's worktree
+    // got them installed. Check them again (fail closed) and install once for this item.
+    if (!task.inherited_deps_done) {
+      const inherited = [];
+      for (const r of repos) {
+        const g = makeGit(r.dir);
+        const def = await defaultBranchRef(g);
+        if (!def || !r.base || r.base === def) continue;
+        const names = await g(["diff", "--name-only", def, r.base]);
+        const ms = [];
+        for (const path of (names.ok ? names.stdout.split("\n") : []).map((x) => x.trim()).filter(Boolean)) {
+          const kind = manifestKind(path);
+          if (!kind || kind.lockfile) continue;
+          ms.push({ path: `${r.prefix}${path}`, before: (await g(["show", `${def}:${path}`])).stdout ?? "", after: (await g(["show", `${r.base}:${path}`])).stdout ?? "" });
+        }
+        inherited.push(...dependencyChanges(ms).deps);
+      }
+      if (inherited.length) {
+        const fetchInherited = await registryFetch();
+        const failed = [];
+        for (const dep of inherited) {
+          const check = await checkPackage(dep, { fetch: fetchInherited, minAgeDays: loopConfig.dependencyMinAgeDays });
+          if (!check.ok) failed.push(`${dep.name} ${dep.spec} (${dep.ecosystem}): ${check.reasons.join("; ")}`);
+        }
+        if (failed.length) return { escalate: true, reason: `The items below this one added dependencies that no longer pass the dependency gate: ${failed.join("; ")}.` };
+        if (!loopConfig.install) return { escalate: true, reason: `The items below this one added ${inherited.map((d) => d.name).join(", ")}, and nothing installs them here: set loop.install in carja.config.json.` };
+        const list = inherited.map((d) => `${d.name} ${String(d.spec ?? "").replace(/^[=~^<>!\s]+/, "")}`.trim()).join(", ");
+        stdout.write(`[CARJA LOOP] ${task.id}: ${list} added by the items below; checked again and installed with loop.install (outside the sandbox).\n`);
+        const env = `export CARJA_ROOT=${JSON.stringify(root)}${codeRoot ? ` CARJA_CODE_ROOT=${JSON.stringify(codeRoot)}` : ""}; `;
+        const res = await sh(`${env}${loopConfig.install}`, code ?? cwd);
+        if (res.exitCode !== 0) return { escalate: true, reason: `loop.install failed for the dependencies the items below added (${list}), exit ${res.exitCode}: ${res.output.trim().split("\n").slice(-5).join(" | ") || "(no output)"}` };
+        await audit(`task ${task.id}: installed the dependencies the items below added: ${list}`);
+      }
+      task.inherited_deps_done = true;
+    }
+
     const { deps, unrecognised } = dependencyChanges(manifests);
     task.deps_cleared ??= {};
     const fresh = deps.filter((d) => task.deps_cleared[depKey(d)] !== d.spec);
