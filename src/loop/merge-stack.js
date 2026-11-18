@@ -13,6 +13,7 @@
 //     the forge shows no conflict,
 //   - merged without squashing (the items above are built on its commits),
 //     at the head it checked, its source branch deleted.
+// A red pipeline is retried once (F22) before the walk stops on it.
 // It stops before an item that needs the owner (owner actions, documents
 // merged from both sides, a high-risk decision; with a risk block in
 // carja.config.json, an item whose tier the owner reviews: src/loop/risk.js),
@@ -144,17 +145,32 @@ export async function walkStack({ project, entries, forges, defaults, confirm = 
         st[k] = await read(s);
       }
       // Wait for a running pipeline, or for the forge to compute mergeability.
-      let waited = 0;
-      while (st[k] && (RUNNING.has(st[k].pipeline) || st[k].checking) && waited < waitMs) {
-        await sleep(pollMs);
-        waited += pollMs;
-        st[k] = await read(s);
+      const wait = async () => {
+        let waited = 0;
+        while (st[k] && (RUNNING.has(st[k].pipeline) || st[k].checking) && waited < waitMs) {
+          await sleep(pollMs);
+          waited += pollMs;
+          st[k] = await read(s);
+        }
+      };
+      await wait();
+      // F22: a red pipeline is often a flaky job. Retry it once, then wait again.
+      let retried = false;
+      if (st[k]?.pipeline === "failed" && typeof f.retryPipeline === "function") {
+        const rr = await f.retryPipeline(s.url, { head: st[k].head });
+        if (rr?.ok) {
+          retried = true;
+          lines.push(`${label}: the pipeline of ${shortRef(s.url)} failed; retried once.`);
+          await sleep(pollMs);
+          st[k] = await read(s);
+          await wait();
+        }
       }
       const x = st[k];
       const partial = k > 0 ? ` ${shortRef(sides[0].url)} is merged, ${shortRef(s.url)} is not.` : "";
       if (!x) return stop(1, `${label}: stopped. The forge does not answer for ${s.url}.${partial}`, `Next: run \`${cmd}\` again.`);
-      if (x.conflict) return stop(1, `${label}: stopped. ${s.url} has a conflict.${partial}`, `Next: resolve it on the forge (in Carja documents, keep both sides; in code, it is your decision), then run \`${cmd}\` again.`);
-      if (x.pipeline === "failed") return stop(1, `${label}: stopped. The pipeline of ${s.url} failed.${partial}`, `Next: rerun the pipeline or push a fix to the branch, then run \`${cmd}\` again.`);
+      if (x.conflict) return stop(1, `${label}: stopped. ${s.url} has a conflict.${partial}`, `Next: on its branch, merge the target branch into it, resolve, run verify, push (in Carja documents, keep both sides), then run \`${cmd}\` again. Ask the owner only when the two sides are a product choice.`);
+      if (x.pipeline === "failed") return stop(1, `${label}: stopped. The pipeline of ${s.url} failed${retried ? " again after one retry" : ""}.${partial}`, `Next: read the failed job, push a fix to the branch, then run \`${cmd}\` again.`);
       if (x.pipeline === "manual") return stop(1, `${label}: stopped. The pipeline of ${s.url} waits on a manual job.${partial}`, `Next: run or skip the job on the forge, then run \`${cmd}\` again.`);
       if (RUNNING.has(x.pipeline) || x.checking) return stop(1, `${label}: stopped. The pipeline of ${s.url} is still running after ${Math.round(waitMs / 60_000)} min.${partial}`, `Next: run \`${cmd}\` again when it ends.`);
 
@@ -218,6 +234,24 @@ export function ghForge(run) {
       if (source) await run("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/heads/${source}`]);
       return { ok: true };
     },
+    // F22: rerun the failed workflow runs of the checked head.
+    async retryPipeline(url, { head }) {
+      const r = await run("gh", ["run", "list", "--commit", head, "--json", "databaseId,conclusion"]);
+      if (!r.ok) return { ok: false, reason: (r.stderr || r.stdout || "").trim().slice(-300) };
+      let runs;
+      try {
+        runs = JSON.parse(r.stdout || "[]");
+      } catch {
+        return { ok: false, reason: "gh run list gave no JSON" };
+      }
+      const failed = runs.filter((x) => ["failure", "cancelled", "timed_out", "startup_failure"].includes(String(x.conclusion).toLowerCase()));
+      if (!failed.length) return { ok: false, reason: "no failed run for this head" };
+      for (const x of failed) {
+        const rr = await run("gh", ["run", "rerun", String(x.databaseId), "--failed"]);
+        if (!rr.ok) return { ok: false, reason: (rr.stderr || rr.stdout || "").trim().slice(-300) };
+      }
+      return { ok: true };
+    },
     async retarget(url, base) {
       const r = await run("gh", ["pr", "edit", url, "--base", base]);
       return r.ok ? { ok: true } : { ok: false, reason: (r.stderr || r.stdout || "").trim().slice(-300) };
@@ -269,6 +303,19 @@ export function glabForge(run) {
     },
     async merge(url, { head }) {
       const r = await api(url, (p) => ["-X", "PUT", `${p}/merge`, "-F", "squash=false", "-F", "should_remove_source_branch=true", "-f", `sha=${head}`]);
+      return r.ok ? { ok: true } : { ok: false, reason: (r.stderr || r.stdout || "").trim().slice(-300) };
+    },
+    // F22: retry the failed jobs of the MR's head pipeline.
+    async retryPipeline(url) {
+      const st = await api(url, (p) => [p]);
+      let id = null;
+      try {
+        id = JSON.parse(st.stdout).head_pipeline?.id ?? null;
+      } catch {
+        id = null;
+      }
+      if (!st.ok || id == null) return { ok: false, reason: "no head pipeline" };
+      const r = await api(url, (p) => ["-X", "POST", `${p.replace(/\/merge_requests\/\d+$/, "")}/pipelines/${id}/retry`]);
       return r.ok ? { ok: true } : { ok: false, reason: (r.stderr || r.stdout || "").trim().slice(-300) };
     },
     async retarget(url, base) {

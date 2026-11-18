@@ -278,3 +278,73 @@ test("with a risk block, an item with no record of its files waits (fail safe)",
 test("without a risk block, the walk stops as before", () => {
   assert.equal(needsUnder(parseRiskConfig({})), ownerNeeds);
 });
+
+// F22 (docs/roadmap/Risk-Tiered-Merge.md): a red pipeline is retried once before the walk stops.
+function retryingForge(mrs, calls, { greenAfterRetry }) {
+  const f = fakeForge(mrs, calls);
+  f.retryPipeline = async (url) => {
+    calls.push(["retry", url]);
+    mrs[url].pipeline = greenAfterRetry ? "success" : "failed";
+    return { ok: true };
+  };
+  return f;
+}
+
+test("a red pipeline is retried once: green after the retry, the item merges", async () => {
+  const entries = [entry(1, { code: false })];
+  const calls = [];
+  const mrs = stackMrs(entries);
+  mrs["https://f/outer/1"].pipeline = "failed";
+  const f = retryingForge(mrs, calls, { greenAfterRetry: true });
+  const r = await walkStack({ project: "p", entries, forges: { outer: f, code: f }, defaults: { outer: "master", code: "main" }, sleep: async () => {}, waitMs: 1000, pollMs: 100 });
+  assert.equal(r.code, 0, r.lines.join("\n"));
+  assert.deepEqual(calls.filter((c) => c[0] === "retry"), [["retry", "https://f/outer/1"]]);
+  assert.equal(mrs["https://f/outer/1"].state, "merged");
+});
+
+test("a pipeline still red after one retry stops the walk, and says it was retried", async () => {
+  const entries = [entry(1, { code: false })];
+  const calls = [];
+  const mrs = stackMrs(entries);
+  mrs["https://f/outer/1"].pipeline = "failed";
+  const f = retryingForge(mrs, calls, { greenAfterRetry: false });
+  const r = await walkStack({ project: "p", entries, forges: { outer: f, code: f }, defaults: { outer: "master", code: "main" }, sleep: async () => {}, waitMs: 1000, pollMs: 100 });
+  assert.equal(r.code, 1);
+  assert.equal(calls.filter((c) => c[0] === "retry").length, 1, "one retry only");
+  assert.match(r.lines.join("\n"), /failed again after one retry/);
+});
+
+test("a code conflict's Next line hands the resolution to the agent, not the owner", async () => {
+  const entries = [entry(1)];
+  const { mrs, io } = setup(entries);
+  mrs["https://f/code/1"].conflict = true;
+  const r = await walkStack({ project: "p", entries, ...io });
+  assert.equal(r.code, 1);
+  assert.match(r.next, /merge the target branch into it, resolve, run verify, push/);
+  assert.doesNotMatch(r.next, /it is your decision/);
+});
+
+test("gh: a retry reruns the failed runs of the checked head", async () => {
+  const seen = [];
+  const run = async (cmd, argv) => {
+    seen.push([cmd, ...argv]);
+    if (argv[0] === "run" && argv[1] === "list") return { ok: true, stdout: JSON.stringify([{ databaseId: 7, conclusion: "failure" }, { databaseId: 8, conclusion: "success" }]) };
+    return { ok: true, stdout: "" };
+  };
+  const r = await ghForge(run).retryPipeline("u", { head: "abc" });
+  assert.equal(r.ok, true);
+  assert.deepEqual(seen[0], ["gh", "run", "list", "--commit", "abc", "--json", "databaseId,conclusion"]);
+  assert.deepEqual(seen.slice(1), [["gh", "run", "rerun", "7", "--failed"]]);
+});
+
+test("glab: a retry posts to the MR's head pipeline", async () => {
+  const seen = [];
+  const run = async (cmd, argv) => {
+    seen.push([cmd, ...argv]);
+    return { ok: true, stdout: JSON.stringify({ state: "opened", sha: "s", head_pipeline: { id: 42, status: "failed" } }) };
+  };
+  const url = "https://code.example.eu/innovation/website-cms/-/merge_requests/85";
+  const r = await glabForge(run).retryPipeline(url, { head: "s" });
+  assert.equal(r.ok, true);
+  assert.deepEqual(seen.at(-1), ["glab", "api", "--hostname", "code.example.eu", "-X", "POST", "projects/innovation%2Fwebsite-cms/pipelines/42/retry"]);
+});
