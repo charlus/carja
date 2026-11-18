@@ -140,7 +140,7 @@ export const COMMANDS = Object.freeze([
       ["doctor", "Check the project before an unattended run"],
       ["doctor --beat", "Also run one real beat to prove the engine and sandbox"],
     ],
-    config: ["verify", "loop.forge", "loop.setup", "loop.allowed_domains", "loop.require_ready", "loop.priorities", "loop.inbox", "loop.allow_nested_repo", "loop.models", "loop.cost_aware", "loop.slices", "loop.blueprint", "loop.code_dir", "loop.profile", "loop.blank_env", "loop.install", "loop.dependency_min_age_days", "loop.quota_max_wait_min", "risk.owner_review", "risk.high_means", "risk.high_paths", "risk.low_paths"],
+    config: ["verify", "loop.forge", "loop.setup", "loop.allowed_domains", "loop.require_ready", "loop.priorities", "loop.inbox", "loop.allow_nested_repo", "loop.models", "loop.cost_aware", "loop.slices", "loop.blueprint", "loop.code_dir", "loop.profile", "loop.blank_env", "loop.install", "loop.dependency_min_age_days", "loop.quota_max_wait_min", "risk.owner_review", "risk.high_means", "risk.high_paths", "risk.low_paths", "risk.breaker_reverts", "risk.breaker_days"],
     examples: [
       ["carja loop km-workload-relief", "build this project; a second terminal can run another project"],
       ["carja loop km-workload-relief --dry-run", "what will it build?"],
@@ -170,7 +170,7 @@ export const COMMANDS = Object.freeze([
       ["--confirm <n>", "You did the steps of item n that come before its merge: merge it, then stop for its steps after the merge"],
       ["--wait <min>", "How long to wait for a running pipeline before it stops (default 20)"],
     ],
-    config: ["risk.owner_review", "risk.high_means", "risk.high_paths", "risk.low_paths"],
+    config: ["risk.owner_review", "risk.high_means", "risk.high_paths", "risk.low_paths", "risk.breaker_reverts", "risk.breaker_days"],
     examples: [
       ["carja merge-stack notes --dry-run", "what can be merged now, and what needs you"],
       ["carja merge-stack notes", "merge bottom first: code MR, then state MR, no squash, source branch deleted. Stops before an item with owner actions, at a red pipeline, a conflict or a closed MR"],
@@ -310,6 +310,8 @@ export const CONFIG_KEYS = Object.freeze([
   ["risk.high_means", "Your definition of high risk, one sentence. It replaces the built-in rule (anything a user would notice or that is hard to undo) in the beat and Checker prompts"],
   ["risk.high_paths", "[\"**/billing/**\"]: an item that changes one of these paths is high. The gates, .claude/, CI files and carja.config.json are always high"],
   ["risk.low_paths", "[\"docs/**\"]: an item that changes only these paths, with nothing else to raise it, is low"],
+  ["risk.breaker_reverts", "How many items Carja merged without you may be reverted on the default branch before medium waits for you again (default 2; 0 turns the breaker off)"],
+  ["risk.breaker_days", "The window for those reverts, in days (default 30). The breaker closes again when the reverts are older"],
   ["loop.quota_max_wait_min", "A beat that hit the agent CLI's usage limit waits for the announced reset when it is at most this many minutes away, then runs again (default 330; 0 stops at the limit)"],
 ]);
 

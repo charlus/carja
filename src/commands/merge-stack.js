@@ -17,6 +17,7 @@ import { BEAT_LOG_DIR } from "../loop/beat-log.js";
 import { defaultBranchRef } from "../loop/reconcile.js";
 import { walkStack, forgeAdapter, needsUnder } from "../loop/merge-stack.js";
 import { parseRiskConfig } from "../loop/risk.js";
+import { effectiveRisk, ledgerItems, recordAutoMerges } from "../loop/breaker.js";
 import { isOldLayout, oldLayoutMessage } from "../names.js";
 
 const readStack = (path) => {
@@ -106,6 +107,10 @@ export async function mergeStackCommand(args, { cwd, stdout, stderr }) {
     stderr.write(`${problem}.\n`);
     return 1;
   }
+  // A3: recent reverts of items merged without the owner give medium back to them.
+  const inForce = risk.configured ? await riskInForce(root, loopConfig, risk) : { risk, gitCommonDir: null };
+  if (inForce.risk.breaker) stdout.write(`${inForce.risk.breaker}\n`);
+  const unreviewed = risk.configured ? entries.filter((e) => !e.merged && needsUnder(inForce.risk)(e).length === 0) : [];
 
   const pollMs = Number(process.env.CARJA_MERGE_POLL_MS) >= 0 && process.env.CARJA_MERGE_POLL_MS !== undefined ? Number(process.env.CARJA_MERGE_POLL_MS) : 20_000;
   const r = await walkStack({
@@ -113,12 +118,13 @@ export async function mergeStackCommand(args, { cwd, stdout, stderr }) {
     entries,
     forges,
     defaults,
-    needsOf: needsUnder(risk),
+    needsOf: needsUnder(inForce.risk),
     confirm,
     dryRun: args.includes("--dry-run"),
     waitMs: waitMin * 60_000,
     pollMs,
   });
+  if (inForce.gitCommonDir && !args.includes("--dry-run")) await recordAutoMerges(inForce.gitCommonDir, ledgerItems(project, unreviewed, r.merged));
   stdout.write(`${r.lines.join("\n")}\n${r.next}\n`);
   return r.code;
 }
@@ -148,4 +154,20 @@ export async function stackForges(root, loopConfig, entries) {
     (needsCode && !code.base && "the code repository has no default branch on origin") ||
     null;
   return { forges: { outer: outer.forge, code: code?.forge ?? null }, defaults: { outer: outer.base, code: code?.base ?? null }, problem };
+}
+
+/**
+ * A3: the risk setting in force for a merge without the owner, tightened by the
+ * auto-merge breaker (src/loop/breaker.js) when recent reverts say so.
+ */
+export async function riskInForce(root, loopConfig, risk) {
+  const common = await runCli("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], root);
+  if (!common.ok) return { risk, gitCommonDir: null };
+  const repoOf = async (key, dir) => {
+    const git = (argv) => runCli("git", argv, dir);
+    return { key, git, ref: await defaultBranchRef(git) };
+  };
+  const codeRoot = loopConfig.codeDir ? join(root, loopConfig.codeDir) : null;
+  const repos = [await repoOf("outer", root), ...(codeRoot && existsSync(join(codeRoot, ".git")) ? [await repoOf("code", codeRoot)] : [])];
+  return { risk: await effectiveRisk({ gitCommonDir: common.stdout, repos, risk }), gitCommonDir: common.stdout };
 }

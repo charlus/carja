@@ -226,7 +226,7 @@ fi
 echo ""
 echo "9. Dead Path References..."
 
-dead_refs=$(grep -rEl '\.?carja/[0-9]-[A-Z]|\.agents/workflows/[A-Z][a-zA-Z-]*\.md|\.agents/skills/[A-Z][a-zA-Z-]*/SKILL\.md' "$AGENT_DIR" 2>/dev/null || true)
+dead_refs=$(grep -rEl --exclude-dir=.worktrees '\.?carja/[0-9]-[A-Z]|\.agents/workflows/[A-Z][a-zA-Z-]*\.md|\.agents/skills/[A-Z][a-zA-Z-]*/SKILL\.md' "$AGENT_DIR" 2>/dev/null || true)
 
 if [ -z "$dead_refs" ]; then
   pass "No dead Title-Case path references found"

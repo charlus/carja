@@ -41,6 +41,7 @@ import { codePaths, ensureCodeWorktree, codeHasWork, squashOnto, mergeNested, st
 import { recordUsage, usageSummary, cacheShare } from "../loop/usage.js";
 import { newRulings, rulingInboxLines, rulingsPrBody, rulingsForChecker, RULINGS_REL } from "../loop/rulings.js";
 import { parseRiskConfig, autoApprovesDependencies, rulingRule } from "../loop/risk.js";
+import { ledgerItems, recordAutoMerges } from "../loop/breaker.js";
 import { walkStack, needsUnder } from "../loop/merge-stack.js";
 import { renderShipAssignment, shipBeatSection, sectionOf, checkShipEvidence, PR_BODY_REL } from "../loop/ship.js";
 import { harvestSlices, specEvidence as checkSpecEvidence, PROJECTS_REL } from "../loop/slices.js";
@@ -628,7 +629,7 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
     // are merged here, through the MR API, bottom first, up to the first one
     // that waits for the owner. Without the block, the loop merges nothing.
     const autoMerge = risk.configured ? await mergeUnreviewed({ root, scope, entries, loopConfig, risk, stackPath, stdout }) : null;
-    const report = await writeStackReport(root, scope, entries, stop, notes, { risk, autoMerge });
+    const report = await writeStackReport(root, scope, entries, stop, notes, { risk: autoMerge?.risk ?? risk, autoMerge });
     await stackEmit("stack_end", { project: scope, status: stop?.status ?? "done", item: stop?.item ?? null });
     stdout.write(`\n${report}`);
     const open = entries.filter((e) => !e.merged).length;
@@ -687,9 +688,18 @@ async function mergeUnreviewed({ root, scope, entries, loopConfig, risk, stackPa
     return r;
   }
   const pollMs = Number(process.env.CARJA_MERGE_POLL_MS) >= 0 && process.env.CARJA_MERGE_POLL_MS !== undefined ? Number(process.env.CARJA_MERGE_POLL_MS) : 20_000;
+  // A3: recent reverts of items merged without the owner give medium back to them.
+  const { riskInForce } = await import("./merge-stack.js");
+  const inForce = await riskInForce(root, loopConfig, risk);
+  risk = inForce.risk;
+  if (risk.breaker) stdout.write(`\n[CARJA LOOP] ${risk.breaker}\n`);
   stdout.write(`\n[CARJA LOOP] merging the items your risk setting does not review (risk.owner_review: ${risk.ownerReview.join(", ")})\n`);
+  const unreviewed = entries.filter((e) => !e.merged && needsUnder(risk)(e).length === 0);
   // A project pipeline can take 40 to 50 minutes (owner, 2026-11-18): wait up to an hour per MR.
   const r = await walkStack({ project: scope, entries, forges, defaults, needsOf: needsUnder(risk), pollMs, waitMs: 60 * 60_000 });
+  if (inForce.gitCommonDir) await recordAutoMerges(inForce.gitCommonDir, ledgerItems(scope, unreviewed, r.merged));
+  r.breaker = risk.breaker ?? null;
+  r.risk = risk;
   for (const e of entries) {
     const urls = [e.outer?.url, ...(e.code ? [e.code.url] : [])];
     if (!e.merged && urls.every((u) => r.merged.includes(u))) {
@@ -841,6 +851,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     // The risk block (src/loop/risk.js): the owner's rule for rating decisions, and whether a checked dependency needs them.
     risk = parseRiskConfig(rootConfig);
     loopConfig.errors.push(...risk.errors);
+    // A3: the breaker also stops checked dependencies from going in without the owner.
+    if (risk.configured && !risk.errors.length) risk = (await (await import("./merge-stack.js")).riskInForce(root, loopConfig, risk)).risk;
   } catch (e) {
     stderr.write(`Could not parse carja.config.json: ${e.message}\n`);
     return 1;

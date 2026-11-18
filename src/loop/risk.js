@@ -68,6 +68,12 @@ export function parseRiskConfig(config) {
     if (typeof raw.high_means === "string" && raw.high_means.trim()) out.highMeans = raw.high_means.trim();
     else out.errors.push("risk.high_means must be a sentence that says what high risk is for you");
   }
+  // A3: the auto-merge breaker (src/loop/breaker.js).
+  for (const [key, field] of [["breaker_reverts", "breakerReverts"], ["breaker_days", "breakerDays"]]) {
+    if (raw[key] === undefined) continue;
+    if (Number.isInteger(raw[key]) && raw[key] >= 0) out[field] = raw[key];
+    else out.errors.push(`risk.${key} must be a whole number, 0 or more`);
+  }
   for (const [key, field] of [["high_paths", "highPaths"], ["low_paths", "lowPaths"]]) {
     if (raw[key] === undefined) continue;
     if (isStringList(raw[key])) out[field] = raw[key].map((s) => s.trim());

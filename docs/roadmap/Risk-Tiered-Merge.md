@@ -1,6 +1,6 @@
 # Risk-tiered merge, and the verification backlog from Anthropic's articles
 
-> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10, F12 and F22 built in 7.6.0. The reviewer-recall eval (F10) has not been run: it calls a model once per case. F18 is dropped.
+> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10, F12 and F22 built in 7.6.0. Reviewer-recall eval run twice on autopportunity (20 cases, `test/evals/README.md`). F23, the auto-merge breaker, built in 7.7.0. F18 is dropped.
 
 ## Why
 
@@ -27,3 +27,7 @@ PR-gated merge holds: merges go through the forge's MR API, never a push. Fail-s
 - **F12 A Pre-existing finding tag.** Built: `reviewer.md` defines it, `src/loop/checker.js` (`preExistingFindings`) keeps it out of the Maker's next prompt, the loop records it in its messages.
 - **F22 merge-stack retries a red pipeline once and resolves a code conflict itself** before it stops. Built: `retryPipeline` in both forges (`src/loop/merge-stack.js`); the conflict is resolved by the agent in `workflows/merge-stack.md`, since a code merge needs judgement and a verify run.
 - **F18 dropped** (owner): rerunning the checks on the combined result would cost 40 to 50 minutes per item on autopportunity.
+
+## Step 2: the auto-merge breaker (F23, 7.7.0)
+
+The code review post plans "circuit breakers that tighten approval when revert or incident numbers move". Each item merged without the owner goes into `.git/carja-auto-merges.jsonl` (base and head per repository, MR URL). Before the next such merge, the default branch of each repository is read for the last `risk.breaker_days`; a revert counts when it names a commit of base..head, the merge commit (second parent = head) or the MR. At `risk.breaker_reverts` reverted items, medium goes back to the owner. Stateless: no reset command, the window closes it. Low stays automatic: it is only what `risk.low_paths` names.
