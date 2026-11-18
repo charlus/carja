@@ -132,7 +132,7 @@ export function harvestCases(dir, { controlMinAgeDays = 30, maxCommits = 2000, n
       for (const [a, b] of ranges) {
         let out = "";
         try {
-          out = git("blame", "--porcelain", "-L", `${a},${b}`, `${c.parents.split(" ")[0]}`, "--", file);
+          out = git("blame", "-w", "--porcelain", "-L", `${a},${b}`, `${c.parents.split(" ")[0]}`, "--", file);
         } catch {
           continue;
         }

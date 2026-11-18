@@ -226,4 +226,13 @@ downgrades it, or one that blocks everything, shows. Keep a change to
 
 **Limits.** The key is a location, not the bug's meaning: a finding at the
 right lines for the wrong reason counts. SZZ blames the last commit to touch a
-line, which is sometimes not the one that introduced the bug. Not yet run.
+line (whitespace ignored), which is sometimes not the one that introduced the
+bug, and some `fix` commits change a requirement rather than a bug no reviewer
+could see. The reviewer gets only the commit message as its definition of done,
+not the spec: a lower bound for the real review.
+
+**First run** (2026-11-18, autopportunity, 10 incidents and 10 controls,
+Sonnet): `recall_any` 0.1, `recall_blocker` 0.1, `control_blocked` 0.1. By
+hand, about 3 of the 10 incidents were not reviewer-detectable (a line-ending
+commit blamed, now fixed with `blame -w`; a prompt-tuning change; a product
+change), so about 1 in 7 real bugs found.

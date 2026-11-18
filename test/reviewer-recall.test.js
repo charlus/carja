@@ -156,3 +156,29 @@ test("SZZ: a fix: commit is traced by blame to the commit that introduced the li
     rmSync(d, { recursive: true, force: true });
   }
 });
+
+test("SZZ skips a whitespace-only commit (line endings) and blames the commit that wrote the line", () => {
+  const d = mkdtempSync(join(tmpdir(), "szz-ws-"));
+  const G = (...a) => execFileSync("git", a, { cwd: d, stdio: "pipe" }).toString().trim();
+  try {
+    G("init", "-q");
+    G("config", "user.email", "t@t");
+    G("config", "user.name", "t");
+    G("config", "core.autocrlf", "false");
+    writeFileSync(join(d, "a.js"), "one\ntwo\n");
+    G("add", "-A");
+    G("commit", "-qm", "init");
+    writeFileSync(join(d, "a.js"), "one\ntwo\nbad line\n");
+    G("commit", "-qam", "feat: totals");
+    const bad = G("rev-parse", "HEAD");
+    writeFileSync(join(d, "a.js"), "one\r\ntwo\r\nbad line\r\n");
+    G("commit", "-qam", "chore: restore CRLF line endings");
+    writeFileSync(join(d, "a.js"), "one\r\ntwo\r\ngood line\r\n");
+    G("commit", "-qam", "fix(totals): rounding");
+    const inc = harvestCases(d, { controlMinAgeDays: 0 }).filter((c) => c.kind === "incident");
+    assert.equal(inc.length, 1);
+    assert.equal(inc[0].bad, bad, "blamed the line-ending commit");
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
+});
