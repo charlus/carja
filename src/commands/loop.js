@@ -15,7 +15,7 @@ import { resolveAdapter } from "../loop/adapters/index.js";
 import { createWorktree, teardownWorktree, worktreePlan, taskWorktreePlan, materializeCarjaContext, CONTEXT_ANCHORS, hasUniqueCommits, ensureWorktreesExcluded, isLiveWorktree, freeWorktreePath } from "../loop/worktree.js";
 import { guardedAutoCommit, autoCommitMessage, IsolationLostError } from "../loop/autocommit.js";
 import { harvestWorkQueue, renderAssignment, renderAttempts } from "../loop/harvester.js";
-import { parseCheckerVerdict, verdictToExitCode, tallyVerdicts, isInfraReason, groundFindings, VERDICT_REL } from "../loop/checker.js";
+import { parseCheckerVerdict, verdictToExitCode, tallyVerdicts, isInfraReason, groundFindings, preExistingFindings, preExistingLine, VERDICT_REL } from "../loop/checker.js";
 import { openPullRequest, planMergeAction, DEFAULT_PR_BODY } from "../loop/merge.js";
 import { runSwarm } from "../loop/swarm.js";
 import { predictConflicts, mergeKeepingDocs } from "../loop/conflict.js";
@@ -1274,6 +1274,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // each with a fresh context, run in a given cwd. A missing/malformed verdict
   // fails safe to reject; a strict majority is required to approve.
   const votes = Math.max(1, state.checker_votes ?? 1);
+  // F12: a defect the reviewer tagged PRE-EXISTING is recorded once per run in the loop messages, never sent back to the Maker.
+  const seenPreExisting = new Set();
   const makeChecker = (cwd, checkerPrompt = checkerPromptPath) => async () => {
     const verdictPath = join(cwd, VERDICT_REL);
     const verdicts = [];
@@ -1309,6 +1311,12 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     }
     const tally = tallyVerdicts(verdicts, votes);
     stdout.write(`[CARJA LOOP] checker: ${tally.approved ? "APPROVED" : "REJECTED"} — ${tally.reason}\n`);
+    for (const f of preExistingFindings(verdicts.flatMap((v) => v.findings ?? []))) {
+      const line = preExistingLine(f);
+      if (seenPreExisting.has(line)) continue;
+      seenPreExisting.add(line);
+      await writeInbox(root, state, line, { title: "Pre-existing defect (the reviewer found it; this change did not introduce it)" });
+    }
     // P1.2: surface each verdict's reason so a rejection is diagnosable (empty-diff
     // / no-file plumbing issue vs a genuine substantive rejection).
     if (!tally.approved) {
@@ -1320,7 +1328,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       await audit(`${infra ? "checker infra-failure" : "checker rejected"}: ${tally.reasons.join(" | ")}`);
     }
     // A13: the reasons and findings travel to the next Maker beat.
-    const findings = verdicts.flatMap((v) => v.findings ?? []).slice(0, 10);
+    const pre = new Set(preExistingFindings(verdicts.flatMap((v) => v.findings ?? [])));
+    const findings = verdicts.flatMap((v) => v.findings ?? []).filter((f) => !pre.has(f)).slice(0, 10);
     return { exitCode: verdictToExitCode(tally), reasons: tally.approved ? [] : tally.reasons, findings: tally.approved ? [] : findings };
   };
 

@@ -147,7 +147,7 @@ Per the gate skill: fix every **BLOCKER** — the whole class the reviewer named
 ```bash
 carja review-log append '{"round":1,"severity":"BLOCKER","category":"error-handling","file":"src/x.py","line":42,"quote":"return data or {}","confidence":8,"action":"fixed","reason":"empty dict hid the upstream failure"}'
 ```
-`severity` is `BLOCKER|IMPORTANT|NIT|SCOPE`; `action` is `fixed|dismissed|known-gap|deferred`; a BLOCKER needs its `quote` and `confidence` ≥ 7 or the CLI refuses it, exactly as the rubric does. `carja review-log summary` then reports rounds to APPROVE, dismissal rate per class and blockers by category — without these lines the review's cost has no number.
+`severity` is `BLOCKER|IMPORTANT|NIT|SCOPE|PRE-EXISTING`; `action` is `fixed|dismissed|known-gap|deferred`; a BLOCKER needs its `quote` and `confidence` ≥ 7 or the CLI refuses it, as in the rubric. `carja review-log summary` reports rounds to APPROVE, dismissal rate per class and blockers by category — without these lines the review's cost has no number.
 
 Then re-review **once**: a fresh reviewer, given round-1 findings *plus your disposition of each*, and `git diff` of the **fix commits only**. Its only job is whether the named classes are closed and whether the fix introduced a new blocker.
 

@@ -1,6 +1,6 @@
 # Risk-tiered merge, and the verification backlog from Anthropic's articles
 
-> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10 and F12 are planned, not built. F18 is dropped.
+> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F12 built in 7.6.0. F7, F8, F9/F10 and F22 are planned, not built. F18 is dropped.
 
 ## Why
 
@@ -24,6 +24,6 @@ PR-gated merge holds: merges go through the forge's MR API, never a push. Fail-s
 - **F7 A `/verify` skill that starts, drives and inspects the running app** before a change is called done. Anthropic's top lever.
 - **F8 Observe mode for gates** (off, observe, enforce): log what would have been blocked before enforcing.
 - **F9/F10 Turn misses into rules, and measure the reviewer** on past incidents and reverts, with clean merged changes as a control.
-- **F12 A Pre-existing finding tag.** Anthropic found 59% of repeated findings predated the change.
+- **F12 A Pre-existing finding tag.** Built: `reviewer.md` defines it, `src/loop/checker.js` (`preExistingFindings`) keeps it out of the Maker's next prompt, the loop records it in its messages.
 - **F22 merge-stack retries a red pipeline once and resolves a code conflict itself** before it stops.
 - **F18 dropped** (owner): rerunning the checks on the combined result would cost 40 to 50 minutes per item on autopportunity.

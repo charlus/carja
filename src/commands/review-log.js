@@ -33,7 +33,7 @@ import { recordApproval } from "../review-verdict.js";
 
 export const REVIEW_LOG_REL = "carja/1-workbench/review-log.jsonl";
 
-const SEVERITIES = new Set(["BLOCKER", "IMPORTANT", "NIT", "SCOPE"]);
+const SEVERITIES = new Set(["BLOCKER", "IMPORTANT", "NIT", "SCOPE", "PRE-EXISTING"]);
 
 // F7: one vocabulary. Free-text categories split one idea over many names
 // (spec-gap, spec-ambiguity, ambiguity), so no class reached the 3 findings the
@@ -375,7 +375,7 @@ export async function reviewLogCommand(args, { cwd, stdout, stderr }) {
       "  append '<json>'   record one finding + its disposition\n" +
       "  summary [--since <ISO date>]\n" +
       "  verdict APPROVE [--repo <dir>]   record that the independent reviewer approved HEAD\n\n" +
-      "Fields: severity (BLOCKER|IMPORTANT|NIT|SCOPE), action (fixed|dismissed|known-gap|deferred),\n" +
+      "Fields: severity (BLOCKER|IMPORTANT|NIT|SCOPE|PRE-EXISTING), action (fixed|dismissed|known-gap|deferred),\n" +
       "        category, file, line, quote, confidence, reason, round, brief_bytes,\n" +
       "        persona, overridden_by, po_decision (a conflict between two personas' findings).\n" +
       "A BLOCKER requires confidence >= 7 and a quote — the same bar as rubric v2.\n",
