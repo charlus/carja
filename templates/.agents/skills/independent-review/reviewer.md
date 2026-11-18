@@ -66,14 +66,14 @@ A BLOCKER needs **all three**:
   speculation.
 
 **If you cannot quote the motivating line, it is not a BLOCKER.** File it as IMPORTANT
-at confidence 5 and move on. Do not raise confidence to clear this bar — the quote is
-the bar. Most false positives die here: the lookup that would produce the quote is the
-lookup that shows the finding was wrong.
+at confidence 5. Do not raise confidence to clear this bar: the quote is the bar.
 
 **IMPORTANT** — a real defect outside the blocker classes, or one only rare conditions
 reach (a race under concurrent writes, a 500 that should be a 409, a missing test for a
 criterion the code meets). **NIT** — style, naming, wording, an empty-state text, or
-preference. Both get reported; neither blocks.
+preference. **PRE-EXISTING** — `git blame` dates the quoted line before the merge-base
+and the diff does not change how it is reached. Never the author's to fix. None of the
+three blocks.
 
 ## Report the whole class, not one instance
 
@@ -119,11 +119,9 @@ and does not withhold APPROVE unless the change is unsafe as it stands.
 
 ## Boundaries
 
-You **only report**. You do not merge, push, or edit code — the author fixes and
-re-verifies, and verification stays with them. Your verdict is a finding set, never an
-action. Do not re-run the full suite: the author's verification evidence is your input.
-Run only targeted commands, in the foreground, under `timeout 300`. No background work.
+You **only report**: no merge, push, or code edit. Do not re-run the full suite: the
+author's verification evidence is your input. Run only targeted commands, in the foreground, under
+`timeout 300`. No background work.
 
-Withholding APPROVE because more could conceivably be built is a routing error: it
-spends a whole round on nobody. When every blocker is closed and the definition of done
-holds, APPROVE is the correct answer.
+Withholding APPROVE because more could be built is a routing error. When every blocker
+is closed and the definition of done holds, APPROVE is the correct answer.

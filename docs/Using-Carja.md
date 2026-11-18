@@ -129,7 +129,7 @@ carja status [dir] [options]
 | `--no-color` | Plain text (also --no-colour; --color or --colour forces colour) |
 | `--stale-days <n>` | Days after which an item counts as stale (default 30) |
 
-Reads: `deployCheck`, `repos`.
+Reads: `deployCheck`, `repos`, `gates.<name>`.
 
 - `carja status --live`: what is on our plate, with MR state
 
@@ -284,7 +284,7 @@ carja loop doctor [dir] [--beat]
 | `doctor` | Check the project before an unattended run |
 | `doctor --beat` | Also run one real beat to prove the engine and sandbox |
 
-Reads: `verify`, `loop.forge`, `loop.setup`, `loop.allowed_domains`, `loop.require_ready`, `loop.priorities`, `loop.inbox`, `loop.allow_nested_repo`, `loop.models`, `loop.cost_aware`, `loop.slices`, `loop.blueprint`, `loop.code_dir`, `loop.profile`, `loop.blank_env`, `loop.install`, `loop.dependency_min_age_days`, `loop.quota_max_wait_min`.
+Reads: `verify`, `loop.forge`, `loop.setup`, `loop.allowed_domains`, `loop.require_ready`, `loop.priorities`, `loop.inbox`, `loop.allow_nested_repo`, `loop.models`, `loop.cost_aware`, `loop.slices`, `loop.blueprint`, `loop.code_dir`, `loop.profile`, `loop.blank_env`, `loop.install`, `loop.dependency_min_age_days`, `loop.quota_max_wait_min`, `risk.owner_review`, `risk.high_means`, `risk.high_paths`, `risk.low_paths`.
 
 - `carja loop km-workload-relief`: build this project; a second terminal can run another project
 - `carja loop km-workload-relief --dry-run`: what will it build?
@@ -327,11 +327,31 @@ carja merge-stack [project] [dir] [--dry-run] [--confirm <n>] [--wait <min>]
 | `--confirm <n>` | You did the steps of item n that come before its merge: merge it, then stop for its steps after the merge |
 | `--wait <min>` | How long to wait for a running pipeline before it stops (default 20) |
 
+Reads: `risk.owner_review`, `risk.high_means`, `risk.high_paths`, `risk.low_paths`.
+
 - `carja merge-stack notes --dry-run`: what can be merged now, and what needs you
 - `carja merge-stack notes`: merge bottom first: code MR, then state MR, no squash, source branch deleted. Stops before an item with owner actions, at a red pipeline, a conflict or a closed MR
 - `carja merge-stack notes --confirm 2`: after the backup that item 2 asked for
 
 ### Gates and evidence
+
+#### `carja app`
+
+Start the product, wait until it is ready, and stop it, so an agent can drive it before it calls a change done.
+
+```
+carja app up|check|down [dir]
+```
+
+| Option | What it does |
+|---|---|
+| `up` | Start app.start in the background and wait for app.ready (default 120 s). Not ready in time: stopped, the end of its log shown, exit 1 |
+| `check` | Run app.ready once: exit 0 when the app is ready |
+| `down` | Stop the app up started |
+
+Reads: `app.start`, `app.ready`, `app.url`, `app.dir`, `app.ready_timeout_s`.
+
+- `carja app up`: start the product; the agent then drives it at app.url
 
 #### `carja verify`
 
@@ -476,7 +496,7 @@ Reads: `registry`.
 Record review findings and approvals, and see which rules reviewers dismiss.
 
 ```
-carja review-log append '<json>' | carja review-log summary [--since <date>] | carja review-log verdict APPROVE [--repo <dir>]
+carja review-log append '<json>' | carja review-log summary [--since <date>] | carja review-log rules | carja review-log verdict APPROVE [--repo <dir>]
 ```
 
 | Option | What it does |
@@ -485,6 +505,7 @@ carja review-log append '<json>' | carja review-log summary [--since <date>] | c
 | `--repo <dir>` | With verdict: the code repository whose HEAD was approved (outer layout) |
 
 - `carja review-log summary`
+- `carja review-log rules`: classes the author fixed in two or more slices: candidate checklist rules
 - `carja review-log verdict APPROVE`: after the independent review approved HEAD: the push gate lets it through
 
 #### `carja context-bill`
@@ -529,6 +550,12 @@ Reads: `verify`, `eval`.
 | `models.preset` | The preset in use: quality, balanced, or one of models.presets (set it with carja models use) |
 | `models.presets` | Your own presets: { "<name>": { "plan": …, "build": …, "rank": […] } } |
 | `models.rank` | Your models, strongest first. The loop doctor uses it to check the reviewer is not weaker than the builder |
+| `app.start` | The command that starts the product, run in the background by carja app up (e.g. "npm run dev") |
+| `app.ready` | A command that exits 0 once the product answers (e.g. "curl -sf http://localhost:3000"), polled by carja app up |
+| `app.url` | Where the agent drives the product, printed by carja app up |
+| `app.dir` | The folder app.start runs in (default: loop.code_dir, else the project root) |
+| `app.ready_timeout_s` | How long carja app up waits for app.ready (default 120) |
+| `gates.<name>` | "observe": the pre-commit gate logs what it would have blocked and lets the commit through; carja status counts them. Names: tdd, eval, brief, report, default-branch. Read from the committed config. goodhart, integrity and protected always enforce, and so does every push gate |
 | `loop.forge` | "gh" \| "glab" (default: from the origin host) |
 | `loop.setup` | Shell command run once in each new worktree, before the first beat |
 | `loop.allowed_domains` | Extra hosts the sandbox may reach; never a package registry (refused) |
@@ -545,6 +572,10 @@ Reads: `verify`, `eval`.
 | `loop.blank_env` | ["GEMINI_API_KEY", …]: set empty in every beat, so app code never calls a provider with a placeholder key (default: the common provider keys, never the engine's own; [] turns it off) |
 | `loop.install` | Shell command the driver runs outside the sandbox after the dependency gate passed a new dependency, e.g. ".venv/bin/pip install -r requirements.txt" or "npm ci" |
 | `loop.dependency_min_age_days` | A new dependency's version must be at least this many days old (default 7) |
+| `risk.owner_review` | The risk tiers that wait for your review: ["high"] lets the loop merge low and medium items itself at the end of `carja loop <project>`, and lets a dependency that passed every check in without a question. high always waits. Without a risk block, every item waits for you |
+| `risk.high_means` | Your definition of high risk, one sentence. It replaces the built-in rule (anything a user would notice or that is hard to undo) in the beat and Checker prompts |
+| `risk.high_paths` | ["**/billing/**"]: an item that changes one of these paths is high. The gates, .claude/, CI files and carja.config.json are always high |
+| `risk.low_paths` | ["docs/**"]: an item that changes only these paths, with nothing else to raise it, is low |
 | `loop.quota_max_wait_min` | A beat that hit the agent CLI's usage limit waits for the announced reset when it is at most this many minutes away, then runs again (default 330; 0 stops at the limit) |
 
 <!-- usage-reference:end -->

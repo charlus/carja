@@ -15,7 +15,7 @@ import { resolveAdapter } from "../loop/adapters/index.js";
 import { createWorktree, teardownWorktree, worktreePlan, taskWorktreePlan, materializeCarjaContext, CONTEXT_ANCHORS, hasUniqueCommits, ensureWorktreesExcluded, isLiveWorktree, freeWorktreePath } from "../loop/worktree.js";
 import { guardedAutoCommit, autoCommitMessage, IsolationLostError } from "../loop/autocommit.js";
 import { harvestWorkQueue, renderAssignment, renderAttempts } from "../loop/harvester.js";
-import { parseCheckerVerdict, verdictToExitCode, tallyVerdicts, isInfraReason, groundFindings, VERDICT_REL } from "../loop/checker.js";
+import { parseCheckerVerdict, verdictToExitCode, tallyVerdicts, isInfraReason, groundFindings, preExistingFindings, preExistingLine, VERDICT_REL } from "../loop/checker.js";
 import { openPullRequest, planMergeAction, DEFAULT_PR_BODY } from "../loop/merge.js";
 import { runSwarm } from "../loop/swarm.js";
 import { predictConflicts, mergeKeepingDocs } from "../loop/conflict.js";
@@ -40,6 +40,8 @@ import { ignoredNestedRepos } from "../nested-repos.js";
 import { codePaths, ensureCodeWorktree, codeHasWork, squashOnto, mergeNested, stateMrBody, codeMrBody, unionBranches, refusedNestedRepos, checkerNestedNote, nestedSandboxWrites } from "../loop/nested.js";
 import { recordUsage, usageSummary, cacheShare } from "../loop/usage.js";
 import { newRulings, rulingInboxLines, rulingsPrBody, rulingsForChecker, RULINGS_REL } from "../loop/rulings.js";
+import { parseRiskConfig, autoApprovesDependencies, rulingRule } from "../loop/risk.js";
+import { walkStack, needsUnder } from "../loop/merge-stack.js";
 import { renderShipAssignment, shipBeatSection, sectionOf, checkShipEvidence, PR_BODY_REL } from "../loop/ship.js";
 import { harvestSlices, specEvidence as checkSpecEvidence, PROJECTS_REL } from "../loop/slices.js";
 import { pruneMergedLoopWorktrees, LOOP_PREFIX, WORK_PREFIX, remoteLoopBranches, mergedBranches, skipClaimed, defaultBranchRef, markWorktreeHeld, removeHeldWorktrees, catchUpCheckout } from "../loop/reconcile.js";
@@ -418,10 +420,17 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
   const dryRun = args.includes("--dry-run");
   const cmd = `carja loop ${scope}`;
   let loopConfig;
+  let risk;
   try {
-    loopConfig = parseLoopConfig(await readRootConfig(root));
+    const rootConfig = await readRootConfig(root);
+    loopConfig = parseLoopConfig(rootConfig);
+    risk = parseRiskConfig(rootConfig);
   } catch (e) {
     stderr.write(`Could not parse carja.config.json: ${e.message}\n`);
+    return 1;
+  }
+  if (risk.errors.length) {
+    stderr.write(`carja.config.json: ${risk.errors.join("; ")}.\n`);
     return 1;
   }
   const rootGit = makeGit(root);
@@ -585,12 +594,15 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
         await runCli("git", ["fetch", "-q", "origin"], root);
         if (codeRoot) await runCli("git", ["fetch", "-q", "origin"], codeRoot);
         const codeUrl = task.merge.code_pr_url ?? null;
+        const outerHead = await remoteHead(rootGit, branch);
+        const codeHead = codeUrl && codeGit ? await remoteHead(codeGit, branch) : null;
         entries.push({
           id: next.id,
           title: itemName(next),
-          outer: { branch, head: await remoteHead(rootGit, branch), url: task.merge.pr_url },
-          code: codeUrl ? { branch, head: codeGit ? await remoteHead(codeGit, branch) : null, url: codeUrl } : null,
+          outer: { branch, head: outerHead, url: task.merge.pr_url },
+          code: codeUrl ? { branch, head: codeHead, url: codeUrl } : null,
           base: belowHeads,
+          files: await itemFiles({ rootGit, codeGit, below: belowHeads, outerHead, codeHead, hasCode: Boolean(codeUrl) }),
           summary: summaryFromBody(task.ship?.body ?? null),
           ownerActions: ownerActionsFromBody(task.ship?.body ?? null),
           detected: task.owner_hints ?? [],
@@ -612,12 +624,16 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
       stdout.write("Nothing to build.\n");
       return 0;
     }
-    const report = await writeStackReport(root, scope, entries, stop, notes);
+    // The risk block (owner, 2026-11-18): the items the owner does not review
+    // are merged here, through the MR API, bottom first, up to the first one
+    // that waits for the owner. Without the block, the loop merges nothing.
+    const autoMerge = risk.configured ? await mergeUnreviewed({ root, scope, entries, loopConfig, risk, stackPath, stdout }) : null;
+    const report = await writeStackReport(root, scope, entries, stop, notes, { risk, autoMerge });
     await stackEmit("stack_end", { project: scope, status: stop?.status ?? "done", item: stop?.item ?? null });
     stdout.write(`\n${report}`);
     const open = entries.filter((e) => !e.merged).length;
     stdout.write(
-      `\n[CARJA LOOP] Next: ${stop?.status === "awaiting_answers" ? `answer the questions in carja/1-workbench/questions/, then run \`${cmd}\` again.` : stop?.status === "done" ? (open ? `\`carja merge-stack ${scope}\` merges the ${open} item(s) in order and stops where you must act (\`--dry-run\` lists them first). The list is in ${REPORT_REL(scope)}.` : "nothing.") : `read ${MESSAGES_REL}, then run \`${cmd}\` again.`}\n`
+      `\n[CARJA LOOP] Next: ${stop?.status === "awaiting_answers" ? `answer the questions in carja/1-workbench/questions/, then run \`${cmd}\` again.` : stop?.status === "done" ? (open ? `\`carja merge-stack ${scope}\` merges the ${open} item(s) in order and stops where you must act (\`--dry-run\` lists them first). The list is in ${REPORT_REL(scope)}.` : autoMerge?.merged.length ? "deploy and test the product. The loop merged every item." : "nothing.") : `read ${MESSAGES_REL}, then run \`${cmd}\` again.`}\n`
     );
     return stop?.status === "done" || stop?.status === "awaiting_answers" ? 0 : 1;
   } finally {
@@ -643,8 +659,51 @@ async function gitRev(g, ref) {
   return r.ok ? r.stdout : null;
 }
 
-async function writeStackReport(root, project, entries, stop, notes) {
-  const text = renderStackReport({ project, entries, stop, notes });
+/** The files an item changes in each repository, relative to it; null when a head is unknown (its tier is then high). */
+async function itemFiles({ rootGit, codeGit, below, outerHead, codeHead, hasCode }) {
+  const names = async (g, from, to) => {
+    if (!g || !from || !to) return null;
+    const r = await g(["diff", "--name-only", from, to]);
+    return r.ok ? r.stdout.split("\n").map((x) => x.trim()).filter(Boolean) : null;
+  };
+  const outer = await names(rootGit, below.outer, outerHead);
+  const code = hasCode ? await names(codeGit, below.code, codeHead) : [];
+  return outer && code ? { outer, code } : null;
+}
+
+/**
+ * Merge the open items the owner does not review (src/loop/risk.js), bottom
+ * first, through the forge's MR API, at the head the walk checked. Stops at the
+ * first item that waits for the owner, a red pipeline or a conflict.
+ * @returns {Promise<{lines: string[], next: string, merged: string[], code: number}|null>}
+ */
+async function mergeUnreviewed({ root, scope, entries, loopConfig, risk, stackPath, stdout }) {
+  if (!entries.some((e) => !e.merged)) return null;
+  const { stackForges } = await import("./merge-stack.js");
+  const { forges, defaults, problem } = await stackForges(root, loopConfig, entries);
+  if (problem) {
+    const r = { lines: [`The loop did not merge anything: ${problem}.`], next: `Next: \`carja merge-stack ${scope}\`.`, merged: [], code: 1 };
+    stdout.write(`[CARJA LOOP] ${r.lines[0]}\n`);
+    return r;
+  }
+  const pollMs = Number(process.env.CARJA_MERGE_POLL_MS) >= 0 && process.env.CARJA_MERGE_POLL_MS !== undefined ? Number(process.env.CARJA_MERGE_POLL_MS) : 20_000;
+  stdout.write(`\n[CARJA LOOP] merging the items your risk setting does not review (risk.owner_review: ${risk.ownerReview.join(", ")})\n`);
+  // A project pipeline can take 40 to 50 minutes (owner, 2026-11-18): wait up to an hour per MR.
+  const r = await walkStack({ project: scope, entries, forges, defaults, needsOf: needsUnder(risk), pollMs, waitMs: 60 * 60_000 });
+  for (const e of entries) {
+    const urls = [e.outer?.url, ...(e.code ? [e.code.url] : [])];
+    if (!e.merged && urls.every((u) => r.merged.includes(u))) {
+      e.merged = true;
+      e.merged_by_loop = true;
+    }
+  }
+  await atomicWriteJson(stackPath, entries);
+  for (const l of r.lines) stdout.write(`[CARJA LOOP] ${l}\n`);
+  return r;
+}
+
+async function writeStackReport(root, project, entries, stop, notes, { risk = null, autoMerge = null } = {}) {
+  const text = renderStackReport({ project, entries, stop, notes, risk, autoMerge });
   await ensureOwnerFilesExcluded(root);
   try {
     await mkdir(join(root, "carja/1-workbench"), { recursive: true });
@@ -775,8 +834,13 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // a beat runs in a worktree and cannot widen its own sandbox or setup. A bad
   // value stops the run (dry-run included) rather than being silently ignored.
   let loopConfig;
+  let risk;
   try {
-    loopConfig = parseLoopConfig(await readRootConfig(root));
+    const rootConfig = await readRootConfig(root);
+    loopConfig = parseLoopConfig(rootConfig);
+    // The risk block (src/loop/risk.js): the owner's rule for rating decisions, and whether a checked dependency needs them.
+    risk = parseRiskConfig(rootConfig);
+    loopConfig.errors.push(...risk.errors);
   } catch (e) {
     stderr.write(`Could not parse carja.config.json: ${e.message}\n`);
     return 1;
@@ -1210,6 +1274,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
   // each with a fresh context, run in a given cwd. A missing/malformed verdict
   // fails safe to reject; a strict majority is required to approve.
   const votes = Math.max(1, state.checker_votes ?? 1);
+  // F12: a defect the reviewer tagged PRE-EXISTING is recorded once per run in the loop messages, never sent back to the Maker.
+  const seenPreExisting = new Set();
   const makeChecker = (cwd, checkerPrompt = checkerPromptPath) => async () => {
     const verdictPath = join(cwd, VERDICT_REL);
     const verdicts = [];
@@ -1245,6 +1311,12 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     }
     const tally = tallyVerdicts(verdicts, votes);
     stdout.write(`[CARJA LOOP] checker: ${tally.approved ? "APPROVED" : "REJECTED"} — ${tally.reason}\n`);
+    for (const f of preExistingFindings(verdicts.flatMap((v) => v.findings ?? []))) {
+      const line = preExistingLine(f);
+      if (seenPreExisting.has(line)) continue;
+      seenPreExisting.add(line);
+      await writeInbox(root, state, line, { title: "Pre-existing defect (the reviewer found it; this change did not introduce it)" });
+    }
     // P1.2: surface each verdict's reason so a rejection is diagnosable (empty-diff
     // / no-file plumbing issue vs a genuine substantive rejection).
     if (!tally.approved) {
@@ -1256,7 +1328,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       await audit(`${infra ? "checker infra-failure" : "checker rejected"}: ${tally.reasons.join(" | ")}`);
     }
     // A13: the reasons and findings travel to the next Maker beat.
-    const findings = verdicts.flatMap((v) => v.findings ?? []).slice(0, 10);
+    const pre = new Set(preExistingFindings(verdicts.flatMap((v) => v.findings ?? [])));
+    const findings = verdicts.flatMap((v) => v.findings ?? []).filter((f) => !pre.has(f)).slice(0, 10);
     return { exitCode: verdictToExitCode(tally), reasons: tally.approved ? [] : tally.reasons, findings: tally.approved ? [] : findings };
   };
 
@@ -1294,10 +1367,13 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     const o = await guardedAutoCommit({ git: makeGit(cwd), message, expect: own ? null : { path: cwd } });
     return { committed: c.committed || o.committed, bypassedHooks: Boolean(c.bypassedHooks || o.bypassedHooks) };
   }
+  // The owner's rule for rating a decision (risk.high_means), in every beat prompt.
+  const riskNote = () => (risk.highMeans ? `\n\n- **Rating a decision you log:** ${rulingRule(risk.highMeans)}\n` : "");
   const nestedNote = () =>
-    loopConfig.codeDir
+    riskNote() +
+    (loopConfig.codeDir
       ? `\n\n- **Code repository:** \`${loopConfig.codeDir}/\` is a separate git repository on this same branch name. Commit code there (\`git -C ${loopConfig.codeDir} commit\`), with its hooks and waivers as usual; Carja documents stay here. Run tests inside \`${loopConfig.codeDir}/\`. A line \`packed-refs.lock: Read-only file system\` during a commit is harmless when the commit exits 0. Whatever you leave uncommitted, the driver commits after your beat: a failed commit is never a reason to escalate.\n`
-      : "";
+      : "");
   // Every Checker prompt, in this layout, says where the code diff is.
   async function withNestedNote(promptFile, key) {
     if (!loopConfig.codeDir) return promptFile;
@@ -1843,7 +1919,17 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       }
       const check = await checkPackage(dep, { fetch: fetchImpl, minAgeDays: loopConfig.dependencyMinAgeDays });
       await emit("dependency", { task: task.id, name: dep.name, ecosystem: dep.ecosystem, ok: check.ok, reasons: check.reasons });
-      const allowed = namedInVision(vision, dep) || answers.approved.includes(key);
+      // The risk block: when the owner does not review medium, a dependency that passed every check does not need them.
+      const named = namedInVision(vision, dep) || answers.approved.includes(key);
+      const autoAllowed = !named && check.ok && autoApprovesDependencies(risk);
+      if (autoAllowed) {
+        task.rulings = [
+          ...(task.rulings ?? []),
+          { at: new Date().toISOString().slice(0, 16).replace("T", " "), task: task.id, decision: `added the dependency ${dep.name} ${check.facts.version} (${dep.ecosystem})`, why: "it passed every check of the dependency gate, and your risk setting does not review medium", risk: "medium", breaks: "a package you do not want stays in the product until it is removed" },
+        ];
+        await audit(`task ${task.id}: dependency ${key} allowed by the risk setting (checks passed)`);
+      }
+      const allowed = named || autoAllowed;
       if (!allowed) {
         ask.push({ dep, check });
         continue;
@@ -1963,7 +2049,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
 
   // The Checker's prompt plus the rulings it must review, via a scratch file.
   async function checkerPromptWithRulings(basePath, rulings, key) {
-    const section = rulingsForChecker(rulings);
+    const section = rulingsForChecker(rulings, risk.highMeans);
     if (!section) return basePath;
     const p = join(tmpdir(), `carja-checker-rulings-${String(key).replace(/[^a-z0-9]+/gi, "-")}.md`);
     const base = (await exists(basePath)) ? await readFile(basePath, "utf8") : "";
@@ -2034,8 +2120,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         await rm(makerSignalPath, { force: true }).catch(() => {}); // clear stale signal
         const rulingsBefore = await readRulingsAt(workCwd);
         let beatPrompt = promptPath;
-        if (state.attempts?.length) {
-          await writeFile(pairPromptPath, `${pairWorkflowText}\n\n---\n\n${renderAttempts(state.attempts)}\n`, "utf8");
+        if (state.attempts?.length || riskNote()) {
+          await writeFile(pairPromptPath, `${pairWorkflowText}${riskNote()}${state.attempts?.length ? `\n\n---\n\n${renderAttempts(state.attempts)}` : ""}\n`, "utf8");
           beatPrompt = pairPromptPath;
         }
         const result = await adapter.runBeat({
@@ -2197,7 +2283,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
         // the loop workflow prompt, via a scratch file. Nothing lands in the
         // worktree (no tracked pollution) and no templates change.
         const beatPromptPath = beatPromptFile(task.id);
-        await writeFile(beatPromptPath, `${swarmWorkflowText}\n\n---\n\n${renderAssignment(task)}${nestedNote()}\n`, "utf8");
+        await writeFile(beatPromptPath, `${swarmWorkflowText}\n\n---\n\n${renderAssignment(task, { highMeans: risk.highMeans })}${nestedNote()}\n`, "utf8");
         const result = await adapter.runBeat({
           promptPath: beatPromptPath,
           cwd: taskCwd,

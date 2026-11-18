@@ -45,6 +45,6 @@ Write `carja/1-workbench/checker-verdict.json` with exactly this shape:
 }
 ```
 
-On approval, `{ "approved": true, "reason": "<one line: why this fully satisfies the goal>", "findings": [] }`. IMPORTANT and NIT findings may be listed alongside `"approved": true` — they are handed to the human, not blockers.
+On approval, `{ "approved": true, "reason": "<one line: why this fully satisfies the goal>", "findings": [] }`. IMPORTANT, NIT and PRE-EXISTING findings may go with `"approved": true`: they go to the human, not blockers.
 
 **Approve when every BLOCKER is closed and the goal is met.** If you are unsure, or you cannot inspect the diff, write `approved: false` — the driver fails safe and treats a missing or malformed verdict as a rejection. A BLOCKER without a `quote`, or with confidence below 7, is malformed and also fails safe: the bar exists so an unsure Checker downgrades instead of blocking. Do not merge, do not modify code; only write the verdict file.

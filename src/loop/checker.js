@@ -227,3 +227,18 @@ export function tallyVerdicts(verdicts, votes) {
       : `${approvals}/${n} Checkers approved (no majority) — failing safe to reject`,
   };
 }
+
+/**
+ * F12: the findings the reviewer tagged PRE-EXISTING, a defect the diff did not
+ * introduce. They never count as blockers (only BLOCKER does); the loop records
+ * them so they are not lost.
+ */
+export function preExistingFindings(findings) {
+  return (findings ?? []).filter((f) => f && /^PRE[-_ ]?EXISTING$/i.test(String(f.severity ?? "").trim()));
+}
+
+/** One line for a pre-existing finding: place, class, quote. */
+export function preExistingLine(f) {
+  const where = `${f.file ?? "?"}${f.line != null ? `:${f.line}` : ""}`;
+  return [where, f.class ?? f.reason ?? null, f.quote ? `\`${String(f.quote).trim().slice(0, 200)}\`` : null].filter(Boolean).join(" — ");
+}

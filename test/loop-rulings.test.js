@@ -17,6 +17,7 @@ import {
   rulingInboxLines,
   rulingsPrBody,
   rulingsForChecker,
+  rulingHint,
   RULINGS_REL,
 } from "../src/loop/rulings.js";
 import { UNION_PATHS } from "../src/gitattributes.js";
@@ -90,4 +91,15 @@ test("the assignment tells a fleet Maker how to log a ruling, with its task id",
   const text = renderAssignment({ id: "bugfix:x", type: "bugfix", title: "Fix x" });
   assert.match(text, /rulings\.md/);
   assert.match(text, /bugfix:x · <decision>/);
+});
+
+// The risk block (owner, 2026-11-18): the owner's definition of high replaces the built-in rule.
+test("risk.high_means replaces the built-in rating rule in the beat and in the Checker brief", () => {
+  const own = "Data loss, security, billing.";
+  assert.match(rulingHint("t1"), /anything a user would notice/);
+  assert.match(rulingHint("t1", own), /Data loss, security, billing\./);
+  assert.doesNotMatch(rulingHint("t1", own), /anything a user would notice/);
+  const checker = rulingsForChecker(parseRulings(LOG), own);
+  assert.match(checker, /owner's definition of high risk \(Data loss, security, billing\.\)/);
+  assert.doesNotMatch(checker, /changes what a user sees or does, rated low/);
 });

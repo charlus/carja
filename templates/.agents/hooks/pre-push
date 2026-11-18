@@ -65,7 +65,7 @@ carja_find_project_root
 # pre-commit that lands on exactly this content is an upgrade, not a neutering,
 # and needs no waiver at push. Forging a match means editing pre-push as well —
 # both entry scripts, the stated limit. Pinned by test/hooks-registry-drift.test.js.
-CARJA_OFFICIAL_PRECOMMIT_SHA256="d95d6884f4fca16dcd85f6a12d624f4424bb09dd3e7a81b417bb686b3ba4bbbc"
+CARJA_OFFICIAL_PRECOMMIT_SHA256="96f57c198220f6f0ed861e656d81d31ee376649638e95e0f9695425b2a95b033"
 
 # git feeds one line per pushed ref: <local ref> <local sha> <remote ref> <remote sha>.
 PUSH_LINES="$(cat)"

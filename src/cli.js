@@ -1,4 +1,5 @@
 import { initCommand } from "./commands/init.js";
+import { appCommand } from "./commands/app.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { addCommand } from "./commands/add.js";
 import { removeCommand } from "./commands/remove.js";
@@ -133,6 +134,8 @@ export async function runCli(rawArgs, io = process) {
       return mergeStackCommand(rest, context);
     case "work":
       return workCommand(rest, context);
+    case "app":
+      return appCommand(rest, context);
     case "models":
       return modelsCommand(rest, context);
     default:

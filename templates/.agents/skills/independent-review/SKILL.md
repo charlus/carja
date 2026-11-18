@@ -6,7 +6,7 @@ category: core
 
 # Independent Review (Fresh-Context Gate)
 
-> The author cannot be their own last reviewer. A mind that just produced an artifact is anchored on the reasoning that produced it — it sees what it *meant*, not what it *wrote*. A reviewer in a **separate, clean context** reads only what's actually there, which is the whole point. This is Carja's Maker/Checker split (`personas/checker.md`, `skills/subagent-isolation/SKILL.md`) applied to any consequential output, not just code.
+> The author cannot be their own last reviewer. A mind that just produced an artifact is anchored on the reasoning that produced it — it sees what it *meant*, not what it *wrote*. A reviewer in a **separate, clean context** reads only what is there. This is Carja's Maker/Checker split (`personas/checker.md`, `skills/subagent-isolation/SKILL.md`) applied to any consequential output.
 
 **This skill is the caller's half of the gate: when to run it, what to hand the reviewer, and how the cycle terminates.** The reviewer's own instructions are one self-contained file — `reviewer.md` — handed over verbatim. Do not append other skills to it.
 
@@ -46,9 +46,10 @@ Freeze a baseline before the first cycle: the original request, the artifact's i
 | **BLOCKER** | Fix it now, in this cycle. Fix the **class** the reviewer named — including the `also:` list — and verify with the reviewer's own detection method, not a weaker one. Keep the suite GREEN. |
 | **IMPORTANT** | Fix it now if it is cheap and in-scope. Otherwise record it in the PR/MR description under **Known gaps**, where the person merging sees it. |
 | **NIT** | Author's discretion. Never blocks, never escalates. |
+| **PRE-EXISTING** | Not this change's. Never blocks. List it in the PR under **Pre-existing**. |
 | **`SCOPE:`** | Surface to the human. Do not absorb it, and do not fix around it. |
 
-**No follow-up backlog from review.** A proven in-scope defect is fixed in this cycle or written into the PR body. Deferral lists rot and are never acted on — recording a gap where the merger reads it is honest; filing it into a backlog nobody re-reads is not.
+**No follow-up backlog from review.** A proven in-scope defect is fixed in this cycle or written into the PR body. Deferral lists rot: record the gap where the merger reads it, not in a backlog nobody re-reads.
 
 **Dismissing a finding is a valid outcome.** For each one you decide *"deliberate trade-off → dismiss with a one-line reason"* or *"I only told myself it was deliberate — the reviewer is right."* Record the disposition either way with `carja review-log append '{…}'`, the reviewer's `class` as `category` and its `lens` as `persona` (omit it for `spec`) — one line per finding into `carja/1-workbench/review-log.jsonl` (Ship 4.4 shows the record): a class dismissed most of the time is a rubric defect to fix in `calibration.md`, not an author defect.
 

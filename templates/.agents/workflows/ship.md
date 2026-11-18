@@ -131,7 +131,7 @@ Route its model tier by stakes (`skills/model-routing/SKILL.md`).
 2. **`skills/independent-review/calibration.md`** — a shippable diff is consequential, so include it.
 3. **The definition of done + the diff:** the spec's acceptance criteria (or `goal_description` if this ran from the loop), every item of `carja/0-compass/architecture-checklist.md` if it exists, the **Review Lens** lines that `carja personas` prints for this diff (the lines only, not the persona files, so the brief stays one file), and `git diff <merge-base>...HEAD`. Not the whole repo.
 
-**When the change has a runtime surface,** behavior-validate the running artifact yourself, source-blind, with adversarial inputs (`skills/behavior-validator/SKILL.md`), and hand the reviewer that output as evidence. Green tests can themselves be wrong or reward-hacked; only observed behavior settles it. The reviewer reads the evidence — it does not run the app.
+**When the change has a runtime surface,** start it with `carja app up` and behavior-validate it yourself, source-blind, with adversarial inputs (`skills/behavior-validator/SKILL.md`), and hand the reviewer that output as evidence. Green tests can be wrong or reward-hacked; only observed behavior settles it. The reviewer reads the evidence, it does not run the app.
 
 ### 4.3 — Read the verdict
 
@@ -147,7 +147,7 @@ Per the gate skill: fix every **BLOCKER** — the whole class the reviewer named
 ```bash
 carja review-log append '{"round":1,"severity":"BLOCKER","category":"error-handling","file":"src/x.py","line":42,"quote":"return data or {}","confidence":8,"action":"fixed","reason":"empty dict hid the upstream failure"}'
 ```
-`severity` is `BLOCKER|IMPORTANT|NIT|SCOPE`; `action` is `fixed|dismissed|known-gap|deferred`; a BLOCKER needs its `quote` and `confidence` ≥ 7 or the CLI refuses it, exactly as the rubric does. `carja review-log summary` then reports rounds to APPROVE, dismissal rate per class and blockers by category — without these lines the review's cost has no number.
+`severity` is `BLOCKER|IMPORTANT|NIT|SCOPE|PRE-EXISTING`; `action` is `fixed|dismissed|known-gap|deferred`; a BLOCKER needs its `quote` and `confidence` ≥ 7 or the CLI refuses it, as in the rubric. `carja review-log summary` reports rounds to APPROVE, dismissal rate per class and blockers by category — without these lines the review's cost has no number.
 
 Then re-review **once**: a fresh reviewer, given round-1 findings *plus your disposition of each*, and `git diff` of the **fix commits only**. Its only job is whether the named classes are closed and whether the fix introduced a new blocker.
 

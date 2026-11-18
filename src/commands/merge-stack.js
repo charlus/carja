@@ -15,7 +15,8 @@ import { STACK_FILE } from "../loop/stack.js";
 import { RUNS_DIR, runKey, positionals, looksLikeProject } from "../loop/scope.js";
 import { BEAT_LOG_DIR } from "../loop/beat-log.js";
 import { defaultBranchRef } from "../loop/reconcile.js";
-import { walkStack, forgeAdapter } from "../loop/merge-stack.js";
+import { walkStack, forgeAdapter, needsUnder } from "../loop/merge-stack.js";
+import { parseRiskConfig } from "../loop/risk.js";
 import { isOldLayout, oldLayoutMessage } from "../names.js";
 
 const readStack = (path) => {
@@ -86,13 +87,48 @@ export async function mergeStackCommand(args, { cwd, stdout, stderr }) {
     return 1;
   }
 
+  let rootConfig;
   let loopConfig;
   try {
-    loopConfig = parseLoopConfig(await readRootConfig(root));
+    rootConfig = await readRootConfig(root);
+    loopConfig = parseLoopConfig(rootConfig);
   } catch (e) {
     stderr.write(`Could not parse carja.config.json: ${e.message}\n`);
     return 1;
   }
+  const risk = parseRiskConfig(rootConfig);
+  if (risk.errors.length) {
+    stderr.write(`carja.config.json: ${risk.errors.join("; ")}.\n`);
+    return 1;
+  }
+  const { forges, defaults, problem } = await stackForges(root, loopConfig, entries);
+  if (problem) {
+    stderr.write(`${problem}.\n`);
+    return 1;
+  }
+
+  const pollMs = Number(process.env.CARJA_MERGE_POLL_MS) >= 0 && process.env.CARJA_MERGE_POLL_MS !== undefined ? Number(process.env.CARJA_MERGE_POLL_MS) : 20_000;
+  const r = await walkStack({
+    project,
+    entries,
+    forges,
+    defaults,
+    needsOf: needsUnder(risk),
+    confirm,
+    dryRun: args.includes("--dry-run"),
+    waitMs: waitMin * 60_000,
+    pollMs,
+  });
+  stdout.write(`${r.lines.join("\n")}\n${r.next}\n`);
+  return r.code;
+}
+
+/**
+ * The forges and default branches a stack is merged through, or the problem
+ * that stops it. Used by this command and by `carja loop <project>`'s merge of
+ * the items the owner does not review.
+ */
+export async function stackForges(root, loopConfig, entries) {
   const codeRoot = loopConfig.codeDir ? join(root, loopConfig.codeDir) : null;
   const repoOf = async (dir) => {
     await runCli("git", ["fetch", "-q", "origin"], dir);
@@ -109,23 +145,7 @@ export async function mergeStackCommand(args, { cwd, stdout, stderr }) {
     (!outer.base && "this repository has no default branch on origin") ||
     (needsCode && !code && `the code repository ${codeRoot ?? "(loop.code_dir)"} is missing`) ||
     (needsCode && !code.forge && "the forge of the code repository is unknown") ||
-    (needsCode && !code.base && "the code repository has no default branch on origin");
-  if (problem) {
-    stderr.write(`${problem}.\n`);
-    return 1;
-  }
-
-  const pollMs = Number(process.env.CARJA_MERGE_POLL_MS) >= 0 && process.env.CARJA_MERGE_POLL_MS !== undefined ? Number(process.env.CARJA_MERGE_POLL_MS) : 20_000;
-  const r = await walkStack({
-    project,
-    entries,
-    forges: { outer: outer.forge, code: code?.forge ?? null },
-    defaults: { outer: outer.base, code: code?.base ?? null },
-    confirm,
-    dryRun: args.includes("--dry-run"),
-    waitMs: waitMin * 60_000,
-    pollMs,
-  });
-  stdout.write(`${r.lines.join("\n")}\n${r.next}\n`);
-  return r.code;
+    (needsCode && !code.base && "the code repository has no default branch on origin") ||
+    null;
+  return { forges: { outer: outer.forge, code: code?.forge ?? null }, defaults: { outer: outer.base, code: code?.base ?? null }, problem };
 }

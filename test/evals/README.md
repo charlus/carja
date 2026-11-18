@@ -201,3 +201,48 @@ passing release. Thresholds, limits and the waiver: `docs/roadmap/Release-Gate.m
 Its sensitivity is shown on real data: one 7.1.0 bare chain missed a convention
 written only in the brief and scored 90.4%, which the gate fails (minimum 95%).
 
+
+## reviewer-recall
+
+Does the reviewer find the bugs that mattered in a real repository, without
+blocking clean changes? After the Claude Code team's review eval.
+
+```bash
+node test/evals/reviewer-recall/run.mjs --repo ~/Workspace/<project> --harvest-only   # the cases, no model call
+CARJA_EVALS=1 npm run eval:recall -- --repo ~/Workspace/<project> --max 10            # one reviewer call per case
+CARJA_EVALS=1 npm run eval:recall -- --repo <code repo> --outer <project> --cases <earlier last-run.json>   # same cases, with the specs
+node test/evals/reviewer-recall/run.mjs --repo <dir> --outer <project> --dry      # the first prompt, no model call
+```
+
+**Cases** (`src/reviewer-recall.js`, `harvestCases`): a commit later reverted,
+named by a `Fixes: <sha>` trailer, or traced by SZZ (`git blame` on the lines a
+`fix` commit changed). A fix made in a review round is left out: the reviewer
+already caught it. Each incident gets one clean control commit, at least 30 days
+old and nearest in changed lines.
+
+**Score:** `recall_any` (a finding where the fix changed the code, within 3
+lines), `recall_blocker` (the same, as a BLOCKER) and `control_blocked` (clean
+commits that got a BLOCKER). Kept apart, so a reviewer that finds a bug and
+downgrades it, or one that blocks everything, shows. Keep a change to
+`reviewer.md` only when recall goes up and `control_blocked` does not.
+
+**Limits.** The key is a location, not the bug's meaning: a finding at the
+right lines for the wrong reason counts. SZZ blames the last commit to touch a
+line (whitespace ignored), which is sometimes not the one that introduced the
+bug, and some `fix` commits change a requirement rather than a bug no reviewer
+could see. The reviewer gets only the commit message as its definition of done,
+not the spec: a lower bound for the real review.
+
+**First run** (2026-11-18, autopportunity, 10 incidents and 10 controls,
+Sonnet): `recall_any` 0.1, `recall_blocker` 0.1, `control_blocked` 0.1. By
+hand, about 3 of the 10 incidents were not reviewer-detectable (a line-ending
+commit blamed, now fixed with `blame -w`; a prompt-tuning change; a product
+change), so about 1 in 7 real bugs found.
+
+**Comparison** (same 20 cases, `--cases`; the engine's default model; `--outer`
+gives the reviewer the project's `carja/` as it was on the commit's date, so the
+specs and the architecture checklist): `recall_any` 0.2, `recall_blocker` 0.2,
+`control_blocked` 0.1. It found two bugs Sonnet missed and missed the one Sonnet
+found; together the two runs found 3 of the 10. Both blocked the same control
+commit. At 10 cases a difference of one case is noise: the runs agree on little
+beyond "most incidents are missed".

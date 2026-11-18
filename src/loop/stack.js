@@ -17,7 +17,12 @@
 // the forge at the start of every run: an MR the owner closed is rebuilt with
 // every item above it; an MR the owner changed is kept as the owner left it and
 // every item above it is rebuilt on top. Merged items are never touched.
+// With a risk block in carja.config.json (src/loop/risk.js), the loop merges
+// the items the owner does not review at the end of the run, and the owner
+// merges the rest.
 // Pure except where a function takes injected IO.
+
+import { itemTier } from "./risk.js";
 
 export const STACK_FILE = "stack.json";
 export const REPORT_REL = (project) => `carja/1-workbench/loop-report-${project}.md`;
@@ -172,10 +177,25 @@ const money = (n) => `$${(Math.round((Number(n) || 0) * 100) / 100).toFixed(2)}`
 /**
  * The final report: the MRs in merge order, what each does, the decisions the
  * loop took alone, what stopped the run, and the cost.
- * @param {{project: string, entries: object[], stop: {status: string, reason?: string, item?: string, round?: string}|null, notes?: string[], now?: string}} input
+ * With a configured `risk`, each item shows its tier, and `autoMerge` (the
+ * walk the loop ran) lists what the loop merged and where it stopped.
+ * @param {{project: string, entries: object[], stop: {status: string, reason?: string, item?: string, round?: string}|null, notes?: string[], now?: string,
+ *   risk?: object|null, autoMerge?: {lines: string[], merged: string[], code: number}|null}} input
  */
-export function renderStackReport({ project, entries, stop = null, notes = [], now = new Date().toISOString() }) {
+export function renderStackReport({ project, entries, stop = null, notes = [], now = new Date().toISOString(), risk = null, autoMerge = null }) {
   const lines = [`# Loop report: ${project}`, "", `_${now.slice(0, 16).replace("T", " ")}. Written by \`carja loop ${project}\`; the next run rewrites it._`, ""];
+  const tierLine = (e) => {
+    const t = itemTier(e, risk);
+    return `- Risk: **${t.tier}** (${t.reasons.join("; ")}).`;
+  };
+  if (autoMerge) {
+    const done = entries.filter((e) => e.merged && [e.outer?.url, ...(e.code ? [e.code.url] : [])].every((u) => autoMerge.merged.includes(u)));
+    lines.push(`## Merged by the loop (${done.length} item${done.length === 1 ? "" : "s"})`, "");
+    lines.push(`Your risk setting reviews ${risk.ownerReview.join(", ")} only. The loop merged these through the MR API, after their review and green pipeline. Revert one on the forge if it is wrong.`, "");
+    for (const e of done) lines.push(`- ${e.title}: ${[e.code?.url, e.outer?.url].filter(Boolean).join(" + ")}`, `  ${tierLine(e).slice(2)}`);
+    if (autoMerge.code !== 0) lines.push("", "Where the merge stopped:", "", ...autoMerge.lines.filter((l) => /stopped|needs you|Risk |not merge/.test(l)).map((l) => `> ${l}`));
+    lines.push("");
+  }
   const open = entries.filter((e) => !e.merged);
   const total = entries.reduce((s, e) => s + (Number(e.cost_usd) || 0), 0);
   if (!open.length) lines.push("No MR waits for you.", "");
@@ -189,6 +209,7 @@ export function renderStackReport({ project, entries, stop = null, notes = [], n
       if (e.summary) lines.push(`- What it does: ${e.summary}`);
       if (e.adopted) lines.push("- Built by an earlier run, taken into this stack as it was.");
       if (e.changed) lines.push("- You changed this MR: your version is kept.");
+      if (risk?.configured) lines.push(tierLine(e));
       // I1: what the owner does around this merge, from the Ship beat and from the diff.
       const actions = ownerActionsOf(e);
       if (actions.length) {
