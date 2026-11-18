@@ -17,7 +17,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { harvestCases, parseReviewerReport, scoreRun } from "../../../src/reviewer-recall.js";
 
@@ -33,7 +33,10 @@ if (!repo) {
 const max = Number(arg("--max", "20"));
 // --cases <last-run.json>: the same cases as an earlier run, so only the model or the context changes.
 const all = arg("--cases") ? JSON.parse(readFileSync(resolve(arg("--cases")), "utf8")).results.map(({ findings, exit, ...c }) => c) : harvestCases(repo);
-const cases = [...all.filter((c) => c.kind === "incident").slice(0, max), ...all.filter((c) => c.kind === "control").slice(0, max)];
+// --only <sha,sha>: these incidents only (a held-out set), with as many controls.
+const only = arg("--only") ? arg("--only").split(",").map((x) => x.trim()) : null;
+const incidents = all.filter((c) => c.kind === "incident" && (!only || only.some((p) => c.bad.startsWith(p)))).slice(0, max);
+const cases = [...incidents, ...all.filter((c) => c.kind === "control").slice(0, incidents.length)];
 console.log(`${repo}: ${cases.filter((c) => c.kind === "incident").length} incident(s), ${cases.filter((c) => c.kind === "control").length} control(s).`);
 if (process.argv.includes("--harvest-only")) {
   for (const c of cases) console.log(`  ${c.kind.padEnd(8)} ${c.bad.slice(0, 10)}  ${c.key ?? ""}`);
@@ -48,6 +51,9 @@ const outerAt = (sha) => {
   const head = execFileSync("git", ["-C", outer, "symbolic-ref", "--short", "refs/remotes/origin/HEAD"]).toString().trim();
   return execFileSync("git", ["-C", outer, "rev-list", "-1", `--before=${when}`, head]).toString().trim() || null;
 };
+// --checklist <file>: today's architecture checklist, instead of the one in the dated carja/ folder.
+const checklist = arg("--checklist") ? resolve(arg("--checklist")) : null;
+const checklistNote = checklist ? `\n\nThe project's architecture checklist is \`${checklist}\`: read it as rubric step 2, instead of any other copy. Read only.` : "";
 const specNote = (dir) =>
   dir
     ? `\n\nThe project's Carja folder, as it was when this commit was written, is \`${dir}/carja/\`. Find the feature spec this commit implements under \`carja/2-backlog/\` (its acceptance criteria are the definition of done), and read \`carja/0-compass/architecture-checklist.md\` (rubric step 2). Read only; change nothing there.`
@@ -76,7 +82,7 @@ for (const c of cases) {
       outerWt = mkdtempSync(join(tmpdir(), "recall-outer-"));
       execFileSync("git", ["-C", outer, "worktree", "add", "-q", "--detach", outerWt, oc], { stdio: "ignore" });
     }
-    const prompt = `${brief}\n\n---\n\n# The change under review\n\nIts commit message:\n\n${subject}\n\nThe diff is \`git diff ${c.base}...${c.bad}\` in this folder.${specNote(outerWt)} Write your report in the shape above.`;
+    const prompt = `${brief}\n\n---\n\n# The change under review\n\nIts commit message:\n\n${subject}\n\nThe diff is \`git diff ${c.base}...${c.bad}\` in this folder.${specNote(outerWt)}${checklistNote} Write your report in the shape above.`;
     cleanup.push(() => {
       if (outerWt) {
         spawnSync("git", ["-C", outer, "worktree", "remove", "--force", outerWt]);
@@ -84,9 +90,10 @@ for (const c of cases) {
       }
     });
     const model = arg("--model");
-    const r = spawnSync("claude", ["-p", prompt, ...(model ? ["--model", model] : []), ...(outerWt ? ["--add-dir", outerWt] : []), "--allowedTools", "Read,Grep,Glob,Bash(git diff:*),Bash(git show:*),Bash(git log:*)"], { cwd: wt, encoding: "utf8", timeout: 900000 });
+    const r = spawnSync("claude", ["-p", prompt, ...(model ? ["--model", model] : []), ...(outerWt ? ["--add-dir", outerWt] : []), ...(checklist ? ["--add-dir", dirname(checklist)] : []), "--allowedTools", "Read,Grep,Glob,Bash(git diff:*),Bash(git show:*),Bash(git log:*)"], { cwd: wt, encoding: "utf8", timeout: 900000 });
     const findings = parseReviewerReport(r.stdout);
-    results.push({ ...c, findings, exit: r.status });
+    // The report text is kept: the score is a location match, and a person must be able to read why.
+    results.push({ ...c, findings, exit: r.status, report: String(r.stdout ?? "").slice(0, 20000) });
     console.log(`  ${c.kind.padEnd(8)} ${c.bad.slice(0, 10)}  ${findings.length} finding(s)`);
   } finally {
     while (cleanup.length) cleanup.pop()();
@@ -96,4 +103,4 @@ for (const c of cases) {
 }
 const score = scoreRun(results);
 console.log(JSON.stringify(score, null, 2));
-writeFileSync(new URL("./last-run.json", import.meta.url), JSON.stringify({ repo, at: new Date().toISOString(), score, results }, null, 2));
+writeFileSync(arg("--out") ? resolve(arg("--out")) : new URL("./last-run.json", import.meta.url), JSON.stringify({ repo, at: new Date().toISOString(), score, results }, null, 2));

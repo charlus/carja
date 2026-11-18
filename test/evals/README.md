@@ -212,6 +212,7 @@ node test/evals/reviewer-recall/run.mjs --repo ~/Workspace/<project> --harvest-o
 CARJA_EVALS=1 npm run eval:recall -- --repo ~/Workspace/<project> --max 10            # one reviewer call per case
 CARJA_EVALS=1 npm run eval:recall -- --repo <code repo> --outer <project> --cases <earlier last-run.json>   # same cases, with the specs
 node test/evals/reviewer-recall/run.mjs --repo <dir> --outer <project> --dry      # the first prompt, no model call
+CARJA_EVALS=1 npm run eval:recall -- --repo <code repo> --only <sha,sha> --checklist <file> --out <file>   # a held-out set, with a given checklist
 ```
 
 **Cases** (`src/reviewer-recall.js`, `harvestCases`): a commit later reverted,
@@ -246,3 +247,15 @@ specs and the architecture checklist): `recall_any` 0.2, `recall_blocker` 0.2,
 found; together the two runs found 3 of the 10. Both blocked the same control
 commit. At 10 cases a difference of one case is noise: the runs agree on little
 beyond "most incidents are missed".
+
+**Held-out check of a checklist rule** (2026-11-18). Two misses became rules in
+autopportunity's architecture checklist, so rerunning those two cases would
+only re-test the tuning. History had three other bugs of the first rule's kind
+(a model without the `server_default` its migration creates), never used to
+write it: `--only d49f45a3e,e4c17d56a,41d8fb434`, with as many controls, run
+once without and once with `--checklist <today's file>`. Without: 1 of 3 at the
+fixed line (a NIT), 0 as a BLOCKER. With: 3 of 3, 2 as a BLOCKER. Controls
+blocked: 0 in both. Caveats: three cases; and without the rule the reviewer
+put BLOCKERs on the migration line of two of them, which may be the same bug
+seen from the other file: the key only knows the file the fix changed. The
+runner now keeps each report's text (`report`) so a person can tell.
