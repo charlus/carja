@@ -95,6 +95,28 @@ test("I4 + I1: a dependency the Technical Vision names is checked and installed,
   }
 });
 
+// F30 (website, 2026-11-18): slice 09 was built on slice 08, which had added dompurify.
+// The gate installed only what each item added itself, so slice 09's worktree never
+// had dompurify and its verify failed on an import the owner had already approved.
+test("F30: an item built on a lower one gets the dependencies the lower items added, checked again, then installed", () => {
+  const l = layout({ carved: 2, prefix: "lessons-f30-" });
+  try {
+    visionNames(l, "Public holidays come from the `holidays` package.");
+    const log = join(l.base, "install-log");
+    withConfig(l, (c) => (c.loop.install = `pwd >> ${log}`));
+    const fixture = registry(l, OLD_CLEAN("pypi", "holidays", "0.58"));
+    const r = loop(l, ["notes"], "prompts", { STUB_DEP: "requirements.txt:holidays==0.58", CARJA_REGISTRY_FIXTURE: fixture });
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    const runs = readFileSync(log, "utf8").trim().split("\n");
+    assert.equal(runs.length, 2, `loop.install ran in: ${runs.join(", ")}`);
+    assert.match(runs[1], /02-slice-2/, "the second install is in slice 2's worktree");
+    assert.match(r.stdout, /02-slice-2[^\n]*holidays 0\.58[^\n]*added by the items below/);
+    clean(l);
+  } finally {
+    rmSync(l.base, { recursive: true, force: true });
+  }
+});
+
 test("I4: a dependency the Technical Vision does not name stops the slice with a question; allowed, the run goes on", () => {
   const l = layout({ carved: 1, prefix: "lessons-c-" });
   try {

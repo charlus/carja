@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.7.1] — 2026-11-18 — A stacked item gets the dependencies of the items below it
+
+Compatibility: upgrade only
+
+### Fixed
+- **A stacked item had no install of the dependencies the items below it added.** On website, slice 09 was built on slice 08, which had added `dompurify`; the dependency gate installed only what each item added itself, so slice 09's verify failed on an import the owner had already approved, and the run stopped. When an item starts from a lower item's branch, the gate now reads the dependencies the lower items added compared with the default branch, checks them on the registry again (fail closed) and runs `loop.install` once for the item. Proven through the real CLI with the stub engine (`test/loop-run-lessons.test.js`, F30).
+
 ## [7.7.0] — 2026-11-18 — Auto-merge stops trusting itself after reverts
 
 Compatibility: upgrade only
