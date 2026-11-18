@@ -263,7 +263,7 @@ export const ESCALATE_HINT =
   "and stop. The driver ends the run and puts your reason in the inbox. Retrying a beat you know is blocked only burns budget.";
 
 /** Render the per-beat assignment a fleet agent reads to know its work item. */
-export function renderAssignment(task) {
+export function renderAssignment(task, { highMeans = null } = {}) {
   const route = ROUTING[task.type] ?? ROUTING.task;
   return [
     "# Loop Assignment (this beat)",
@@ -284,7 +284,7 @@ export function renderAssignment(task) {
     "",
     `**Blocked?** ${ESCALATE_HINT}`,
     "",
-    `**Deciding alone?** ${rulingHint(task.id)}`,
+    `**Deciding alone?** ${rulingHint(task.id, highMeans)}`,
     ...(task.attempts?.length ? ["", renderAttempts(task.attempts)] : []),
   ].join("\n");
 }

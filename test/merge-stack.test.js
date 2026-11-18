@@ -8,7 +8,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { walkStack, ghForge, glabForge, ownerNeeds } from "../src/loop/merge-stack.js";
+import { walkStack, ghForge, glabForge, ownerNeeds, needsUnder } from "../src/loop/merge-stack.js";
+import { parseRiskConfig } from "../src/loop/risk.js";
 
 /** A forge in memory. `mrs[url]` = {state, target, source, head, pipeline, conflict}. */
 function fakeForge(mrs, calls, { onRetarget = null, pipelineAfter = null } = {}) {
@@ -247,4 +248,33 @@ test("glab: the status maps GitLab's states", async () => {
   assert.equal((await glabForge(mk({ head_pipeline: null })).status(url)).pipeline, "none");
   assert.equal((await glabForge(mk({ detailed_merge_status: "checking" })).status(url)).checking, true);
   assert.equal((await glabForge(mk({ state: "merged" })).status(url)).state, "merged");
+});
+
+// The risk block (owner, 2026-11-18): low and medium merge without the owner, high waits.
+test("with a risk block, medium items merge without the owner and the walk stops before a high one", async () => {
+  const files = { outer: ["carja/x.md"], code: ["src/a.js"] };
+  const entries = [
+    entry(1, { files, docsMerged: ["carja/x.md"], detected: ["Install the new dependency where the product runs: a 1.0.0 (npm). The loop installed it in its own worktree only."] }),
+    entry(2, { files: { outer: [], code: ["src/billing/pay.js"] } }),
+    entry(3, { files }),
+  ];
+  const { mrs, io } = setup(entries);
+  const risk = parseRiskConfig({ risk: { owner_review: ["high"], high_paths: ["**/billing/**"] } });
+  const r = await walkStack({ project: "p", entries, ...io, needsOf: needsUnder(risk) });
+  assert.equal(r.code, 2);
+  assert.equal(mrs["https://f/outer/1"].state, "merged", "medium, with merged documents and a checked dependency: merged");
+  assert.equal(mrs["https://f/code/2"].state, "open");
+  assert.match(r.lines.join("\n"), /Risk high, which waits for your review: touches a path you rate high: src\/billing\/pay\.js/);
+});
+
+test("with a risk block, an item with no record of its files waits (fail safe)", async () => {
+  const entries = [entry(1)];
+  const { mrs, io } = setup(entries);
+  const r = await walkStack({ project: "p", entries, ...io, needsOf: needsUnder(parseRiskConfig({ risk: { owner_review: ["high"] } })) });
+  assert.equal(r.code, 2);
+  assert.equal(mrs["https://f/outer/1"].state, "open");
+});
+
+test("without a risk block, the walk stops as before", () => {
+  assert.equal(needsUnder(parseRiskConfig({})), ownerNeeds);
 });

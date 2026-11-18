@@ -5,7 +5,8 @@
 // agent to: one command merges a stacked run's MRs in order, bottom first.
 //
 // It merges through the forge's MR API only, never a push to the default
-// branch, and only when the owner runs it: the loop itself never calls it. For
+// branch, and only when the owner runs it, or at the end of `carja loop <project>`
+// for the items below the owner's risk.owner_review (src/loop/risk.js). For
 // each item, bottom first: the code MR, then the Carja state MR, each one
 //   - moved to the default branch when it still targets the item below,
 //   - merged only when its pipeline is green (it waits for a running one) and
@@ -13,13 +14,16 @@
 //   - merged without squashing (the items above are built on its commits),
 //     at the head it checked, its source branch deleted.
 // It stops before an item that needs the owner (owner actions, documents
-// merged from both sides, a high-risk decision), at the first red pipeline,
+// merged from both sides, a high-risk decision; with a risk block in
+// carja.config.json, an item whose tier the owner reviews: src/loop/risk.js),
+// at the first red pipeline,
 // conflict or closed MR, and after an item the owner confirmed, so the owner
 // does that item's after-merge steps before anything above it lands.
 //
 // The walk is pure over an injected forge: {status(url), merge(url, {head, source}), retarget(url, base)}.
 
 import { ownerActionsOf } from "./stack.js";
+import { needsOwnerReview } from "./risk.js";
 
 const sp = (n) => (n === 1 ? "" : "s");
 
@@ -43,16 +47,30 @@ export function ownerNeeds(e) {
   return out;
 }
 
+/**
+ * What stops the walk before an item, under the project's risk block
+ * (src/loop/risk.js). Without the block: ownerNeeds, as before. With it: an
+ * item below the owner's review level merges without them, and one at or above
+ * it waits with the reason first, then its owner steps.
+ */
+export function needsUnder(risk) {
+  if (!risk?.configured) return ownerNeeds;
+  return (e) => {
+    const why = needsOwnerReview(e, risk);
+    return why.length ? [...why, ...ownerNeeds(e)] : [];
+  };
+}
+
 const RUNNING = new Set(["running", "pending", "created", "waiting_for_resource", "preparing", "scheduled"]);
 
 /**
  * Walk the stack, bottom first.
  * @param {{project: string, entries: object[], forges: {outer: object, code: object|null}, defaults: {outer: string, code: string|null},
- *   confirm?: number|null, dryRun?: boolean, waitMs?: number, pollMs?: number, sleep?: (ms: number) => Promise<void>}} input
+ *   confirm?: number|null, dryRun?: boolean, waitMs?: number, pollMs?: number, sleep?: (ms: number) => Promise<void>, needsOf?: (e: object) => string[]}} input
  * @returns {Promise<{code: 0|1|2, lines: string[], next: string, merged: string[]}>}
  *   code 0: every item is merged (dry run: every item can be); 2: the owner must act; 1: a problem stopped the walk.
  */
-export async function walkStack({ project, entries, forges, defaults, confirm = null, dryRun = false, waitMs = 20 * 60_000, pollMs = 20_000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+export async function walkStack({ project, entries, forges, defaults, confirm = null, dryRun = false, waitMs = 20 * 60_000, pollMs = 20_000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), needsOf = ownerNeeds }) {
   const items = entries.filter((e) => !e.merged);
   const lines = [];
   const merged = [];
@@ -85,7 +103,7 @@ export async function walkStack({ project, entries, forges, defaults, confirm = 
     const closed = sides.find((s, k) => st[k].state === "closed");
     if (closed) return stop(1, `${label}: closed without a merge (${closed.url}).`, `Next: \`carja loop ${project}\` builds it again, with everything above it.`);
 
-    const needs = ownerNeeds(e);
+    const needs = needsOf(e);
     const confirmed = confirm === n;
     if (needs.length && !confirmed) {
       const block = [`${label}: needs you before the merge:`, ...needs.map((a) => `   - ${a}`)].join("\n");

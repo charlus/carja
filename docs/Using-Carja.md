@@ -284,7 +284,7 @@ carja loop doctor [dir] [--beat]
 | `doctor` | Check the project before an unattended run |
 | `doctor --beat` | Also run one real beat to prove the engine and sandbox |
 
-Reads: `verify`, `loop.forge`, `loop.setup`, `loop.allowed_domains`, `loop.require_ready`, `loop.priorities`, `loop.inbox`, `loop.allow_nested_repo`, `loop.models`, `loop.cost_aware`, `loop.slices`, `loop.blueprint`, `loop.code_dir`, `loop.profile`, `loop.blank_env`, `loop.install`, `loop.dependency_min_age_days`, `loop.quota_max_wait_min`.
+Reads: `verify`, `loop.forge`, `loop.setup`, `loop.allowed_domains`, `loop.require_ready`, `loop.priorities`, `loop.inbox`, `loop.allow_nested_repo`, `loop.models`, `loop.cost_aware`, `loop.slices`, `loop.blueprint`, `loop.code_dir`, `loop.profile`, `loop.blank_env`, `loop.install`, `loop.dependency_min_age_days`, `loop.quota_max_wait_min`, `risk.owner_review`, `risk.high_means`, `risk.high_paths`, `risk.low_paths`.
 
 - `carja loop km-workload-relief`: build this project; a second terminal can run another project
 - `carja loop km-workload-relief --dry-run`: what will it build?
@@ -326,6 +326,8 @@ carja merge-stack [project] [dir] [--dry-run] [--confirm <n>] [--wait <min>]
 | `--dry-run` | Check every MR on the forge and list each item: ready, blocked, or needs you. Merge nothing |
 | `--confirm <n>` | You did the steps of item n that come before its merge: merge it, then stop for its steps after the merge |
 | `--wait <min>` | How long to wait for a running pipeline before it stops (default 20) |
+
+Reads: `risk.owner_review`, `risk.high_means`, `risk.high_paths`, `risk.low_paths`.
 
 - `carja merge-stack notes --dry-run`: what can be merged now, and what needs you
 - `carja merge-stack notes`: merge bottom first: code MR, then state MR, no squash, source branch deleted. Stops before an item with owner actions, at a red pipeline, a conflict or a closed MR
@@ -545,6 +547,10 @@ Reads: `verify`, `eval`.
 | `loop.blank_env` | ["GEMINI_API_KEY", …]: set empty in every beat, so app code never calls a provider with a placeholder key (default: the common provider keys, never the engine's own; [] turns it off) |
 | `loop.install` | Shell command the driver runs outside the sandbox after the dependency gate passed a new dependency, e.g. ".venv/bin/pip install -r requirements.txt" or "npm ci" |
 | `loop.dependency_min_age_days` | A new dependency's version must be at least this many days old (default 7) |
+| `risk.owner_review` | The risk tiers that wait for your review: ["high"] lets the loop merge low and medium items itself at the end of `carja loop <project>`, and lets a dependency that passed every check in without a question. high always waits. Without a risk block, every item waits for you |
+| `risk.high_means` | Your definition of high risk, one sentence. It replaces the built-in rule (anything a user would notice or that is hard to undo) in the beat and Checker prompts |
+| `risk.high_paths` | ["**/billing/**"]: an item that changes one of these paths is high. The gates, .claude/, CI files and carja.config.json are always high |
+| `risk.low_paths` | ["docs/**"]: an item that changes only these paths, with nothing else to raise it, is low |
 | `loop.quota_max_wait_min` | A beat that hit the agent CLI's usage limit waits for the announced reset when it is at most this many minutes away, then runs again (default 330; 0 stops at the limit) |
 
 <!-- usage-reference:end -->

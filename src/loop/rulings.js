@@ -14,6 +14,7 @@
 // eval. All functions are pure.
 
 import { envelopeUntrusted } from "./untrusted.js";
+import { rulingRule } from "./risk.js";
 
 export const RULINGS_REL = "carja/1-workbench/rulings.md";
 export const RULING_FORMAT =
@@ -66,23 +67,26 @@ export function rulingsPrBody(rulings, base) {
   return `${base}\n\n## Decisions the Maker made alone (${list.length})\n\n${list.map(bullet).join("\n")}\n`;
 }
 
-/** The Checker's extra input: the rulings as data, and what to do with them. */
-export function rulingsForChecker(rulings) {
+/** The Checker's extra input: the rulings as data, and what to do with them. `highMeans`: the owner's definition of high (risk.high_means). */
+export function rulingsForChecker(rulings, highMeans = null) {
   if (!rulings?.length) return "";
+  const underRated = highMeans
+    ? `A ruling that matches the owner's definition of high risk (${highMeans}) but is rated lower is a finding too: say so. Do not raise a ruling the owner's definition does not cover.`
+    : "A ruling that changes what a user sees or does, rated low, is a finding too: say so.";
   return [
     "# Decisions the Maker made alone",
     "",
-    "The Maker logged these decisions, which the spec did not settle. A ruling that contradicts the spec or an acceptance criterion is a finding. A ruling that changes what a user sees or does, rated low, is a finding too: say so.",
+    `The Maker logged these decisions, which the spec did not settle. A ruling that contradicts the spec or an acceptance criterion is a finding. ${underRated}`,
     "",
     envelopeUntrusted(rulings.map(bullet).join("\n"), { source: "the Maker's ruling log (carja/1-workbench/rulings.md)" }),
   ].join("\n");
 }
 
-/** The instruction a beat carries, with its task id filled in. */
-export function rulingHint(taskId = "<task id>") {
+/** The instruction a beat carries, with its task id filled in. `highMeans`: the owner's definition of high (risk.high_means). */
+export function rulingHint(taskId = "<task id>", highMeans = null) {
   return (
     `When you decide something the spec does not settle, append one line to \`${RULINGS_REL}\`: ` +
     `\`- [YYYY-MM-DD HH:MM] ${taskId} · <decision> · why: <reason> · if wrong: low|medium|high · <what breaks>\`. ` +
-    "Rate `high` anything a user would notice or that is hard to undo. The PR lists every ruling, and a `high` one goes to the owner's inbox."
+    `${rulingRule(highMeans)} The PR lists every ruling, and a \`high\` one goes to the owner's inbox.`
   );
 }

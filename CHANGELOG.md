@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.6.0] — 2026-11-18 — The owner chooses which risk waits for them
+
+Compatibility: upgrade only
+
+### Added
+- **A `risk` block in `carja.config.json`.** A one-person team answered for every item of a stacked run, and for each dependency the Technical Vision did not name. `risk.owner_review` lists the tiers that wait for the owner. With `["high"]`, `carja loop <project>` merges the low and medium items itself at the end of the run, through the MR API (no squash, at the head it checked, on a green pipeline, waiting up to 60 minutes for one), and stops at the first item that waits. `carja merge-stack` follows the same rule. A dependency that passed every check of the dependency gate is installed without a question and logged as a medium ruling. `risk.high_means` replaces the built-in rating rule ("anything a user would notice or that is hard to undo") in the beat and Checker prompts. `risk.high_paths` and `risk.low_paths` rate paths. An item is high when it changes the gates, `.claude/`, CI files or `carja.config.json`, has an owner action, a migration, a new environment variable, a deployment change or a high ruling, or when Carja has no record of its files. Without the block, nothing changes. Proven through the real CLI with the stub engine and the stub `gh` (`test/loop-risk-merge.test.js`), and in `test/risk.test.js`; not yet run against GitLab or a live project.
+
 ## [7.5.0] — 2026-11-17 — `carja merge-stack` merges a loop run's MRs
 
 Compatibility: upgrade only
