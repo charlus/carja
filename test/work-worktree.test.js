@@ -227,3 +227,87 @@ test("carja status warns when the owner's folder or its code repository is off t
     rmSync(base, { recursive: true, force: true });
   }
 });
+
+/** A second gitignored code repository `web/` next to `repo/`, with its own origin. */
+function addSecondCodeRepo(base, root) {
+  writeFileSync(join(root, ".gitignore"), "repo/\nweb/\n");
+  G(root, "add", "-A");
+  G(root, "commit", "-qm", "ignore web");
+  G(root, "push", "-q", "origin", "HEAD:main");
+  const { bare } = repoWithOrigin(base, "web-src", { "index.html": "<p>x</p>\n" });
+  execFileSync("git", ["clone", "-q", bare, join(root, "web")], { stdio: "pipe" });
+  G(join(root, "web"), "remote", "set-head", "origin", "main");
+  return join(root, "web");
+}
+
+/** Commit one file in `dir` on the item branch, merge it into main through `clone`, push. */
+function commitAndMerge(dir, clone, branch) {
+  writeFileSync(join(dir, "d.txt"), "d\n");
+  G(dir, "add", "-A");
+  G(dir, "commit", "-qm", "d");
+  G(clone, "merge", "-q", "--no-ff", "-m", "m", branch);
+  G(clone, "push", "-q", "origin", "HEAD:main");
+  G(clone, "fetch", "-q", "origin");
+}
+
+test("carja work clean removes a merged item whose second code worktree was never used (found 2026-11-19 on website)", async () => {
+  const { base, root, code } = outerLayout();
+  try {
+    const web = addSecondCodeRepo(base, root);
+    const made = await run(["work", "cve", root], root);
+    assert.equal(made.code, 0, made.err);
+    const wt = join(root, ".agents/.worktrees/work-cve");
+    assert.ok(existsSync(join(wt, "web", ".git")), "both code repositories get a worktree");
+    commitAndMerge(join(wt, "repo"), code, `${WORK_PREFIX}cve`);
+    commitAndMerge(wt, root, `${WORK_PREFIX}cve`);
+    const r = await run(["work", "clean", root], root);
+    assert.equal(r.code, 0, r.err);
+    assert.equal(existsSync(wt), false, r.out);
+    assert.equal(spawnSync("git", ["rev-parse", "--verify", "-q", `refs/heads/${WORK_PREFIX}cve`], { cwd: web }).status, 1, "the unused branch is deleted too");
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("carja work clean keeps a merged item when its unused code worktree holds an uncommitted change", async () => {
+  const { base, root, code } = outerLayout();
+  try {
+    addSecondCodeRepo(base, root);
+    await run(["work", "cve", root], root);
+    const wt = join(root, ".agents/.worktrees/work-cve");
+    commitAndMerge(join(wt, "repo"), code, `${WORK_PREFIX}cve`);
+    commitAndMerge(wt, root, `${WORK_PREFIX}cve`);
+    writeFileSync(join(wt, "web", "wip.txt"), "wip\n");
+    const r = await run(["work", "clean", root], root);
+    assert.equal(r.code, 0, r.err);
+    assert.ok(existsSync(join(wt, "web", "wip.txt")), r.out);
+    assert.match(r.out, /web\//);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("carja work clean fetches each code repository before it decides (stale origin, found 2026-11-19 on autopportunity)", async () => {
+  const { base, root, code } = outerLayout();
+  try {
+    await run(["work", "done", root], root);
+    const wt = join(root, ".agents/.worktrees/work-done");
+    // The code MR is merged on the forge by someone else: the owner's clone never fetched it.
+    writeFileSync(join(wt, "repo", "d.txt"), "d\n");
+    G(join(wt, "repo"), "add", "-A");
+    G(join(wt, "repo"), "commit", "-qm", "d");
+    G(join(wt, "repo"), "push", "-q", "origin", `${WORK_PREFIX}done`);
+    const other = join(base, "other-clone");
+    execFileSync("git", ["clone", "-q", join(base, "code-src.git"), other], { stdio: "pipe" });
+    G(other, "config", "user.email", "t@t");
+    G(other, "config", "user.name", "t");
+    G(other, "merge", "-q", "--no-ff", "-m", "m", `origin/${WORK_PREFIX}done`);
+    G(other, "push", "-q", "origin", "HEAD:main");
+    commitAndMerge(wt, root, `${WORK_PREFIX}done`);
+    const r = await run(["work", "clean", root], root);
+    assert.equal(r.code, 0, r.err);
+    assert.equal(existsSync(wt), false, r.out);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
