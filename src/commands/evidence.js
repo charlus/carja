@@ -14,6 +14,7 @@
 
 import { recordRun, checkFreshness, resolveLedgerPath } from "../evidence/ledger.js";
 import { readFile } from "node:fs/promises";
+import { commitStamp } from "../evidence/stamp.js";
 
 function flagValue(args, flag) {
   const eq = args.find((a) => a.startsWith(`${flag}=`));
@@ -105,6 +106,12 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
     return res.ok ? 0 : 1;
   }
 
+  if (sub === "stamp") {
+    // F25: the `Verified:` trailer values for the commit being made (the prepare-commit-msg hook).
+    for (const line of await commitStamp({ cwd })) stdout.write(`${line}\n`);
+    return 0;
+  }
+
   if (sub === "list") {
     const only = flagValue(args, "--label");
     const path = await resolveLedgerPath({ cwd });
@@ -134,11 +141,12 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
   }
 
   stderr.write(
-    "usage: carja evidence <run|check|list>\n\n" +
+    "usage: carja evidence <run|check|list|stamp>\n\n" +
       "  run    --label <name> [--stable-tree] -- <command...>   run it and record the result\n" +
       "         (--stable-tree: fail a green run that changed files while it ran)\n" +
       "  check  --label <name> [--expect-cmd <cmd>] [--max-age <hours>] [--allow-paths a,b/]\n" +
-      "  list   [--label <name>]\n\n" +
+      "  list   [--label <name>]\n" +
+      "  stamp  the Verified: trailer values for the commit being made (prepare-commit-msg hook)\n\n" +
       "Freshness is bound to the working-tree CONTENT, so committing exactly the\n" +
       "code that was tested keeps its evidence FRESH, while an untracked new\n" +
       "source file invalidates it.\n",

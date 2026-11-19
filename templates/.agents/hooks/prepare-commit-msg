@@ -1,0 +1,30 @@
+#!/bin/sh
+# Carja prepare-commit-msg: stamp every commit with how it was verified (F25).
+#
+# Adds one `Verified:` trailer per green run that `carja evidence run` recorded
+# on exactly the tree being committed, or `Verified: none`. Read them back with
+#   git log --format='%h %s%n  %(trailers:key=Verified,valueonly,separator=%x2C )'
+# Never blocks a commit: no carja, no ledger or any error stamps `none`. Runs
+# under --no-verify too (git skips only pre-commit and commit-msg), so the
+# loop's bypassed commits are stamped as well.
+
+msg_file="$1"
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || exit 0
+
+lines=""
+bin="$(command -v carja 2>/dev/null || command -v conductor 2>/dev/null)"
+[ -n "$bin" ] && lines="$("$bin" evidence stamp 2>/dev/null)"
+[ -n "$lines" ] || lines="none"
+
+# An amend or a reused message carries the old stamp: drop it first.
+grep -v '^Verified: ' "$msg_file" > "$msg_file.carja" 2>/dev/null && mv "$msg_file.carja" "$msg_file"
+rm -f "$msg_file.carja"
+
+set --
+while IFS= read -r line; do
+  [ -n "$line" ] && set -- "$@" --trailer "Verified: $line"
+done <<LINES
+$lines
+LINES
+git interpret-trailers --in-place "$@" "$msg_file" 2>/dev/null || true
+exit 0

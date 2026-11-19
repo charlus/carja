@@ -224,7 +224,7 @@ export const COMMANDS = Object.freeze([
   },
   {
     name: "evidence", group: "gates", summary: "Record and check verification evidence against the working tree",
-    usage: "carja evidence run --label <name> [--stable-tree] -- <cmd>\n  carja evidence check --label <name> [options]\n  carja evidence list",
+    usage: "carja evidence run --label <name> [--stable-tree] -- <cmd>\n  carja evidence check --label <name> [options]\n  carja evidence list\n  carja evidence stamp",
     flags: [
       ["--label <name>", "Which evidence (repeatable for check)"],
       ["--stable-tree", "With run: fail when the command changes files"],

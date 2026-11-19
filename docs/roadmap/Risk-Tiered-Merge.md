@@ -1,6 +1,6 @@
 # Risk-tiered merge, and the verification backlog from Anthropic's articles
 
-> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10, F12 and F22 built in 7.6.0. Reviewer-recall eval run twice on autopportunity (20 cases, `test/evals/README.md`). F23, the auto-merge breaker, built in 7.7.0. F24, checklist triggers, built in 7.8.0. F18 is dropped.
+> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10, F12 and F22 built in 7.6.0. Reviewer-recall eval run twice on autopportunity (20 cases, `test/evals/README.md`). F23, the auto-merge breaker, built in 7.7.0. F24, checklist triggers, built in 7.8.0. F25, the `Verified:` stamp, built in 7.9.0. F18 is dropped.
 
 ## Why
 
@@ -35,3 +35,7 @@ The code review post plans "circuit breakers that tighten approval when revert o
 ## Step 3: checklist items triggered by the diff (F24, 7.8.0)
 
 A held-out check (`test/evals/README.md`) showed a checklist rule turning a missed bug class into a found one, so the checklist will grow with each miss. `trigger:` keeps that cheap: the driver gives the Checker only the items whose globs match the changed files, plus every item without a trigger, read from the base branch. `carja checklist` does the same for interactive reviews. Globs only, no content patterns: a path says enough for the rules seen so far.
+
+## Step 4: a verification stamp on every commit (F25, 7.9.0)
+
+The `prepare-commit-msg` hook adds `Verified: <label>: <command>, exit 0, <time>` for each green `carja evidence run` recorded on exactly the tree being committed (the index), or `Verified: none`. It runs under `--no-verify` too and never blocks. The stamp is machine-local, like the ledger: it says what ran on this machine, not what CI did. Not built: reading the stamps in the breaker or the stack report.

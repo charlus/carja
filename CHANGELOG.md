@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.9.0] — 2026-11-19 — Every commit says how it was verified
+
+Compatibility: upgrade only
+
+### Added
+- **A `Verified:` trailer on every commit.** Code merged without the owner could not be audited for how, or whether, it was verified. A new `prepare-commit-msg` hook asks `carja evidence stamp` for the green runs `carja evidence run` recorded on exactly the tree being committed (the index, so a partial commit is judged on what it commits) and adds one `Verified: <label>: <command>, exit 0, <time>` per label, or `Verified: none`. A run that changed files while it ran does not count. It never blocks a commit, runs under `--no-verify` too (so the loop's bypassed commits are stamped), and an amend keeps one stamp. Read them with `git log --format='%h %s %(trailers:key=Verified,valueonly)'`. `carja upgrade` wires it. Proven with real git and the real hook (`test/verification-stamp.test.js`); not yet run on a live loop.
+
 ## [7.8.0] — 2026-11-18 — Checklist items triggered by the diff
 
 Compatibility: upgrade only
