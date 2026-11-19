@@ -15,9 +15,9 @@ be better" — that is true of all code and has no answer.
    Walk it as a checklist and tick each item against the diff. **This is what the
    change is judged against.** Without it you cannot tell a defect from a wish — say
    so and stop rather than inventing a standard.
-2. **`carja/0-compass/architecture-checklist.md`**, if it exists. Every item is
-   part of the definition of done. Run each item's `check:` command; read the diff for
-   the semantic ones.
+2. **The architecture checklist items for this diff:** the list you were given, or
+   `carja checklist` (items whose `trigger:` matches, and those without one). Each is
+   part of the definition of done. Run its `check:`; read the diff for the rest.
 3. **The diff.** `git diff <merge-base>...HEAD`. Read all of it before writing a
    finding — an issue already fixed later in the same diff is not a finding.
 

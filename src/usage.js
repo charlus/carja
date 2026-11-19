@@ -189,6 +189,15 @@ export const COMMANDS = Object.freeze([
     examples: [["carja app up", "start the product; the agent then drives it at app.url"]],
   },
   {
+    name: "checklist", group: "gates", summary: "The architecture checklist items that apply to the current diff: those whose trigger matches, and those without one",
+    usage: "carja checklist [dir] [--base <ref>] [--files <a,b>]",
+    flags: [
+      ["--base <ref>", "Compare with this ref, and read the checklist there (default: the default branch on origin)"],
+      ["--files <a,b>", "Use these paths, from the project root, instead of the diff"],
+    ],
+    examples: [["carja checklist", "what the reviewer must check for this branch"]],
+  },
+  {
     name: "verify", group: "gates", summary: "Show or set the command `git push` must pass",
     usage: "carja verify [options]",
     flags: [

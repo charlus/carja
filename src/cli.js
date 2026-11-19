@@ -1,4 +1,5 @@
 import { initCommand } from "./commands/init.js";
+import { checklistCommand } from "./commands/checklist.js";
 import { appCommand } from "./commands/app.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { addCommand } from "./commands/add.js";
@@ -136,6 +137,8 @@ export async function runCli(rawArgs, io = process) {
       return workCommand(rest, context);
     case "app":
       return appCommand(rest, context);
+    case "checklist":
+      return checklistCommand(rest, context);
     case "models":
       return modelsCommand(rest, context);
     default:

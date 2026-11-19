@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.8.0] — 2026-11-18 — Checklist items triggered by the diff
+
+Compatibility: upgrade only
+
+### Added
+- **`trigger:` on architecture checklist items, and `carja checklist`.** The reviewer read every item on every change; autopportunity's checklist has about 40, most unrelated to any one change, and it grows with each miss turned into a rule. After the Claude Code team's reliability checklist (39 items, 3 to 10 checked per diff), an item may carry `trigger: <glob>, <glob>` (paths from the project root, so a nested code repository's files start with its folder). A review gets the item only when the change touches a match; an item without a trigger always applies, so an existing checklist behaves as before. The loop's driver selects the items and puts them in the Checker's prompt, read from the base branch so a change cannot edit the rules that judge it. `carja checklist [--base <ref>] [--files <a,b>]` prints them for an interactive review; `reviewer.md` and `loop-checker.md` point to them. Proven through the real CLI with the stub engine (`test/checklist-triggers.test.js`); the effect on a live review is not measured.
+
 ## [7.7.1] — 2026-11-18 — A stacked item gets the dependencies of the items below it
 
 Compatibility: upgrade only
