@@ -225,7 +225,7 @@ function allPathsAllowed(paths, allowPaths) {
 }
 
 /** Read the ledger into records, newest last. Corrupt lines are skipped. */
-async function readLedger({ cwd, home }) {
+export async function readLedgerRecords({ cwd = process.cwd(), home = null } = {}) {
   try {
     const path = await resolveLedger({ cwd, home });
     const text = await readFile(path, "utf8");
@@ -273,7 +273,7 @@ export async function checkFreshness({
 }) {
   const wanted = (labels ?? []).map((l) => (typeof l === "string" ? { label: l } : l));
   const wtree = await workingTreeFingerprint(cwd).catch(() => null);
-  const records = await readLedger({ cwd, home });
+  const records = await readLedgerRecords({ cwd, home });
   const env = envFiles ? await envDigest(cwd, envFiles).catch(() => null) : null;
 
   const byLabel = {};

@@ -425,6 +425,7 @@ Record and check verification evidence against the working tree.
 carja evidence run --label <name> [--stable-tree] -- <cmd>
 carja evidence check --label <name> [options]
 carja evidence list
+carja evidence stamp
 ```
 
 | Option | What it does |

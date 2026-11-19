@@ -15,6 +15,8 @@ const EXECUTABLE_HOOKS = [
   "pre-push",
   // Cleanup after `git pull`: removes merged `carja loop` worktrees.
   "post-merge",
+  // F25: a Verified: trailer on every commit, from the evidence ledger.
+  "prepare-commit-msg",
   "verification-stop-hook.sh",
   // Opt-in Claude Code PreToolUse hook. Not wired by core.hooksPath (that is
   // git's), but it still needs the bit set for settings.json to invoke it.
@@ -173,10 +175,10 @@ export async function installHooksCommand(args, { cwd, stdout, stderr }) {
   await writeInstalledHeartbeat(targetDir);
 
   const present = new Set(await readdir(hooksDir));
-  const wired = ["pre-commit", "pre-push", "post-merge"].filter((h) => present.has(h));
+  const wired = ["pre-commit", "prepare-commit-msg", "pre-push", "post-merge"].filter((h) => present.has(h));
   stdout.write(
     `✅ Carja enforcement hooks enabled (core.hooksPath → ${HOOKS_REL}): ${wired.join(", ")}\n` +
-      `   Test-Driven Law on commit, Verification Iron Law on push${present.has("post-merge") ? ", merged loop worktrees cleaned up on pull" : ""}. Bypass is logged; see ${HOOKS_REL}/README.md.\n`
+      `   Test-Driven Law on commit${present.has("prepare-commit-msg") ? ", a Verified: stamp on each commit" : ""}, Verification Iron Law on push${present.has("post-merge") ? ", merged loop worktrees cleaned up on pull" : ""}. Bypass is logged; see ${HOOKS_REL}/README.md.\n`
   );
   reportNested(await wireNestedRepos(targetDir), stdout);
   return 0;
