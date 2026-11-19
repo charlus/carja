@@ -30,7 +30,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { workingTreeFingerprint } from "../src/evidence/wtree.js";
-import { recordRun, checkFreshness, resolveLedgerPath } from "../src/evidence/ledger.js";
+import { recordRun, checkFreshness, resolveLedgerPath, modelVars } from "../src/evidence/ledger.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -412,5 +412,39 @@ describe("E2.5 — a run that changes the working tree is not evidence", () => {
     const r = await cli(["run", "--label", "verify", "--stable-tree", "--", "echo y >> src/app.js; exit 5"]);
     assert.equal(r.code, 5);
     await restore();
+  });
+});
+
+describe("P5 — a progress line during a long run", () => {
+  test("a run longer than the interval prints its label, elapsed time and the last green duration", async () => {
+    const lines = [];
+    const io = { stdout: { write() {} }, stderr: { write: (d) => lines.push(String(d)) } };
+    await recordRun({ label: "slow", command: "sleep 0.35", cwd: repo, home, io: { stdout: { write() {} }, stderr: { write() {} } } });
+    const r = await recordRun({ label: "slow", command: "sleep 0.35", cwd: repo, home, io, progressEveryMs: 100 });
+    assert.equal(r.exitCode, 0);
+    const progress = lines.filter((l) => /carja evidence: slow running for/.test(l));
+    assert.ok(progress.length >= 2, lines.join(""));
+    assert.match(progress[0], /last green run: \d+s/);
+  });
+
+  test("a short run prints no progress line", async () => {
+    const lines = [];
+    const io = { stdout: { write() {} }, stderr: { write: (d) => lines.push(String(d)) } };
+    await recordRun({ label: "quick", command: "true", cwd: repo, home, io, progressEveryMs: 5000 });
+    assert.deepEqual(lines.filter((l) => /running for/.test(l)), []);
+  });
+});
+
+describe("P6 — eval verdicts keyed on the model", () => {
+  test("modelVars takes every variable whose name holds MODEL, sorted, and nothing else", () => {
+    assert.deepEqual(modelVars({ B_MODEL: "b", OPENAI_API_KEY: "k", A_model: "a", PATH: "/bin" }), ["A_model=a", "B_MODEL=b"]);
+  });
+
+  test("a recorded run is STALE once a bound model variable changes, FRESH while it holds", async () => {
+    await recordRun({ label: "evals", command: "true", cwd: repo, home, envVars: ["JUDGE_MODEL=a"] });
+    const same = await checkFreshness({ labels: [{ label: "evals" }], cwd: repo, home, envVars: ["JUDGE_MODEL=a"] });
+    assert.equal(same.byLabel.evals.state, "FRESH");
+    const other = await checkFreshness({ labels: [{ label: "evals" }], cwd: repo, home, envVars: ["JUDGE_MODEL=b"] });
+    assert.equal(other.byLabel.evals.state, "STALE");
   });
 });

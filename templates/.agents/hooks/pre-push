@@ -542,15 +542,34 @@ if carja_has_eval_files "$ROOT"; then
     echo "⚠️  Carja Eval-Driven Law (run) WAIVED: $CARJA_SKIP_EVAL"
     echo "    (logged to carja/0-compass/ship-log.md)"
   else
-    echo "🧪 Carja Eval-Driven Law — running evals: $eval_cmd"
-    if ( cd "$ROOT" && eval "$eval_cmd" ); then
-      echo "✅ Evals passed."
+    # P6: evals cost model calls. A green run of this exact command on this exact
+    # content, root .env files and *MODEL* variables is reused, as verify is.
+    # A red run is never reused. Any doubt → run.
+    have_carja=0
+    [ "${CARJA_EVIDENCE:-on}" != "off" ] && command -v carja >/dev/null 2>&1 && have_carja=1
+    eval_fresh=0
+    if [ "$have_carja" = "1" ] && ( cd "$ROOT" && carja evidence check --label eval --expect-cmd "$eval_cmd" --env --allow-paths "${CARJA_EVIDENCE_ALLOW_PATHS:-CHANGELOG.md,VERSION}" >/dev/null 2>&1 ); then
+      eval_fresh=1
+    fi
+    if [ "$eval_fresh" = "1" ]; then
+      echo "✅ Evals FRESH — this exact eval command already passed on this content and model."
+      echo "   (evidence ledger; re-run anyway with CARJA_EVIDENCE=off)"
     else
-      echo ""
-      echo "🛑 Evals FAILED — push blocked."
-      echo "   Tests being green is not enough — the non-deterministic surface regressed."
-      echo "   Fix the evalset, or bypass explicitly: CARJA_SKIP_EVAL=\"why\" git push …"
-      exit 1
+      echo "🧪 Carja Eval-Driven Law — running evals: $eval_cmd"
+      if [ "$have_carja" = "1" ]; then
+        ( cd "$ROOT" && carja evidence run --label eval --env -- "$eval_cmd" ); eval_rc=$?
+      else
+        ( cd "$ROOT" && eval "$eval_cmd" ); eval_rc=$?
+      fi
+      if [ "$eval_rc" = "0" ]; then
+        echo "✅ Evals passed."
+      else
+        echo ""
+        echo "🛑 Evals FAILED — push blocked."
+        echo "   Tests being green is not enough — the non-deterministic surface regressed."
+        echo "   Fix the evalset, or bypass explicitly: CARJA_SKIP_EVAL=\"why\" git push …"
+        exit 1
+      fi
     fi
   fi
 fi

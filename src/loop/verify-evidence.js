@@ -12,25 +12,15 @@
 // files while it ran) grades STALE, and verify runs.
 
 import { readdir } from "node:fs/promises";
-import { recordRun, checkFreshness } from "../evidence/ledger.js";
+import { recordRun, checkFreshness, rootEnvFiles } from "../evidence/ledger.js";
 
 const LABEL = "verify";
-
-/** `.env`, `.env.local`, … at the root of cwd: what loop.setup makes and the suite reads, ignored by git. */
-async function envFilesIn(cwd) {
-  try {
-    const entries = await readdir(cwd, { withFileTypes: true });
-    return entries.filter((e) => e.isFile() && /^\.env(\..+)?$/.test(e.name)).map((e) => e.name);
-  } catch {
-    return [];
-  }
-}
 
 /**
  * @returns {Promise<{exitCode:number, output:string, reused:boolean}>}
  */
 export async function verifyWithEvidence(cmd, cwd, { home = null } = {}) {
-  const envFiles = await envFilesIn(cwd);
+  const envFiles = await rootEnvFiles(cwd);
   const fresh = await checkFreshness({ labels: [{ label: LABEL, expectCmd: cmd }], cwd, home, envFiles });
   const r = fresh.byLabel[LABEL];
   if (fresh.ok) {
@@ -42,6 +32,6 @@ export async function verifyWithEvidence(cmd, cwd, { home = null } = {}) {
   }
   let output = "";
   const sink = { write: (d) => (output += d.toString()) };
-  const { exitCode } = await recordRun({ label: LABEL, command: cmd, cwd, home, envFiles, io: { stdout: sink, stderr: sink } });
+  const { exitCode } = await recordRun({ label: LABEL, command: cmd, cwd, home, envFiles, io: { stdout: sink, stderr: sink }, progressEveryMs: 0 });
   return { exitCode, output, reused: false };
 }

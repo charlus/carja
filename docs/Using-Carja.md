@@ -422,7 +422,7 @@ carja trust-verify [--revoke | --list]
 Record and check verification evidence against the working tree.
 
 ```
-carja evidence run --label <name> [--stable-tree] -- <cmd>
+carja evidence run --label <name> [--stable-tree] [--env] -- <cmd>
 carja evidence check --label <name> [options]
 carja evidence list
 carja evidence stamp
@@ -432,6 +432,7 @@ carja evidence stamp
 |---|---|
 | `--label <name>` | Which evidence (repeatable for check) |
 | `--stable-tree` | With run: fail when the command changes files |
+| `--env` | With run or check: bind the result to the root .env files and every *MODEL* variable (pre-push uses it for evals) |
 | `--expect-cmd <cmd>` | With check: the evidence must come from this command |
 | `--max-age <hours>` | With check: the evidence must be this recent |
 | `--allow-paths <a,b>` | With check: changes to these paths keep the evidence fresh |

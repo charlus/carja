@@ -121,6 +121,8 @@ export async function cleanMerged({ root, git, forgeMerged = () => async () => n
   const { dirs } = await codeDirs(root);
   const removed = [];
   const kept = [];
+  // A stale origin hides a merge done on the forge (2026-11-19, autopportunity). Fail-open: offline, decide on what is there.
+  for (const dir of [root, ...dirs.map((d) => join(root, d))]) await git(dir)(["fetch", "-q", "origin"]);
   for (const d of dirs) {
     const r = await pruneMergedLoopWorktrees({ git: git(join(root, d)), forgeMerged: forgeMerged(join(root, d)), prefixes });
     removed.push(...r.removed);
@@ -131,11 +133,30 @@ export async function cleanMerged({ root, git, forgeMerged = () => async () => n
     forgeMerged: forgeMerged(root),
     prefixes,
     skip: async (w) => {
-      for (const d of dirs) if (await exists(join(w.path, d, ".git"))) return `its code worktree ${d}/ is still open (its MR is not merged yet)`;
+      for (const d of dirs) {
+        if (!(await exists(join(w.path, d, ".git")))) continue;
+        // Every code repository gets a worktree, used or not (2026-11-19, website). The item is merged, so one
+        // with no commit of its own and a clean tree holds nothing: remove it, without force.
+        if (await removeUnusedCodeWorktree({ git: git(join(root, d)), path: join(w.path, d), branch: w.branch })) continue;
+        return `its code worktree ${d}/ is still open (its MR is not merged yet, or it has uncommitted changes)`;
+      }
       return null;
     },
   });
   return { removed: [...removed, ...r.removed], kept: [...kept, ...r.kept] };
+}
+
+/** Remove a code worktree that has no commit beyond its default branch and a clean tree. True when removed. */
+async function removeUnusedCodeWorktree({ git, path, branch }) {
+  const base = await defaultBranchRef(git);
+  if (!base) return false;
+  const own = await git(["rev-list", "--count", `${base}..${branch}`]);
+  if (!own.ok || own.stdout !== "0") return false;
+  const dirty = await git(["-C", path, "status", "--porcelain"]);
+  if (!dirty.ok || dirty.stdout) return false;
+  if (!(await git(["worktree", "remove", path])).ok) return false;
+  await git(["branch", "-q", "-d", branch]);
+  return true;
 }
 
 /**

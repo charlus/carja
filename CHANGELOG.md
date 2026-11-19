@@ -8,6 +8,21 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.10.0] — 2026-11-19 — Evals reused at push, a long verify shows progress, work clean finishes its job
+
+Compatibility: upgrade only
+
+### Added
+- **A green eval is not run again on the same content and model (P6).** `pre-push` ran the evals on every push, each run a set of paid model calls. It now runs them through `carja evidence run --label eval --env` and skips a run when the ledger holds a green run of the same eval command on the same working-tree content, the same root `.env` files and the same values of every environment variable whose name holds `MODEL`. A red run is never reused. `CARJA_EVIDENCE=off` forces the run. `carja evidence run|check --env` gives the same binding to any lane. Proven with real git and the real hook (`test/hooks-eval-gate.sh`, R6 and R7). Limit: a model chosen in a file outside the tree and outside the root `.env` files is not part of the key.
+- **A progress line during a long run (P5).** `carja evidence run` prints `carja evidence: <label> running for 1m30s (last green run: 1m44s)` on stderr every 30 seconds, so a 2-minute verify at push no longer looks hung. The loop driver's buffered verify prints none.
+
+### Changed
+- **Build sets the `verify` command when it is empty (A3).** The 7.3.0 benchmark ran the whole suite 3.5 times per session instead of once: with no `verify` command, `carja evidence run` had nothing to run and the agent ran `pytest` itself. Build's final verification now sets it first with `carja verify --set`.
+
+### Fixed
+- **`carja work clean` removes a merged item whose second code repository was never used.** Every nested code repository gets a worktree, and an unused one has no MR, so the item was kept forever (website, 2026-11-19). Once the item is merged, a code worktree with no commit of its own and a clean tree is removed, without force. A code worktree with uncommitted changes still keeps the item.
+- **`carja work clean` fetches the project and each code repository first.** A code MR merged on the forge was not seen while the local `origin` was stale (autopportunity, 2026-11-19). Offline, it decides on what is there.
+
 ## [7.9.0] — 2026-11-19 — Every commit says how it was verified
 
 Compatibility: upgrade only

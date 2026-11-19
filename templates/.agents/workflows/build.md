@@ -58,7 +58,7 @@ The whole change is the unit of independent review.
 
 ## Phase 3: Final Verification
 
-1. **Full suite, once:** `carja evidence run --label verify -- <verify command>` (the `verify` command in `carja.config.json`). Run it again only when code changed after it. `pre-push` then skips its own run for this tree.
+1. **Full suite, once:** `carja evidence run --label verify -- <verify command>` (`verify` in `carja.config.json`; empty → set it first: `carja verify --set "<the command that runs every test>"`). Run it again only when code changed after it. `pre-push` then skips its own run for this tree.
 2. **Build:** the production build, if there is one.
 3. **Acceptance criteria:** walk `feature-spec.md` and cite the evidence for each. Not met → fix (Phase 1), then step 1 again.
 4. **Visual review (off by default):** when the Designer was listed, end the report with *"Visual review skipped by default. Ask and a fresh Designer reviews screenshots of the screens touched."* Run it only when the product owner asks (`.agents/skills/ux-reviewer/SKILL.md`).
