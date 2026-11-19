@@ -295,7 +295,7 @@ carja evidence run --label tests -- npm test     # run it, and record what it ra
 carja evidence check --label tests               # FRESH / STALE / MISSING
 ```
 
-Commit exactly the code that was tested and the evidence stays **FRESH**. Add an untracked source file and it goes **STALE**. A run that changes tracked or new files while it runs (snapshots, a lint fix, a lockfile) is never FRESH, and `pre-push` runs the command with `--stable-tree`, which fails such a run and names the files: the code that passed is not the code on disk. `pre-push` and the loop driver use this to skip a re-run they do not need — and only ever to *skip* one: no ledger, no CLI, or any doubt at all, and the command runs. The ledger can never satisfy the gate on its own.
+Commit exactly the code that was tested and the evidence stays **FRESH**. Add an untracked source file and it goes **STALE**. A run that changes tracked or new files while it runs (snapshots, a lint fix, a lockfile) is never FRESH, and `pre-push` runs the command with `--stable-tree`, which fails such a run and names the files: the code that passed is not the code on disk. `pre-push` and the loop driver use this to skip a re-run they do not need — and only ever to *skip* one: no ledger, no CLI, or any doubt at all, and the command runs. The ledger can never satisfy the gate on its own. Evals get the same reuse at push, and the key also holds the root `.env` files and every environment variable whose name holds `MODEL`: the same evalset on another model is run again.
 
 ---
 

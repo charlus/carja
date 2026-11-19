@@ -31,7 +31,7 @@
 // machine where it did not would be worse than no record at all. It is also
 // per-branch, so a record from another branch cannot grade this one FRESH.
 
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, readdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -105,9 +105,10 @@ const resolveLedger = resolveLedgerPath;
  * sha256 over the names and contents of `envFiles` (paths relative to cwd).
  * A missing file hashes as absent, so creating one changes the digest.
  */
-export async function envDigest(cwd, envFiles) {
+export async function envDigest(cwd, envFiles, envVars = []) {
   const h = createHash("sha256");
-  for (const f of [...envFiles].sort()) {
+  for (const v of envVars ?? []) h.update(`var\0${v}\0`);
+  for (const f of [...(envFiles ?? [])].sort()) {
     h.update(`${f}\0`);
     try {
       h.update(await readFile(join(cwd, f)));
@@ -117,6 +118,34 @@ export async function envDigest(cwd, envFiles) {
     h.update("\0");
   }
   return h.digest("hex");
+}
+
+/** `.env`, `.env.local`, … at the root of cwd: ignored by git, read by the suite. */
+export async function rootEnvFiles(cwd) {
+  try {
+    const entries = await readdir(cwd, { withFileTypes: true });
+    return entries.filter((e) => e.isFile() && /^\.env(\..+)?$/.test(e.name)).map((e) => e.name);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * P6: the environment variables that choose a model (any name holding MODEL),
+ * as sorted `NAME=value` lines. An eval verdict is bound to them: the same
+ * evalset on another model is another measurement.
+ */
+export function modelVars(env = process.env) {
+  return Object.keys(env)
+    .filter((k) => /MODEL/i.test(k))
+    .sort()
+    .map((k) => `${k}=${env[k]}`);
+}
+
+/** "1m05s" or "42s". */
+function clock(ms) {
+  const s = Math.round(ms / 1000);
+  return s >= 60 ? `${Math.floor(s / 60)}m${String(s % 60).padStart(2, "0")}s` : `${s}s`;
 }
 
 /**
@@ -139,8 +168,10 @@ export async function recordRun({
   cwd = process.cwd(),
   home = null,
   envFiles = null,
+  envVars = null,
   io = { stdout: process.stdout, stderr: process.stderr },
   now = () => Date.now(),
+  progressEveryMs = 30_000,
 }) {
   const startedMs = now();
 
@@ -149,7 +180,16 @@ export async function recordRun({
   // the tree the evidence claims to cover.
   const wtree = await workingTreeFingerprint(cwd).catch(() => null);
   const head = await headSha(cwd).catch(() => null);
-  const env = envFiles ? await envDigest(cwd, envFiles).catch(() => null) : null;
+  const env = envFiles || envVars ? await envDigest(cwd, envFiles, envVars).catch(() => null) : null;
+
+  // P5: a long run says it is alive, and how long the last green one took.
+  const last = progressEveryMs > 0 ? await lastGreenDuration({ cwd, home, label, command }).catch(() => null) : null;
+  const ticker =
+    progressEveryMs > 0
+      ? setInterval(() => {
+          io.stderr?.write?.(`carja evidence: ${label} running for ${clock(now() - startedMs)}${last != null ? ` (last green run: ${clock(last * 1000)})` : ""}\n`);
+        }, progressEveryMs)
+      : null;
 
   const exitCode = await new Promise((resolve) => {
     const child = spawn(command, { cwd, shell: true, stdio: ["ignore", "pipe", "pipe"] });
@@ -158,6 +198,7 @@ export async function recordRun({
     child.on("error", () => resolve(127));
     child.on("close", (code) => resolve(code ?? 1));
   });
+  if (ticker) clearInterval(ticker);
 
   // A second fingerprint after the run. When it differs, the command changed
   // files while it ran (snapshots, a lint fix, a lockfile): the code that
@@ -224,6 +265,13 @@ function allPathsAllowed(paths, allowPaths) {
   );
 }
 
+/** Seconds the newest green run of this label and command took, or null. */
+async function lastGreenDuration({ cwd, home, label, command }) {
+  const sha = sha256(command);
+  const rec = [...(await readLedgerRecords({ cwd, home }))].reverse().find((r) => r?.label === label && r.cmd_sha256 === sha && r.exit === 0);
+  return typeof rec?.duration_s === "number" ? rec.duration_s : null;
+}
+
 /** Read the ledger into records, newest last. Corrupt lines are skipped. */
 export async function readLedgerRecords({ cwd = process.cwd(), home = null } = {}) {
   try {
@@ -267,6 +315,7 @@ export async function checkFreshness({
   cwd = process.cwd(),
   home = null,
   envFiles = null,
+  envVars = null,
   maxAgeHours = null,
   allowPaths = [],
   now = () => Date.now(),
@@ -274,7 +323,8 @@ export async function checkFreshness({
   const wanted = (labels ?? []).map((l) => (typeof l === "string" ? { label: l } : l));
   const wtree = await workingTreeFingerprint(cwd).catch(() => null);
   const records = await readLedgerRecords({ cwd, home });
-  const env = envFiles ? await envDigest(cwd, envFiles).catch(() => null) : null;
+  const bound = Boolean(envFiles || envVars);
+  const env = bound ? await envDigest(cwd, envFiles, envVars).catch(() => null) : null;
 
   const byLabel = {};
   for (const { label, expectCmd } of wanted) {
@@ -313,8 +363,8 @@ export async function checkFreshness({
       };
       continue;
     }
-    if (envFiles && (!env || rec.env_sha256 !== env)) {
-      byLabel[label] = { ...base, state: "STALE", reason: "the .env files changed since this run, or were not recorded" };
+    if (bound && (!env || rec.env_sha256 !== env)) {
+      byLabel[label] = { ...base, state: "STALE", reason: "the .env files or the model variables changed since this run, or were not recorded" };
       continue;
     }
     if (!wtree || !rec.wtree) {

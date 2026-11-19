@@ -164,6 +164,34 @@ else
 fi
 rm -rf "$D"
 
+# R6 (P6): a green eval on the same content, command, root .env files and *MODEL*
+# variables is reused at the next push; any of them changing runs it again.
+BIN="$(mktemp -d)"
+printf '#!/usr/bin/env bash\nexec node "%s/bin/carja.js" "$@"\n' "$REPO_ROOT" > "$BIN/carja"
+chmod +x "$BIN/carja"
+COUNT="$(mktemp)"
+D="$(run_repo "echo run >> $COUNT")"
+pp() { ( cd "$D" && PATH="$BIN:$PATH" CARJA_HOME="$BIN/home" "$@" bash .agents/hooks/pre-push </dev/null >/tmp/pp.out 2>&1 ); }
+runs() { wc -l < "$COUNT" | tr -d ' '; }
+pp env; pp env
+[ "$(runs)" = "1" ] && grep -q "FRESH" /tmp/pp.out && ok "R6: a green eval on unchanged content is not run again" || { no "R6: the eval ran $(runs) times on unchanged content"; sed 's/^/      /' /tmp/pp.out; }
+pp env JUDGE_MODEL=other
+[ "$(runs)" = "2" ] && ok "R6: a changed *MODEL* variable runs the eval again" || no "R6: a model change reused the eval ($(runs) runs)"
+printf 'OPENAI_MODEL=x\n' > "$D/.env"; pp env JUDGE_MODEL=other
+[ "$(runs)" = "3" ] && ok "R6: a changed root .env runs the eval again" || no "R6: an .env change reused the eval ($(runs) runs)"
+printf '// prompt v2\n' >> "$D/answer.eval.ts"; pp env JUDGE_MODEL=other
+[ "$(runs)" = "4" ] && ok "R6: a changed evalset or prompt runs the eval again" || no "R6: a content change reused the eval ($(runs) runs)"
+rm -rf "$D" "$BIN" "$COUNT"
+
+# R7: a red eval is never reused: the second push runs it and is blocked again.
+BIN="$(mktemp -d)"
+printf '#!/usr/bin/env bash\nexec node "%s/bin/carja.js" "$@"\n' "$REPO_ROOT" > "$BIN/carja"
+chmod +x "$BIN/carja"
+D="$(run_repo 'false')"
+pp env; pp env; rc=$?
+[ "$rc" -ne 0 ] && grep -q "Evals FAILED" /tmp/pp.out && ok "R7: a red eval is run again and still blocks" || no "R7: a red eval was reused"
+rm -rf "$D" "$BIN"
+
 echo ""
 echo "  hooks-eval-gate: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

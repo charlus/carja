@@ -2,7 +2,7 @@
 //
 // `carja evidence` — the CLI over the evidence ledger (E2).
 //
-//   carja evidence run --label tests [--stable-tree] -- npm test
+//   carja evidence run --label tests [--stable-tree] [--env] -- npm test
 //   carja evidence check --label tests [--expect-cmd "npm test"] [--max-age 24]
 //   carja evidence list [--label tests]
 //
@@ -12,7 +12,7 @@
 // is FRESH, so it is usable as a gate — but it never throws, and "I could not
 // tell" grades STALE, never FRESH.
 
-import { recordRun, checkFreshness, resolveLedgerPath } from "../evidence/ledger.js";
+import { recordRun, checkFreshness, resolveLedgerPath, rootEnvFiles, modelVars } from "../evidence/ledger.js";
 import { readFile } from "node:fs/promises";
 import { commitStamp } from "../evidence/stamp.js";
 
@@ -54,13 +54,14 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
     const command = sep !== -1 ? args.slice(sep + 1).join(" ") : null;
     if (!label || !command) {
       stderr.write(
-        "usage: carja evidence run --label <name> [--stable-tree] -- <command...>\n" +
+        "usage: carja evidence run --label <name> [--stable-tree] [--env] -- <command...>\n" +
           '  e.g. carja evidence run --label tests -- npm test\n',
       );
       return 1;
     }
     const stable = args.slice(0, sep).includes("--stable-tree");
-    const { exitCode, treeChanged } = await recordRun({ label, command, cwd, io: { stdout, stderr } });
+    const bind = args.slice(0, sep).includes("--env") ? { envFiles: await rootEnvFiles(cwd), envVars: modelVars() } : {};
+    const { exitCode, treeChanged } = await recordRun({ label, command, cwd, ...bind, io: { stdout, stderr } });
     if (stable && exitCode === 0 && treeChanged) {
       stderr.write(
         `\nThe command changed files while it ran: ${treeChanged.join(", ")}\n` +
@@ -77,16 +78,18 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
     const labels = collectLabels(args);
     if (labels.length === 0) {
       stderr.write(
-        "usage: carja evidence check --label <name> [--expect-cmd <cmd>] [--max-age <hours>] [--allow-paths a,b]\n" +
+        "usage: carja evidence check --label <name> [--expect-cmd <cmd>] [--max-age <hours>] [--allow-paths a,b] [--env]\n" +
           "  Name every lane you expect: the ledger cannot prove that a lane which never ran was supposed to.\n",
       );
       return 1;
     }
     const maxAge = flagValue(args, "--max-age");
     const allow = flagValue(args, "--allow-paths");
+    const bind = args.includes("--env") ? { envFiles: await rootEnvFiles(cwd), envVars: modelVars() } : {};
     const res = await checkFreshness({
       labels,
       cwd,
+      ...bind,
       maxAgeHours: maxAge ? Number(maxAge) : null,
       allowPaths: allow ? allow.split(",").map((s) => s.trim()).filter(Boolean) : [],
     });
@@ -142,9 +145,10 @@ export async function evidenceCommand(args, { cwd, stdout, stderr }) {
 
   stderr.write(
     "usage: carja evidence <run|check|list|stamp>\n\n" +
-      "  run    --label <name> [--stable-tree] -- <command...>   run it and record the result\n" +
+      "  run    --label <name> [--stable-tree] [--env] -- <command...>   run it and record the result\n" +
       "         (--stable-tree: fail a green run that changed files while it ran)\n" +
-      "  check  --label <name> [--expect-cmd <cmd>] [--max-age <hours>] [--allow-paths a,b/]\n" +
+      "         (--env: bind the result to the root .env files and every *MODEL* variable)\n" +
+      "  check  --label <name> [--expect-cmd <cmd>] [--max-age <hours>] [--allow-paths a,b/] [--env]\n" +
       "  list   [--label <name>]\n" +
       "  stamp  the Verified: trailer values for the commit being made (prepare-commit-msg hook)\n\n" +
       "Freshness is bound to the working-tree CONTENT, so committing exactly the\n" +

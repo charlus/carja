@@ -1,6 +1,6 @@
 # Verification cost
 
-> **Status (2026-10-22):** P1 built in 6.47.0 (the loop driver reuses a green verify on unchanged content). P4 built in 6.49.0 (beats run with provider keys empty). P2, P3, P5, P6 not started. D1: affected-only runs (P2) are opt-in through `conductor.config.json`, with the full suite when the selector is absent.
+> **Status (2026-11-19):** P1 built in 6.47.0 (the loop driver reuses a green verify on unchanged content). P4 built in 6.49.0 (beats run with provider keys empty). P3 done by 7.3.0 (`Slimming.md`: Build runs the full suite once, through the ledger). P5 and P6 built in 7.10.0. P2 not started: since P3, Build runs targeted tests between tasks and the full suite once, so the measured gain (104 s to 16–23 s per full run) no longer applies. D1: affected-only runs (P2) are opt-in through `conductor.config.json`, with the full suite when the selector is absent.
 
 ## Problem
 
@@ -18,10 +18,10 @@ The full suite stays the final gate. Reuse is allowed only as the verdict of a r
 |---|---|---|
 | P1 | The loop driver runs verify through the ledger (label `verify`, content, command, root `.env` files) | Built, 6.47.0 |
 | P4 | Beats run with the provider keys empty (`loop.blank_env`), never the engine's own. The per-test stall timeout was not built: it needs a plugin (pytest-timeout) the project may not have | Built, 6.49.0 |
-| P5 | A progress line during a long verify: label, elapsed, last duration | Not started |
+| P5 | A progress line during a long verify: label, elapsed, last duration | Built, 7.10.0 |
 | P2 | Affected-only runs for inner steps (pytest-testmon, `vitest related`), opt-in, full run at the gate. Measured: 16–23 s instead of 104 s | Not started |
-| P3 | `build.md` Step 3 uses P2 and runs the full suite once per batch. Interactive workflow: its own PR, proven by an agent-layer eval | Not started |
-| P6 | Eval verdicts in the ledger, keyed on the evalset, its prompts and the model | Not started |
+| P3 | `build.md` Step 3 uses P2 and runs the full suite once per batch. Interactive workflow: its own PR, proven by an agent-layer eval | Full suite once: done by 7.3.0. Use of P2: not started |
+| P6 | Eval verdicts in the ledger, keyed on the evalset, its prompts and the model | Built, 7.10.0: keyed on the whole tree (evalsets, prompts, code), the root `.env` files and every `*MODEL*` variable |
 
 ## Limits of P1
 
