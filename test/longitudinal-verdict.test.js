@@ -1,24 +1,13 @@
-// Release gate: every templates/ tree that ships has a passing (or waived)
-// longitudinal benchmark run in test/evals/longitudinal/releases.jsonl.
-// Run one with `npm run eval:release` (docs/roadmap/Release-Gate.md).
+// The verdict of the longitudinal benchmark (gate-lib.mjs). The benchmark is a
+// manual measurement, `npm run eval:longitudinal`, never a blocking gate
+// (docs/roadmap/Release-Gate.md, sensitivity check of 2026-11-20).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import { THRESHOLDS, summarise, verdict, baselineFor, treeHash, readHistory, covered } from "./evals/longitudinal/gate-lib.mjs";
-
-const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
-const HISTORY = join(REPO, "test/evals/longitudinal/releases.jsonl");
+import { THRESHOLDS, summarise, verdict, baselineFor } from "./evals/longitudinal/gate-lib.mjs";
 
 const chain = (final, costUsd, kept = 1) => ({ chain: "c", final, kept, costUsd, wallMs: 0, reviewed: 0, capped: 0 });
 const five = (final, cost) => Array.from({ length: 5 }, () => chain(final, cost));
 const base = { version: "7.3.0", verdict: "pass", model: "m", fixture: "f", meanCost: 4 };
-
-test("the current templates/ have a passing or waived benchmark run", () => {
-  const templates = treeHash(REPO, "templates");
-  const row = covered(readHistory(HISTORY), templates);
-  assert.ok(row, `templates/ ${templates.slice(0, 12)} has no release-gate row. Commit, then run: npm run eval:release`);
-});
 
 test("quality at the 7.3 level passes, with a cost inside the noise", () => {
   const v = verdict(five(1, 4.5), base);
@@ -65,10 +54,4 @@ test("summarise keeps only complete carja chains and reads the last step", () =>
   const s = summarise(rows);
   assert.equal(s.length, 1);
   assert.deepEqual([s[0].final, s[0].kept, s[0].costUsd, s[0].reviewed], [0.95, 1, 4, 4]);
-});
-
-test("a waived or failed row covers only what it says", () => {
-  assert.ok(covered([{ templates: "t", verdict: "waived" }], "t"));
-  assert.equal(covered([{ templates: "t", verdict: "fail" }], "t"), null);
-  assert.equal(covered([{ templates: "u", verdict: "pass" }], "t"), null);
 });

@@ -192,14 +192,16 @@ measure does not separate the rule from the hint. User-level settings are
 excluded (`--setting-sources project,local`); not verified that this excludes
 the user's own CLAUDE.md.
 
-## release gate (longitudinal)
+## longitudinal benchmark
 
-Not behind `CARJA_EVALS=1`: `test/release-gate.test.js` in `test:unit` reads the
-recorded verdicts and spends nothing. The run itself is `npm run eval:release`:
-5 chains of 8 dependent features on the carja arm, judged against the last
-passing release. Thresholds, limits and the waiver: `docs/roadmap/Release-Gate.md`.
-Its sensitivity is shown on real data: one 7.1.0 bare chain missed a convention
-written only in the brief and scored 90.4%, which the gate fails (minimum 95%).
+A manual measurement, not a gate: `npm run eval:longitudinal`, 5 chains of 8
+dependent features on the carja arm, judged against the last passing release
+and recorded in `longitudinal/releases.jsonl`. `test/longitudinal-verdict.test.js`
+checks only the pure verdict and spends nothing. It is not sensitive to the
+method: with the TDD law, the Verification Iron Law and both review skills
+removed, 19 of 19 graded steps scored 100% (2026-11-20). It sees a convention
+written only in the brief (one 7.1.0 bare chain scored 90.4%). Details:
+`docs/roadmap/Release-Gate.md`.
 
 
 ## reviewer-recall

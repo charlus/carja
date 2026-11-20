@@ -1,21 +1,18 @@
 #!/usr/bin/env node
-// Release gate (docs/roadmap/Release-Gate.md). Runs the
-// longitudinal benchmark on the carja arm of a committed Carja version, judges
-// it against THRESHOLDS (gate-lib.mjs) and appends the verdict to
-// releases.jsonl. test/release-gate.test.js fails while the templates/ on disk
-// have no passing or waived row.
+// Longitudinal benchmark (docs/roadmap/Release-Gate.md). A manual measurement,
+// not a gate: nothing blocks on it. Runs the benchmark on the carja arm of a
+// committed Carja version, judges it against THRESHOLDS (gate-lib.mjs) and
+// appends the verdict to releases.jsonl. About $20-25 and 1-2 h of quota.
 //
-//   npm run eval:release                      # run on HEAD, about $20-25 and 1-2 h
-//   npm run eval:release -- run --ref <sha> [--work <dir>] [--parallel 5]
-//   npm run eval:release -- record --work <dir> [--ref <sha>]   # judge a finished run again
-//   npm run eval:release -- status            # is the current templates/ covered?
-//   npm run eval:release -- waive --reason "<why this change cannot move the result>"
+//   npm run eval:longitudinal                      # run on HEAD
+//   npm run eval:longitudinal -- run --ref <sha> [--work <dir>] [--parallel 5]
+//   npm run eval:longitudinal -- record --work <dir> [--ref <sha>]   # judge a finished run again
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { THRESHOLDS, summarise, verdict, baselineFor, treeHash, readHistory, covered } from "./gate-lib.mjs";
+import { THRESHOLDS, summarise, verdict, baselineFor, treeHash, readHistory } from "./gate-lib.mjs";
 
 const HERE = dirname(new URL(import.meta.url).pathname);
 const REPO = resolve(HERE, "../../..");
@@ -53,7 +50,7 @@ function record(work, ref, model) {
   for (const c of chains) console.log(`  ${c.chain}: final ${(100 * c.final).toFixed(1)}%, kept ${(100 * c.kept).toFixed(1)}%, $${c.costUsd.toFixed(2)}, ${Math.round(c.wallMs / 60000)} min, reviewed ${c.reviewed}/${THRESHOLDS.steps}${c.capped ? `, capped ${c.capped}` : ""}`);
   for (const r of v.reasons) console.log(`  FAIL ${r}`);
   for (const n of v.notes) console.log(`  note ${n}`);
-  if (v.verdict === "incomplete") console.log(`  not recorded; resume with: npm run eval:release -- run --ref ${row.ref} --work ${work}`);
+  if (v.verdict === "incomplete") console.log(`  not recorded; resume with: npm run eval:longitudinal -- run --ref ${row.ref} --work ${work}`);
   return v.verdict === "pass";
 }
 
@@ -74,27 +71,8 @@ async function runGate() {
   return ok;
 }
 
-function status() {
-  const templates = treeHash(REPO, "templates");
-  const row = covered(readHistory(HISTORY), templates);
-  if (row) console.log(`templates/ ${templates.slice(0, 12)}: ${row.verdict} (${row.version}, ${row.date})`);
-  else console.log(`templates/ ${templates.slice(0, 12)}: NOT COVERED. Commit, then: npm run eval:release`);
-  return !!row;
-}
-
-function waive(reason) {
-  if (!reason) throw new Error('waive needs --reason "<why this change cannot move the result>"');
-  const templates = treeHash(REPO, "templates");
-  const version = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8")).version;
-  appendFileSync(HISTORY, JSON.stringify({ date: new Date().toISOString().slice(0, 10), version, templates, verdict: "waived", reason }) + "\n");
-  console.log(`waived templates/ ${templates.slice(0, 12)} (${version}): ${reason}`);
-  return true;
-}
-
 let ok;
 if (CMD === "run") ok = await runGate();
 else if (CMD === "record") ok = record(resolve(arg("work")), arg("ref", "HEAD"), arg("model"));
-else if (CMD === "status") ok = status();
-else if (CMD === "waive") ok = waive(arg("reason"));
-else { console.error("commands: run | record | status | waive"); process.exit(2); }
+else { console.error("commands: run | record"); process.exit(2); }
 process.exit(ok ? 0 : 1);

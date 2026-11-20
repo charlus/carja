@@ -1,4 +1,4 @@
-// Release gate: the pure part. A release passes when the longitudinal
+// Longitudinal benchmark verdict: the pure part. A release passes when the longitudinal
 // benchmark (carja arm, 5 chains x 8 features) holds quality and does not
 // cost clearly more than the last release that passed on the same model and
 // the same material. Thresholds are in THRESHOLDS; gate.mjs runs and records.
@@ -87,7 +87,3 @@ export const readHistory = (file) => {
   catch (e) { if (e.code === "ENOENT") return []; throw e; }
 };
 
-// The templates on disk are covered when a row for exactly this tree passed or was waived.
-export function covered(history, templates) {
-  return history.find((r) => r.templates === templates && (r.verdict === "pass" || r.verdict === "waived")) ?? null;
-}
