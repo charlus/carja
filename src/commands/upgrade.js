@@ -218,17 +218,44 @@ async function commitUpgrade({ targetDir, version, snap, noCommit, structural, e
 /**
  * The upgrade commit runs with a waiver, and the hook logs that waiver to the
  * ship-log AFTER the commit is staged, so the line is left uncommitted. Commit
- * it, but only when it is the ship-log's sole change: anything else there is
- * the user's, and stays theirs.
+ * that one line and nothing else: the index gets the committed ship-log plus
+ * the upgrade's own line. Every other change there (an earlier waiver a loop
+ * logged, the owner's answers) is the user's and stays uncommitted (A10,
+ * website, 2026-11-20).
  */
 async function commitWaiverLine(targetDir, version) {
   const log = "carja/0-compass/ship-log.md";
-  const diff = await git(["diff", "-U0", "--", log], targetDir);
-  if (!diff.ok) return null;
-  const changed = diff.stdout.split("\n").filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---) /.test(l));
-  if (!changed.length || !changed.every((l) => /^\+- \[[\d-]+ [\d:]+\] Hook waiver \(/.test(l))) return null;
-  const c = await git(["commit", "-q", "-m", `chore: log the Carja ${version} upgrade waiver`, "--", log], targetDir);
-  if (!c.ok) return null;
+  const committed = await git(["show", `HEAD:${log}`], targetDir);
+  if (!committed.ok) return null;
+  let working;
+  try {
+    working = await readFile(join(targetDir, log), "utf8");
+  } catch {
+    return null;
+  }
+  const mine = `] Hook waiver (Protected): carja upgrade to ${version}`;
+  const line = working.split("\n").reverse().find((l) => /^- \[[\d-]+ [\d:]+\] Hook waiver \(/.test(l) && l.includes(mine));
+  if (!line || committed.stdout.split("\n").includes(line)) return null;
+  // A temporary index from HEAD: what the user staged is neither committed nor unstaged.
+  const rel = (name) => git(["rev-parse", "--git-path", name], targetDir).then((r) => (r.ok ? resolve(targetDir, r.stdout) : null));
+  const index = await rel(`carja-waiver-${process.pid}.index`);
+  const body = await rel(`carja-waiver-${process.pid}.md`);
+  if (!index || !body) return null;
+  const env = { GIT_INDEX_FILE: index };
+  try {
+    // The hook appends; so does this. `git show` trimmed the final newline.
+    await writeFile(body, `${committed.stdout}\n${line}\n`, "utf8");
+    const blob = await git(["hash-object", "-w", body], targetDir);
+    if (!blob.ok) return null;
+    if (!(await git(["read-tree", "HEAD"], targetDir, env)).ok) return null;
+    if (!(await git(["update-index", "--cacheinfo", `100644,${blob.stdout},${log}`], targetDir, env)).ok) return null;
+    if (!(await git(["commit", "-q", "-m", `chore: log the Carja ${version} upgrade waiver`], targetDir, env)).ok) return null;
+  } finally {
+    await rm(index, { force: true });
+    await rm(body, { force: true });
+  }
+  // The real index follows HEAD for the ship-log; the working file keeps the user's changes.
+  await git(["reset", "-q", "--", log], targetDir);
   return (await git(["rev-parse", "--short", "HEAD"], targetDir)).stdout || null;
 }
 

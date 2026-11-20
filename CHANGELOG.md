@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.3] — 2026-11-20 — The upgrade's waiver commit holds only its own line
+
+Compatibility: upgrade only
+
+### Fixed
+- **`carja upgrade` commits only its own waiver line to the ship-log.** It committed every uncommitted `Hook waiver` line, so on website a loop waiver from earlier in the day rode the upgrade's commit. And when the ship-log held any other uncommitted change, such as the owner's recorded answers, it committed nothing and left its own line uncommitted. It now commits the committed ship-log plus its own line, through a temporary index: other changes in the ship-log stay uncommitted, and anything the user staged stays staged. Proven with real git (`test/upgrade.test.js`).
+
 ## [7.11.2] — 2026-11-20 — A dead loop run no longer shows as running
 
 Compatibility: upgrade only
