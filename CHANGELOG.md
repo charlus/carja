@@ -8,6 +8,15 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.2] — 2026-11-20 — A dead loop run no longer shows as running
+
+Compatibility: upgrade only
+
+### Fixed
+- **`carja watch` and the watch tower showed a killed run as running.** A run stopped without its end record (closed terminal, machine asleep) kept the "running" label and a minute count that never stopped (autopportunity, 2026-11-20: 1347 min for a run dead since the day before). When the latest run has no `run_end` and its process is gone, both screens now say "stopped (process gone)" with the time of its last event, drop the beat in progress, and the live `carja watch` stops refreshing. Proven by `test/loop-watch-progress.test.js` and on the real autopportunity event log.
+
+---
+
 ## [7.11.1] — 2026-11-20 — The release gate is no longer a gate
 
 Compatibility: upgrade only

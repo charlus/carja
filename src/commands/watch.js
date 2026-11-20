@@ -70,7 +70,7 @@ export async function watchCommand(args, { cwd, stdout }) {
     const text = await screen();
     stdout.write(`\x1b[2J\x1b[H  carja watch · ${root} · Ctrl-C to leave\n\n${text}`);
     const ms = await models();
-    if (!ms.length || ms.every((m) => m.ended)) return 0;
+    if (!ms.length || ms.every((m) => m.ended || m.gone)) return 0;
     await new Promise((r) => setTimeout(r, 2000));
   }
 }
