@@ -1,6 +1,6 @@
 # Risk-tiered merge, and the verification backlog from Anthropic's articles
 
-> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10, F12 and F22 built in 7.6.0. Reviewer-recall eval run twice on autopportunity (20 cases, `test/evals/README.md`). F23, the auto-merge breaker, built in 7.7.0. F24, checklist triggers, built in 7.8.0. F25, the `Verified:` stamp, built in 7.9.0. F18 is dropped.
+> **Status:** 2026-11-18. Step 1 (the `risk` block, F17 and F21) built in 7.6.0, proven through the real CLI with the stub engine and stub `gh`. Not yet run on a live project or against GitLab. F7, F8, F9/F10, F12 and F22 built in 7.6.0. Reviewer-recall eval run twice on autopportunity (20 cases, `test/evals/README.md`). F23, the auto-merge breaker, built in 7.7.0. F24, checklist triggers, built in 7.8.0. F25, the `Verified:` stamp, built in 7.9.0. F26, `carja merge-stack --backlog`, built in 7.11.0, proven with the stub `gh` merging for real, not yet against GitLab. F18 is dropped.
 
 ## Why
 
@@ -26,6 +26,7 @@ PR-gated merge holds: merges go through the forge's MR API, never a push. Fail-s
 - **F9/F10 Turn misses into rules, and measure the reviewer** on past incidents and reverts, with clean merged changes as a control. Built: `src/reviewer-recall.js` (reverts, `Fixes:` trailers, SZZ; location key; separate recall and control scores), `test/evals/reviewer-recall/run.mjs`, and `carja review-log rules` (`src/review-rules.js`). Not built: the three agents that try to disprove a candidate rule; the owner approves it in the MR instead.
 - **F12 A Pre-existing finding tag.** Built: `reviewer.md` defines it, `src/loop/checker.js` (`preExistingFindings`) keeps it out of the Maker's next prompt, the loop records it in its messages.
 - **F22 merge-stack retries a red pipeline once and resolves a code conflict itself** before it stops. Built: `retryPipeline` in both forges (`src/loop/merge-stack.js`); the conflict is resolved by the agent in `workflows/merge-stack.md`, since a code merge needs judgement and a verify run.
+- **F26 merge-stack merges a backlog run's MRs** (owner, 2026-11-20: "merge stack only work on project, not on a loop that close unrelated tasks from the backlog"). A plain `carja loop` run records no stack, so its MRs could only be merged by hand. Built: `src/loop/backlog-mrs.js` finds them on the forge (open MRs from a loop branch to the default branch, outside every project stack), since `loop-state.json` lagged one MR behind on autopportunity. A state MR that conflicts after another item's merge takes the default branch in, both sides of each Carja document kept (`mergeKeepingDocs`), pushed through the hooks and not recorded as reviewed. A code conflict still stops. `--confirm` takes the state MR's number, because merged items leave the list. Proven by `test/merge-stack-backlog.test.js`.
 - **F18 dropped** (owner): rerunning the checks on the combined result would cost 40 to 50 minutes per item on autopportunity.
 
 ## Step 2: the auto-merge breaker (F23, 7.7.0)

@@ -71,11 +71,10 @@ const RUNNING = new Set(["running", "pending", "created", "waiting_for_resource"
  * @returns {Promise<{code: 0|1|2, lines: string[], next: string, merged: string[]}>}
  *   code 0: every item is merged (dry run: every item can be); 2: the owner must act; 1: a problem stopped the walk.
  */
-export async function walkStack({ project, entries, forges, defaults, confirm = null, dryRun = false, waitMs = 20 * 60_000, pollMs = 20_000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), needsOf = ownerNeeds }) {
+export async function walkStack({ project, entries, forges, defaults, confirm = null, dryRun = false, waitMs = 20 * 60_000, pollMs = 20_000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), needsOf = ownerNeeds, cmd = `carja merge-stack ${project}`, closedNext = `Next: \`carja loop ${project}\` builds it again, with everything above it.`, doneNext = `Next: deploy and test the product. Then \`git pull\` in this folder (it removes the merged items' worktrees), and \`carja loop ${project}\` if the project has items left to build.`, resolveConflict = null, keyOf = (e, n) => n }) {
   const items = entries.filter((e) => !e.merged);
   const lines = [];
   const merged = [];
-  const cmd = `carja merge-stack ${project}`;
   let code = 0;
   let next = null;
   const stop = (c, line, n) => {
@@ -102,17 +101,19 @@ export async function walkStack({ project, entries, forges, defaults, confirm = 
       continue;
     }
     const closed = sides.find((s, k) => st[k].state === "closed");
-    if (closed) return stop(1, `${label}: closed without a merge (${closed.url}).`, `Next: \`carja loop ${project}\` builds it again, with everything above it.`);
+    if (closed) return stop(1, `${label}: closed without a merge (${closed.url}).`, closedNext);
 
     const needs = needsOf(e);
-    const confirmed = confirm === n;
+    // The number `--confirm` takes: the item's place, or, where the list changes between runs, its state MR's number.
+    const key = keyOf(e, n);
+    const confirmed = confirm === key;
     if (needs.length && !confirmed) {
       const block = [`${label}: needs you before the merge:`, ...needs.map((a) => `   - ${a}`)].join("\n");
-      if (!dryRun) return stop(2, block, `Next: do the steps above that come before the merge, then run \`${cmd} --confirm ${n}\`.`);
+      if (!dryRun) return stop(2, block, `Next: do the steps above that come before the merge, then run \`${cmd} --confirm ${key}\`.`);
       // The dry run details the first item the walk will stop at; the others come one at a time.
       lines.push(next ? `${label}: needs you before the merge (${needs.length} step${sp(needs.length)}).` : block);
       code = Math.max(code, 2);
-      next ??= `Next: \`${cmd}\` merges up to item ${n}. Do its steps before the merge, then \`${cmd} --confirm ${n}\`.`;
+      next ??= `Next: \`${cmd}\` merges up to item ${n}. Do its steps before the merge, then \`${cmd} --confirm ${key}\`.`;
       continue;
     }
 
@@ -154,6 +155,21 @@ export async function walkStack({ project, entries, forges, defaults, confirm = 
         }
       };
       await wait();
+      // A backlog item's state MR conflicts once another item's state MR is merged:
+      // both edit the task backlog and the ship-log. Take the default branch into
+      // it, keeping both sides of each Carja document; any other conflict stays.
+      if (st[k]?.conflict && s.key === "outer" && resolveConflict) {
+        const rc = await resolveConflict({ entry: e, side: s, base });
+        if (!rc?.merged) return stop(1, `${label}: stopped. ${s.url} has a conflict${rc?.reason ? `: ${rc.reason}` : ""}.${k > 0 ? ` ${shortRef(sides[0].url)} is merged, ${shortRef(s.url)} is not.` : ""}`, `Next: on its branch, merge ${base} into it, resolve, run verify, push, then run \`${cmd}\` again. Ask the owner only when the two sides are a product choice.`);
+        lines.push(`${label}: took ${base} into ${shortRef(s.url)}, both sides kept in ${rc.files.map((f) => `\`${f}\``).join(", ")}.`);
+        await sleep(pollMs);
+        st[k] = await read(s);
+        for (let t = 0; st[k] && st[k].conflict && t < 3; t++) {
+          await sleep(pollMs);
+          st[k] = await read(s);
+        }
+        await wait();
+      }
       // F22: a red pipeline is often a flaky job. Retry it once, then wait again.
       let retried = false;
       if (st[k]?.pipeline === "failed" && typeof f.retryPipeline === "function") {
@@ -193,7 +209,7 @@ export async function walkStack({ project, entries, forges, defaults, confirm = 
   }
 
   if (dryRun) return { code, lines, next: next ?? `Next: \`${cmd}\` merges them.`, merged };
-  return { code: 0, lines, next: `Next: deploy and test the product. Then \`git pull\` in this folder (it removes the merged items' worktrees), and \`carja loop ${project}\` if the project has items left to build.`, merged };
+  return { code: 0, lines, next: doneNext, merged };
 }
 
 // ---- The forges ----------------------------------------------------------
@@ -251,6 +267,16 @@ export function ghForge(run) {
         if (!rr.ok) return { ok: false, reason: (rr.stderr || rr.stdout || "").trim().slice(-300) };
       }
       return { ok: true };
+    },
+    // The open PRs to `base` in this repository: [{url, branch, title}], or null.
+    async listOpen(base) {
+      const r = await run("gh", ["pr", "list", "--state", "open", "--base", base, "--json", "url,headRefName,title", "--limit", "200"]);
+      if (!r.ok) return null;
+      try {
+        return JSON.parse(r.stdout || "[]").map((p) => ({ url: p.url, branch: p.headRefName, title: p.title ?? "" }));
+      } catch {
+        return null;
+      }
     },
     async retarget(url, base) {
       const r = await run("gh", ["pr", "edit", url, "--base", base]);
@@ -317,6 +343,16 @@ export function glabForge(run) {
       if (!st.ok || id == null) return { ok: false, reason: "no head pipeline" };
       const r = await api(url, (p) => ["-X", "POST", `${p.replace(/\/merge_requests\/\d+$/, "")}/pipelines/${id}/retry`]);
       return r.ok ? { ok: true } : { ok: false, reason: (r.stderr || r.stdout || "").trim().slice(-300) };
+    },
+    // The open MRs to `base` in this repository (the one `run` runs in): [{url, branch, title}], or null.
+    async listOpen(base) {
+      const r = await run("glab", ["api", `projects/:id/merge_requests?state=opened&target_branch=${encodeURIComponent(base)}&per_page=100`]);
+      if (!r.ok) return null;
+      try {
+        return JSON.parse(r.stdout || "[]").map((m) => ({ url: m.web_url, branch: m.source_branch, title: m.title ?? "" }));
+      } catch {
+        return null;
+      }
     },
     async retarget(url, base) {
       const r = await api(url, (p) => ["-X", "PUT", p, "-f", `target_branch=${base}`]);

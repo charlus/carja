@@ -1,11 +1,13 @@
 // src/commands/merge-stack.js
 //
-// `carja merge-stack [project] [dir] [--dry-run] [--confirm <n>] [--wait <min>]`:
-// merge a stacked run's MRs in order, through the forge. The walk and the
-// forges are src/loop/merge-stack.js; this file finds the stack, the forges and
-// the default branches.
+// `carja merge-stack [project] [dir] [--backlog] [--dry-run] [--confirm <n>] [--wait <min>]`:
+// merge a stacked run's MRs in order, through the forge, or the MRs a backlog
+// run opened (`--backlog`, or no project named and no project stack waiting).
+// The walk and the forges are src/loop/merge-stack.js, the backlog items
+// src/loop/backlog-mrs.js; this file finds the items, the forges and the
+// default branches.
 
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -18,7 +20,8 @@ import { defaultBranchRef } from "../loop/reconcile.js";
 import { walkStack, forgeAdapter, needsUnder } from "../loop/merge-stack.js";
 import { parseRiskConfig } from "../loop/risk.js";
 import { effectiveRisk, ledgerItems, recordAutoMerges } from "../loop/breaker.js";
-import { isOldLayout, oldLayoutMessage } from "../names.js";
+import { isOldLayout, oldLayoutMessage, statePath } from "../names.js";
+import { backlogEntries, branchesOfStacks, mrNumber, branchFiles, takeDefaultKeepingDocs } from "../loop/backlog-mrs.js";
 
 const readStack = (path) => {
   try {
@@ -66,15 +69,24 @@ export async function mergeStackCommand(args, { cwd, stdout, stderr }) {
   }
   const runsDir = join(common.stdout, BEAT_LOG_DIR, RUNS_DIR);
 
-  // No project named: the one stack with MRs waiting.
-  if (!project) {
-    const names = existsSync(runsDir) ? await readdir(runsDir) : [];
+  const backlog = args.includes("--backlog");
+  if (backlog && project) {
+    stderr.write(`--backlog merges the MRs of backlog runs, not a project: run \`carja merge-stack ${project}\` or \`carja merge-stack --backlog\`.\n`);
+    return 1;
+  }
+  const names = existsSync(runsDir) ? await readdir(runsDir) : [];
+  // No project named: the one stack with MRs waiting, else the backlog runs' MRs.
+  if (!project && !backlog) {
     const waiting = names.filter((n) => (readStack(join(runsDir, n, STACK_FILE)) ?? []).some((e) => !e.merged));
-    if (waiting.length !== 1) {
-      stderr.write(waiting.length ? `Several projects have MRs waiting: ${waiting.join(", ")}. Name one: \`carja merge-stack <project>\`.\n` : "No `carja loop <project>` run has MRs waiting here.\n");
+    if (waiting.length > 1) {
+      stderr.write(`Several projects have MRs waiting: ${waiting.join(", ")}. Name one: \`carja merge-stack <project>\`, or \`carja merge-stack --backlog\` for the MRs of backlog runs.\n`);
       return 1;
     }
-    project = waiting[0];
+    project = waiting[0] ?? null;
+  }
+  if (!project) {
+    const stacks = names.map((n) => readStack(join(runsDir, n, STACK_FILE)) ?? []);
+    return mergeBacklog({ root, args, confirm, waitMin, stacks, stdout, stderr });
   }
   const runDir = join(runsDir, runKey(project));
   const entries = readStack(join(runDir, STACK_FILE));
@@ -125,6 +137,93 @@ export async function mergeStackCommand(args, { cwd, stdout, stderr }) {
     pollMs,
   });
   if (inForce.gitCommonDir && !args.includes("--dry-run")) await recordAutoMerges(inForce.gitCommonDir, ledgerItems(project, unreviewed, r.merged));
+  stdout.write(`${r.lines.join("\n")}\n${r.next}\n`);
+  return r.code;
+}
+
+const BACKLOG_CMD = "carja merge-stack --backlog";
+
+/**
+ * The MRs a plain `carja loop` run opened, one item per backlog task, each to
+ * the default branch: found on the forge (src/loop/backlog-mrs.js), merged
+ * oldest first with the same walk and gates as a stack. A state MR that
+ * conflicts after another item's merge takes the default branch in, both sides
+ * of each Carja document kept, and is pushed through the hooks.
+ */
+async function mergeBacklog({ root, args, confirm, waitMin, stacks, stdout, stderr }) {
+  const dryRun = args.includes("--dry-run");
+  const pid = await liveLockPid(join(root, statePath(root, "carja/1-workbench/loop.lock")));
+  if (pid) {
+    stderr.write(`⛔  \`carja loop\` is running here (pid ${pid}) and opens these MRs. Wait for it to end, then run this again.\n`);
+    return 1;
+  }
+  let rootConfig;
+  let loopConfig;
+  try {
+    rootConfig = await readRootConfig(root);
+    loopConfig = parseLoopConfig(rootConfig);
+  } catch (e) {
+    stderr.write(`Could not parse carja.config.json: ${e.message}\n`);
+    return 1;
+  }
+  const risk = parseRiskConfig(rootConfig);
+  if (risk.errors.length) {
+    stderr.write(`carja.config.json: ${risk.errors.join("; ")}.\n`);
+    return 1;
+  }
+  const { forges, defaults, problem } = await stackForges(root, loopConfig, []);
+  if (problem) {
+    stderr.write(`${problem}.\n`);
+    return 1;
+  }
+  const codeRoot = loopConfig.codeDir ? join(root, loopConfig.codeDir) : null;
+  const outer = await forges.outer.listOpen(defaults.outer);
+  const code = forges.code && defaults.code ? await forges.code.listOpen(defaults.code) : null;
+  if (!outer || (forges.code && defaults.code && !code)) {
+    stderr.write(`The forge did not list the open MRs of ${!outer ? "this repository" : "the code repository"}: check its login, then run \`${BACKLOG_CMD}\` again.\n`);
+    return 1;
+  }
+  let tasks = [];
+  try {
+    tasks = JSON.parse(await readFile(join(root, statePath(root, "carja/1-workbench/loop-state.json")), "utf8")).tasks ?? [];
+  } catch {
+    tasks = [];
+  }
+  const { entries, orphans } = backlogEntries({ outer, code, stackBranches: branchesOfStacks(stacks), tasks });
+  for (const url of orphans) stdout.write(`A code MR with no Carja state MR is left alone: ${url}.\n`);
+  if (entries.length && entries.some((e) => e.code) && !forges.code) {
+    stderr.write(`the code repository ${codeRoot ?? "(loop.code_dir)"} is missing.\n`);
+    return 1;
+  }
+  // The files each item changes, for the risk block: what it adds to the default branch.
+  const gitIn = (dir) => (argv) => runCli("git", argv, dir);
+  for (const e of entries) {
+    const o = await branchFiles(gitIn(root), defaults.outer, e.outer.branch);
+    const c = e.code ? await branchFiles(gitIn(codeRoot), defaults.code, e.code.branch) : [];
+    e.files = o && c ? { outer: o, code: c } : null;
+  }
+
+  const inForce = risk.configured ? await riskInForce(root, loopConfig, risk) : { risk, gitCommonDir: null };
+  if (inForce.risk.breaker) stdout.write(`${inForce.risk.breaker}\n`);
+  const unreviewed = risk.configured ? entries.filter((e) => needsUnder(inForce.risk)(e).length === 0) : [];
+  const pollMs = Number(process.env.CARJA_MERGE_POLL_MS) >= 0 && process.env.CARJA_MERGE_POLL_MS !== undefined ? Number(process.env.CARJA_MERGE_POLL_MS) : 20_000;
+  const r = await walkStack({
+    project: "backlog",
+    entries,
+    forges,
+    defaults,
+    needsOf: needsUnder(inForce.risk),
+    confirm,
+    dryRun,
+    waitMs: waitMin * 60_000,
+    pollMs,
+    cmd: BACKLOG_CMD,
+    keyOf: (e) => mrNumber(e.outer.url),
+    closedNext: `Next: reopen the MR, or close its pair too and take the item back into the backlog, then run \`${BACKLOG_CMD}\` again.`,
+    doneNext: "Next: deploy and test the product. Then `git pull` in this folder (it removes the merged items' worktrees).",
+    resolveConflict: ({ side, base }) => takeDefaultKeepingDocs({ root, git: (argv, dir = root) => runCli("git", argv, dir), branch: side.branch, base }),
+  });
+  if (inForce.gitCommonDir && !dryRun) await recordAutoMerges(inForce.gitCommonDir, ledgerItems("backlog", unreviewed, r.merged));
   stdout.write(`${r.lines.join("\n")}\n${r.next}\n`);
   return r.code;
 }

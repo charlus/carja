@@ -314,15 +314,16 @@ carja watch --all [--once]
 
 #### `carja merge-stack`
 
-Merge the MRs of a `carja loop <project>` run in order, through the forge, and stop where you must act.
+Merge the MRs of a `carja loop <project>` run in order, or those of backlog runs, through the forge, and stop where you must act.
 
 ```
-carja merge-stack [project] [dir] [--dry-run] [--confirm <n>] [--wait <min>]
+carja merge-stack [project] [dir] [--backlog] [--dry-run] [--confirm <n>] [--wait <min>]
 ```
 
 | Option | What it does |
 |---|---|
-| `[project]` | The project whose stack to merge. Optional when only one project has MRs waiting |
+| `[project]` | The project whose stack to merge. Optional when only one project has MRs waiting. With no project waiting, the command merges the backlog runs' MRs |
+| `--backlog` | Merge the MRs a plain `carja loop` run opened, one item per backlog task, oldest first. Found on the forge: open MRs from a loop branch to the default branch, outside any project's stack. A state MR that conflicts after another item's merge takes the default branch in, both sides of each Carja document kept. `--confirm` then takes the state MR's number |
 | `--dry-run` | Check every MR on the forge and list each item: ready, blocked, or needs you. Merge nothing |
 | `--confirm <n>` | You did the steps of item n that come before its merge: merge it, then stop for its steps after the merge |
 | `--wait <min>` | How long to wait for a running pipeline before it stops (default 20) |
@@ -332,6 +333,7 @@ Reads: `risk.owner_review`, `risk.high_means`, `risk.high_paths`, `risk.low_path
 - `carja merge-stack notes --dry-run`: what can be merged now, and what needs you
 - `carja merge-stack notes`: merge bottom first: code MR, then state MR, no squash, source branch deleted. Stops before an item with owner actions, at a red pipeline, a conflict or a closed MR
 - `carja merge-stack notes --confirm 2`: after the backup that item 2 asked for
+- `carja merge-stack --backlog --dry-run`: the MRs backlog runs opened: what can be merged now, and what needs you
 
 ### Gates and evidence
 
