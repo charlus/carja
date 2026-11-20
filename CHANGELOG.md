@@ -8,6 +8,15 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.1] — 2026-11-20 — The release gate is no longer a gate
+
+Compatibility: upgrade only
+
+### Removed
+- **The release gate on `templates/` changes.** Every change to `templates/` cost about $20–25 and 1–2 hours of the shared quota, and on 2026-11-20 the gate runs helped exhaust it during a loop run. A sensitivity check showed the gate could not fail on a serious defect: with the TDD law, the Verification Iron Law and both review skills removed, all 19 graded steps scored 100%. `test/release-gate.test.js` and the `status` and `waive` commands are removed, and no model eval blocks a change. The benchmark stays as a manual measurement under a new name, `npm run eval:longitudinal` (was `eval:release`). Only this repository is affected: the eval gate at push in installed projects is unchanged. Result: `docs/roadmap/Release-Gate.md`.
+
+---
+
 ## [7.11.0] — 2026-11-20 — merge-stack merges a backlog run's MRs
 
 Compatibility: upgrade only
