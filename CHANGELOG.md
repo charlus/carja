@@ -8,6 +8,16 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.0] — 2026-11-20 — merge-stack merges a backlog run's MRs
+
+Compatibility: upgrade only
+
+### Added
+- **`carja merge-stack --backlog` merges the MRs of a plain `carja loop` run.** Only a project run recorded a stack, so the MRs of backlog items could only be merged by hand (autopportunity, 2026-11-20: six items, twelve MRs). The command finds them on the forge: open MRs from a loop branch to the default branch, outside every project's stack, the code MR paired with its state MR by branch. It merges them oldest first through the same walk and gates as a stack: green pipeline, owner actions, the `risk` block. Every state MR edits the task backlog and the ship-log, so after the first merge the others conflict. The command merges the default branch into the state branch, keeps both sides of each Carja document, and pushes through the hooks. A conflict in code still stops the walk. `--confirm` takes the state MR's number, because merged items leave the list. With no project named and no project stack waiting, `carja merge-stack` does the same. A backlog run's last line now names the command. Proven by `test/merge-stack-backlog.test.js` (stub `gh` merging for real), not yet against GitLab.
+
+### Changed
+- `carja merge-stack` with no project and no project stack waiting merges the backlog runs' MRs instead of exiting with "No `carja loop <project>` run has MRs waiting here."
+
 ## [7.10.0] — 2026-11-19 — Evals reused at push, a long verify shows progress, work clean finishes its job
 
 Compatibility: upgrade only

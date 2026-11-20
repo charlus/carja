@@ -40,12 +40,14 @@ if (argv[0] === "pr" && argv[1] === "create") {
   process.exit(0);
 }
 if (argv[0] === "pr" && argv[1] === "list") {
+  // By source branch (--head), or every PR to a base (--base, `carja merge-stack --backlog`).
   const head = flag("--head");
+  const base = flag("--base");
   const state = (flag("--state") ?? "open").toUpperCase();
   const prs = load()
-    .prs.filter((p) => p.repo === repo && p.head === head && (state === "ALL" || p.state === state))
+    .prs.filter((p) => p.repo === repo && (head ? p.head === head : !base || p.base === base) && (state === "ALL" || p.state === state))
     .reverse()
-    .map((p) => ({ ...p, number: p.n, headRefOid: headOf(p.head) }));
+    .map((p) => ({ ...p, number: p.n, headRefOid: headOf(p.head), headRefName: p.head }));
   if (flag("--jq") === ".[0].url") console.log(prs[0]?.url ?? "");
   else console.log(JSON.stringify(prs.slice(0, Number(flag("--limit") ?? 30))));
   process.exit(0);
@@ -59,6 +61,18 @@ if (argv[0] === "pr" && argv[1] === "close") {
 }
 // `carja merge-stack` (test/merge-stack-cli.test.js): view, merge, retarget, delete a branch.
 // A PR's checks come from its `checks` field ("SUCCESS" when absent).
+// With STUB_FORGE_REAL_MERGE=1, a merge writes a merge commit to the base branch
+// in the bare origin, and a PR conflicts when git says so (git >= 2.38).
+const REAL = process.env.STUB_FORGE_REAL_MERGE === "1";
+const who = { GIT_AUTHOR_NAME: "forge", GIT_AUTHOR_EMAIL: "forge@stub", GIT_COMMITTER_NAME: "forge", GIT_COMMITTER_EMAIL: "forge@stub" };
+const bare = (...a) => execFileSync("git", ["--git-dir", repo, ...a], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...who } }).toString().trim();
+const mergeTree = (p) => {
+  try {
+    return bare("merge-tree", "--write-tree", `refs/heads/${p.base}`, `refs/heads/${p.head}`).split("\n")[0];
+  } catch {
+    return null;
+  }
+};
 const byUrl = (d) => d.prs.find((x) => x.url === argv[2] || String(x.n) === argv[2]);
 if (argv[0] === "pr" && argv[1] === "view") {
   const p = byUrl(load());
@@ -69,7 +83,7 @@ if (argv[0] === "pr" && argv[1] === "view") {
     baseRefName: p.base,
     headRefName: p.head,
     headRefOid: headOf(p.head),
-    mergeable: p.conflict ? "CONFLICTING" : "MERGEABLE",
+    mergeable: p.conflict || (REAL && p.state === "OPEN" && !mergeTree(p)) ? "CONFLICTING" : "MERGEABLE",
     statusCheckRollup: [{ status: conclusion === "PENDING" ? "IN_PROGRESS" : "COMPLETED", conclusion: conclusion === "PENDING" ? "" : conclusion }],
   }));
   process.exit(0);
@@ -81,6 +95,15 @@ if (argv[0] === "pr" && argv[1] === "merge") {
   if (flag("--match-head-commit") !== headOf(p.head)) {
     console.error("head branch was modified");
     process.exit(1);
+  }
+  if (REAL) {
+    const tree = mergeTree(p);
+    if (!tree) {
+      console.error("merge conflict");
+      process.exit(1);
+    }
+    const commit = bare("commit-tree", tree, "-p", `refs/heads/${p.base}`, "-p", `refs/heads/${p.head}`, "-m", `Merge ${p.head}`);
+    bare("update-ref", `refs/heads/${p.base}`, commit);
   }
   p.state = "MERGED";
   p.merged = { method: "merge", sha: flag("--match-head-commit") };

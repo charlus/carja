@@ -112,9 +112,11 @@ test("merge-stack: refuses while the project's loop runs, and says when nothing 
     assert.equal(r.status, 1);
     assert.match(r.stderr, /carja loop notes` is running/);
     rmSync(join(l.root, ".git/carja-loop-logs/runs/notes"), { recursive: true });
+    // No project stack waits: the command turns to the backlog runs' MRs (test/merge-stack-backlog.test.js).
+    writeFileSync(l.db, JSON.stringify({ prs: [] }));
     const none = mergeStack(l, []);
-    assert.equal(none.status, 1);
-    assert.match(none.stderr, /No `carja loop <project>` run has MRs waiting here\./);
+    assert.equal(none.status, 0, none.stdout + none.stderr);
+    assert.match(none.stdout, /backlog: no MR waits for a merge\./);
   } finally {
     rmSync(l.base, { recursive: true, force: true });
   }

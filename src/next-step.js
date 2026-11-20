@@ -26,7 +26,8 @@ export function nextAfterLoop(status, { prUrls = [], cmd = LOOP } = {}) {
     case "awaiting_answers":
       return "Next: `carja status` names the question file. Answer each question with an option number, then run the loop again.";
     case "completed":
-      return `Next: review and merge the MR${prUrls.length === 1 ? "" : "s"}${prUrls.length ? ` (${prUrls.join(", ")})` : ""}. After the merge, \`${cmd}\` takes the next item.`;
+      // A backlog run (no project): `carja merge-stack --backlog` merges its MRs through the same gates.
+      return `Next: review and merge the MR${prUrls.length === 1 ? "" : "s"}${prUrls.length ? ` (${prUrls.join(", ")})` : ""}${cmd === LOOP ? " with `carja merge-stack --backlog`, which stops where you must act" : ""}. After the merge, \`${cmd}\` takes the next item.`;
     case "awaiting_review":
       return "Next: read carja/1-workbench/loop-messages.md. It names the branch to review: below L3 the loop opens no MR, and at L3 the inbox says why the MR could not be opened.";
     case "escalated":

@@ -113,6 +113,8 @@ test("a bare `carja` in a project says where it stands and the next command; out
 test("the Next line names the command for each way a run or a check ends", () => {
   assert.match(nextAfterLoop("awaiting_answers"), /Answer each question/);
   assert.match(nextAfterLoop("completed", { prUrls: ["u1"] }), /merge the MR \(u1\)/);
+  assert.match(nextAfterLoop("completed", { prUrls: ["u1"] }), /`carja merge-stack --backlog`/);
+  assert.doesNotMatch(nextAfterLoop("completed", { prUrls: ["u1"], cmd: "carja loop notes" }), /--backlog/);
   assert.match(nextAfterLoop("escalated"), /loop-messages\.md/);
   // A6 (2026-10-22): an L3 run whose MR could not be opened also ends awaiting_review.
   assert.match(nextAfterLoop("awaiting_review"), /loop-messages\.md.*could not be opened/);
