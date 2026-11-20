@@ -228,6 +228,31 @@ test("upgrade leaves a clean tree: it commits the waiver line its own commit log
   assert.match(readFileSync(join(dir, "carja/0-compass/ship-log.md"), "utf8"), /Hook waiver \(Protected\): carja upgrade/);
 });
 
+// A10 (website, 2026-11-20): an earlier waiver line the loop had logged and not
+// committed rode the upgrade's waiver commit. Only the upgrade's own line is
+// committed; every other change to the ship-log stays the user's, uncommitted.
+test("the waiver commit holds only the upgrade's own line, never the user's uncommitted ship-log changes", async () => {
+  const dir = await makeGitInstall();
+  const log = join(dir, "carja/0-compass/ship-log.md");
+  writeFileSync(log, "# Ship Log\n\n## 2026-11-19 — Thing\n- **Decide:** merge?\n");
+  g(dir, "add", "-A");
+  g(dir, "commit", "-q", "-m", "a ship-log");
+  writeFileSync(log, "# Ship Log\n\n## 2026-11-19 — Thing\n- **Decided:** 2026-11-20, owner: yes\n- [2026-11-20 10:42] Hook waiver (TDD): an earlier loop waiver\n");
+  const { code, stdout } = await runUpgrade(dir);
+  assert.equal(code, 0, stdout);
+  const waiverSha = g(dir, "log", "-1", "--format=%h", "--grep", "upgrade waiver");
+  assert.ok(waiverSha, `the upgrade's waiver line was not committed: ${stdout}`);
+  const added = g(dir, "show", "--format=", "-U0", waiverSha, "--", "carja/0-compass/ship-log.md").split("\n").filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---) /.test(l));
+  assert.equal(added.length, 1, added.join("\n"));
+  assert.match(added[0], /^\+- \[[\d-]+ [\d:]+\] Hook waiver \(Protected\): carja upgrade to /);
+  const left = g(dir, "diff", "--", "carja/0-compass/ship-log.md");
+  assert.match(left, /\+- \*\*Decided:\*\* 2026-11-20, owner: yes/, "the owner's answer is still uncommitted");
+  assert.match(left, /\+- \[2026-11-20 10:42\] Hook waiver \(TDD\)/, "the earlier waiver is still uncommitted");
+  const text = readFileSync(log, "utf8");
+  assert.match(text, /Decided:\*\* 2026-11-20, owner: yes/);
+  assert.match(text, /Hook waiver \(Protected\): carja upgrade/);
+});
+
 // F7 (first real crossing, 2026-10-19): the message said "No waiver needed"
 // and the next commit logged a waiver. The upgrade does need the
 // protected-path waiver; it sets and logs it itself, so the user types none.
@@ -252,6 +277,9 @@ test("upgrade never sweeps the user's own staged work into its commit", async ()
   await runUpgrade(dir);
   assert.ok(!g(dir, "show", "--name-only", "--format=", upgradeCommit(dir)).split("\n").includes("mine.txt"), "user file was committed");
   assert.match(g(dir, "status", "--porcelain", "--", "mine.txt"), /^A /, "user file is no longer staged");
+  const waiverSha = g(dir, "log", "-1", "--format=%h", "--grep", "upgrade waiver");
+  assert.ok(waiverSha, "the waiver line was not committed");
+  assert.deepEqual(g(dir, "show", "--name-only", "--format=", waiverSha).split("\n"), ["carja/0-compass/ship-log.md"], "the waiver commit took more than the ship-log");
 });
 
 test("upgrade does not commit over the user's uncommitted framework edits", async () => {

@@ -34,7 +34,7 @@ const NOT_OURS = {
   "merge-stack": ["--path-format=absolute", "--path-format", "--git-common-dir", "-q"],
   personas: ["--exclude-standard", "--name-only", "--others"],
   "trust-verify": ["-c", "--show-toplevel"],
-  upgrade: ["-c", "-z", "--cached", "--git-path", "--is-inside-work-tree", "-m", "--porcelain", "-q", "--quiet", "--short", "--verify", "--path-format=absolute", "--git-common-dir"],
+  upgrade: ["-c", "-z", "-w", "--cacheinfo", "--cached", "--git-path", "--is-inside-work-tree", "-m", "--porcelain", "-q", "--quiet", "--short", "--verify", "--path-format=absolute", "--git-common-dir"],
   view: ["--quiet"],
 };
 const COMMAND_FOR_FILE = { "loop-doctor": "loop", "loop-on": "loop", "loop-profile": "loop", "loop-take": "loop" };
