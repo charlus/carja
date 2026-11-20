@@ -38,7 +38,7 @@ function paint(color) {
 export function productState(m, waitingCount) {
   if (waitingCount) return "waiting";
   if (!m) return "idle";
-  if (!m.ended) return "running";
+  if (!m.ended) return m.gone ? "failed" : "running";
   if (["awaiting_answers"].includes(m.ended.status)) return "waiting";
   if (["escalated", "failed", "stalled", "budget_exceeded", "max_iterations_exceeded"].includes(m.ended.status)) return "failed";
   return "ended";
@@ -70,12 +70,13 @@ export function renderTower(products, now, { color = false } = {}) {
     const name = p.bold(r.name.padEnd(18));
     let summary;
     if (!m) summary = p.dim("no run yet");
+    else if (m.gone) summary = `stopped (process gone) · last event ${hhmm(m.gone.at)} · ${mins(m.started, Date.parse(m.gone.at))} min · ${m.beats} beats · $${m.cost.toFixed(2)}`;
     else if (m.ended) summary = `ended ${hhmm(m.ended.at)} ${m.ended.status} · ${mins(m.started, Date.parse(m.ended.at))} min · ${m.beats} beats · $${m.cost.toFixed(2)}`;
     else summary = `started ${hhmm(m.started)} · ${mins(m.started, now)} min · ${m.beats} beats · $${m.cost.toFixed(2)}`;
     out.push(` ${sym} ${name} ${summary}`);
     for (const w of r.waiting) out.push(`     ${p.waiting("?")} question round waiting for you → ${w}`);
     if (!m) continue;
-    if (!m.items.length && !m.ended) out.push(p.dim(`     ○ ${m.planned.length} item${m.planned.length === 1 ? "" : "s"} queued, no beat yet`));
+    if (!m.items.length && !m.ended && !m.gone) out.push(p.dim(`     ○ ${m.planned.length} item${m.planned.length === 1 ? "" : "s"} queued, no beat yet`));
     for (const it of m.items) {
       const label = shortTask(it.task).padEnd(36);
       const history = Object.entries(it.beats).map(([k, n]) => `${n} ${STAGE[k] ?? k}`).join(", ");

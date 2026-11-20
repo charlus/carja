@@ -94,7 +94,19 @@ export function watchModels(events, { isAlive = () => false } = {}) {
   if (!starts.length) return [];
   const ended = new Set(events.filter((e) => e.type === "run_end").map((e) => e.run));
   const live = starts.filter((s) => !ended.has(s.run) && (s.pid ? isAlive(s.pid) : s === starts.at(-1)));
-  return (live.length ? live : [starts.at(-1)]).map((s) => runModel(events, s));
+  if (live.length) return live.map((s) => runModel(events, s));
+  // None live: the latest run. When it has no run_end but its process is gone
+  // (killed, closed terminal, machine asleep), it is stopped, not running.
+  const last = starts.at(-1);
+  const m = runModel(events, last);
+  if (!m.ended && last.pid && !isAlive(last.pid)) {
+    const lastEvent = events.filter((e) => e.run === last.run).at(-1);
+    m.gone = { at: lastEvent.at };
+    for (const it of m.items) it.active = null;
+    m.waitingQuota = null;
+    if (m.stack) m.stack.endsAt = null;
+  }
+  return [m];
 }
 
 function runModel(events, last) {
@@ -134,6 +146,7 @@ function runModel(events, last) {
     project: last.project ?? null,
     started: last.at,
     ended: mine.find((e) => e.type === "run_end") ?? null,
+    gone: null,
     items: [...items.values()],
     beats,
     cost,
@@ -219,7 +232,8 @@ export function renderWatch(m, now) {
   }
   if (m.waitingQuota) lines.push(`  ⏸  Usage limit reached: waiting until ${hhmm(m.waitingQuota)}, then the same beat runs again.`);
   if (st?.stop) lines.push(`  Last stop ${hhmm(st.stop.at)}: ${st.stop.item ? `${st.stop.item}: ` : ""}${stopInWords(st.stop.status)}${st.stop.reason ? ` (${st.stop.reason})` : ""}.`);
-  lines.push(`  Loop run started ${hhmm(m.started)} · ${Math.round((now - Date.parse(m.started)) / 60000)} min · ${m.beats} beat${m.beats === 1 ? "" : "s"} · ≈ $${m.cost.toFixed(2)} at list price`, "");
+  const until = m.gone ? Date.parse(m.gone.at) : now;
+  lines.push(`  Loop run started ${hhmm(m.started)} · ${Math.round((until - Date.parse(m.started)) / 60000)} min · ${m.beats} beat${m.beats === 1 ? "" : "s"} · ≈ $${m.cost.toFixed(2)} at list price`, "");
   if (!m.items.length) lines.push(`  ${m.planned.length} item${m.planned.length === 1 ? "" : "s"} queued, no beat yet.`);
   for (const it of m.items) {
     lines.push(`  ${it.task}`);
@@ -233,6 +247,7 @@ export function renderWatch(m, now) {
     if (it.last) lines.push(`    last news ${hhmm(it.last.at)}: ${it.last.text}`);
   }
   lines.push("");
-  lines.push(m.ended ? `  Run ended ${hhmm(m.ended.at)}: ${m.ended.status}.` : "  Running. Steps come from the engine as they happen (claude); verdicts and MRs when they land.");
+  if (m.gone) lines.push(`  Stopped: the loop process is gone, with no end record (last event ${hhmm(m.gone.at)}). Nothing is running.`);
+  else lines.push(m.ended ? `  Run ended ${hhmm(m.ended.at)}: ${m.ended.status}.` : "  Running. Steps come from the engine as they happen (claude); verdicts and MRs when they land.");
   return `${lines.join("\n")}\n`;
 }

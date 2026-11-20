@@ -55,3 +55,28 @@ test("a stopped stack says why, in words", () => {
   assert.equal(stopInWords("done"), "every item is built: merge the MRs in the order of the loop report");
   assert.equal(stopInWords("weird"), "stopped (weird)");
 });
+
+// autopportunity, 2026-11-20: a run killed on 19 November (closed terminal or
+// sleep) left no run_end, and the tower showed it "running" for 1347 min.
+test("a run whose process died without run_end is stopped, not running", async () => {
+  const [m] = watchModels(kmRun(), { isAlive: () => false });
+  assert.equal(m.ended, null);
+  assert.equal(m.gone?.at, T("22:25"));
+  assert.ok(m.items.every((it) => !it.active), "a killed beat is not in progress");
+  const screen = renderWatchAll([m], Date.parse(T("23:30")));
+  assert.match(screen, /process is gone/);
+  assert.doesNotMatch(screen, /Running\./);
+  assert.doesNotMatch(screen, /now: /);
+
+  const { renderTower, productState } = await import("../src/loop/tower.js");
+  assert.equal(productState(m, 0), "failed");
+  const tower = renderTower([{ name: "autopportunity", root: "/w/a", model: m, waiting: [] }], Date.parse(T("23:30")) + 22 * 3600000);
+  assert.match(tower, /▶ 0 running/);
+  assert.match(tower, /stopped \(process gone\) · last event \d\d:\d\d · 132 min/);
+});
+
+test("a live run without run_end is still running", () => {
+  const [m] = watchModels(kmRun(), { isAlive: () => true });
+  assert.equal(m.gone, null);
+  assert.match(renderWatchAll([m], Date.parse(T("23:30"))), /Running\./);
+});
