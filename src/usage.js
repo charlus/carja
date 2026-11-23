@@ -174,7 +174,7 @@ export const COMMANDS = Object.freeze([
     config: ["risk.owner_review", "risk.high_means", "risk.high_paths", "risk.low_paths", "risk.breaker_reverts", "risk.breaker_days"],
     examples: [
       ["carja merge-stack notes --dry-run", "what can be merged now, and what needs you"],
-      ["carja merge-stack notes", "merge bottom first: code MR, then state MR, no squash, source branch deleted. Stops before an item with owner actions, at a red pipeline, a conflict or a closed MR"],
+      ["carja merge-stack notes", "merge bottom first: code MR, then state MR, no squash, source branch deleted. Stops before an item with owner actions, at a red pipeline, a conflict or a closed MR. With every MR merged, a done run's report and its messages move to carja/6-archive/loop/"],
       ["carja merge-stack notes --confirm 2", "after the backup that item 2 asked for"],
       ["carja merge-stack --backlog --dry-run", "the MRs backlog runs opened: what can be merged now, and what needs you"],
     ],

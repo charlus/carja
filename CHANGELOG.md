@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.5] — 2026-11-23 — A merged project's loop report and messages leave the workbench
+
+Compatibility: upgrade only
+
+### Fixed
+- **`carja status` no longer shows a merged project's loop report and old loop messages as open work.** Nothing ever retired `loop-report-<project>.md` or cleared `loop-messages.md`, so on a real project a report of 9 MRs merged and deployed weeks before still said "Merge with merge-stack", and 9 escalations that had all shipped still looked open. Now, when `carja merge-stack <project>` finds every MR of the stack merged (by itself or by hand on the forge), it moves the report of a done run to `carja/6-archive/loop/`, with that project's loop messages and the untagged ones written before this version. Nothing is deleted, and git does not track the archive. The report of a run that stopped stays, with its messages: its escalation is still open. While another loop runs in the folder, only the report moves. Each loop message now carries its project and time in a hidden tag after its title. Proven by `test/loop-retire.test.js` and, through the real CLI with the stub forge, `test/merge-stack-cli.test.js`.
+
 ## [7.11.4] — 2026-11-23 — An idle loop state starts with a fresh clock
 
 Compatibility: upgrade only

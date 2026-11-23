@@ -21,6 +21,7 @@ import { walkStack, forgeAdapter, needsUnder } from "../loop/merge-stack.js";
 import { parseRiskConfig } from "../loop/risk.js";
 import { effectiveRisk, ledgerItems, recordAutoMerges } from "../loop/breaker.js";
 import { isOldLayout, oldLayoutMessage, statePath } from "../names.js";
+import { retireLoopFiles, MESSAGES_REL } from "../loop/owner-files.js";
 import { backlogEntries, branchesOfStacks, mrNumber, branchFiles, takeDefaultKeepingDocs } from "../loop/backlog-mrs.js";
 
 const readStack = (path) => {
@@ -137,8 +138,20 @@ export async function mergeStackCommand(args, { cwd, stdout, stderr }) {
     pollMs,
   });
   if (inForce.gitCommonDir && !args.includes("--dry-run")) await recordAutoMerges(inForce.gitCommonDir, ledgerItems(project, unreviewed, r.merged));
+  // Every MR merged: a done run's report and messages leave the workbench, to the archive.
+  if (r.code === 0 && !args.includes("--dry-run")) {
+    const live = await anyLoopLive(root, runsDir, names);
+    const gone = await retireLoopFiles(root, project, { messages: !live });
+    if (gone.report) r.lines.push(`Archived the loop report: ${gone.report}${gone.messages ? `, and ${gone.messages} loop message${gone.messages === 1 ? "" : "s"}: ${gone.messagesArchive}` : ""}.${live ? ` Another loop runs here: ${MESSAGES_REL} is left as it is.` : ""}`);
+  }
   stdout.write(`${r.lines.join("\n")}\n${r.next}\n`);
   return r.code;
+}
+
+/** True when any loop of this folder holds its lock: a project run or a backlog run. */
+async function anyLoopLive(root, runsDir, names) {
+  for (const n of names) if (await liveLockPid(join(runsDir, n, "loop.lock"))) return true;
+  return Boolean(await liveLockPid(join(root, statePath(root, "carja/1-workbench/loop.lock"))));
 }
 
 const BACKLOG_CMD = "carja merge-stack --backlog";
