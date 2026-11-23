@@ -6,7 +6,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -117,6 +117,32 @@ test("merge-stack: refuses while the project's loop runs, and says when nothing 
     const none = mergeStack(l, []);
     assert.equal(none.status, 0, none.stdout + none.stderr);
     assert.match(none.stdout, /backlog: no MR waits for a merge\./);
+  } finally {
+    rmSync(l.base, { recursive: true, force: true });
+  }
+});
+
+test("merge-stack: every MR merged by hand on the forge, the done run's report and messages go to the archive", async () => {
+  const { renderStackReport, REPORT_REL } = await import("../src/loop/stack.js");
+  const { messageTag, MESSAGES_REL, ARCHIVE_REL } = await import("../src/loop/owner-files.js");
+  const l = stacked();
+  try {
+    const d = JSON.parse(readFileSync(l.db, "utf8"));
+    for (const p of d.prs) p.state = "MERGED";
+    writeFileSync(l.db, JSON.stringify(d));
+    mkdirSync(join(l.root, "carja/1-workbench"), { recursive: true });
+    writeFileSync(join(l.root, REPORT_REL("notes")), renderStackReport({ project: "notes", entries: [] }));
+    const tag = (project) => messageTag({ project, at: "2026-11-04T09:00:00.000Z" });
+    writeFileSync(join(l.root, MESSAGES_REL), `# Loop messages\n\n## [loop] notes ruling ${tag("notes")}\nshipped\n\n## [loop] km stop ${tag("km")}\nopen\n`);
+
+    const r = mergeStack(l, ["notes"]);
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stdout, /3\. slice 03: already merged\.\nArchived the loop report: carja\/6-archive\/loop\/loop-report-notes-\d{4}-\d\d-\d\d\.md, and 1 loop message: carja\/6-archive\/loop\/loop-messages-notes-/);
+    assert.equal(existsSync(join(l.root, REPORT_REL("notes"))), false);
+    assert.match(readFileSync(join(l.root, MESSAGES_REL), "utf8"), /^# Loop messages\n\n## \[loop\] km stop/);
+    assert.equal(G(l.root, "status", "--porcelain", "--", ARCHIVE_REL), "", "git does not see the archive");
+    const st = spawnSync("node", [join(REPO, "bin/carja.js"), "status"], { cwd: l.root, encoding: "utf8", env: { ...process.env, CARJA_HOME: join(l.base, "home") } });
+    assert.doesNotMatch(st.stdout, /Loop report/);
   } finally {
     rmSync(l.base, { recursive: true, force: true });
   }

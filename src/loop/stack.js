@@ -27,6 +27,9 @@ import { itemTier } from "./risk.js";
 export const STACK_FILE = "stack.json";
 export const REPORT_REL = (project) => `carja/1-workbench/loop-report-${project}.md`;
 
+/** The report's line for a run that built every item; `carja merge-stack` retires only such a report. */
+export const RUN_DONE_LINE = "Every item of the project is built.";
+
 /**
  * The latest MR whose source branch is `branch`, from the forge.
  * @param {{forge: "gh"|"glab", run: (cmd: string, argv: string[]) => Promise<{ok: boolean, stdout: string}>, branch: string}} io
@@ -230,7 +233,7 @@ export function renderStackReport({ project, entries, stop = null, notes = [], n
   }
   if (notes.length) lines.push("## What changed since the last run", "", ...notes.map((n) => `- ${n}`), "");
   lines.push("## Where the run stopped", "");
-  if (!stop || stop.status === "done") lines.push("Every item of the project is built. Nothing is left to build until you merge or reject an MR.");
+  if (!stop || stop.status === "done") lines.push(`${RUN_DONE_LINE} Nothing is left to build until you merge or reject an MR.`);
   else if (stop.status === "awaiting_answers")
     lines.push(`${stop.item ?? "An item"} needs your decision on a one-way door. Answer each question in \`${stop.round ?? "carja/1-workbench/questions/"}\` with an option number, then run \`carja loop ${project}\` again. Nothing was built above it.`);
   else lines.push(`${stop.item ?? "The run"} stopped: ${stop.status}${stop.reason ? `. ${stop.reason}` : ""}. Read carja/1-workbench/loop-messages.md, then run \`carja loop ${project}\` again: it continues from there.`);

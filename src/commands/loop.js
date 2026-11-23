@@ -21,7 +21,7 @@ import { openPullRequest, planMergeAction, DEFAULT_PR_BODY } from "../loop/merge
 import { runSwarm } from "../loop/swarm.js";
 import { predictConflicts, mergeKeepingDocs } from "../loop/conflict.js";
 import { withQuotaWait, DEFAULT_QUOTA_MARGIN_S } from "../loop/quota.js";
-import { appendLoopMessage, ensureOwnerFilesExcluded, MESSAGES_REL } from "../loop/owner-files.js";
+import { appendLoopMessage, ensureOwnerFilesExcluded, MESSAGES_REL, messageTag } from "../loop/owner-files.js";
 import { manifestKind, dependencyChanges, namedInVision, checkPackage, dependencyRound, approvalsFromRound, depKey } from "../loop/deps.js";
 import { ownerHints, isEnvExample } from "../loop/owner-hints.js";
 import { lockDecision, renderLock } from "../loop/lock.js";
@@ -321,8 +321,8 @@ export async function readRootConfig(root) {
   return readJson(cfgPath);
 }
 
-async function writeInbox(root, state, reason, { title = null } = {}) {
-  const line = `\n## [loop] ${title ?? `Escalation — ${state.status}`}\n${reason}\n(goal: ${state.goal_description || "n/a"}, beat ${state.iterations.current}/${beatCeiling(state)})\n`;
+async function writeInbox(root, state, reason, { title = null, project = null } = {}) {
+  const line = `\n## [loop] ${title ?? `Escalation — ${state.status}`} ${messageTag({ project: project ?? "backlog", at: new Date().toISOString() })}\n${reason}\n(goal: ${state.goal_description || "n/a"}, beat ${state.iterations.current}/${beatCeiling(state)})\n`;
   // I6: loop-messages.md, which git does not track; an append, so two project
   // runs in one folder never lose each other's lines.
   await appendLoopMessage(root, line);
@@ -1328,7 +1328,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       const line = preExistingLine(f);
       if (seenPreExisting.has(line)) continue;
       seenPreExisting.add(line);
-      await writeInbox(root, state, line, { title: "Pre-existing defect (the reviewer found it; this change did not introduce it)" });
+      await writeInbox(root, state, line, { project: scope, title: "Pre-existing defect (the reviewer found it; this change did not introduce it)" });
     }
     // P1.2: surface each verdict's reason so a rejection is diagnosable (empty-diff
     // / no-file plumbing issue vs a genuine substantive rejection).
@@ -1645,7 +1645,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       // Fail safe: a beat's worktree is gone. Commit nothing, stop the run.
       state.status = "halted_isolation";
       await atomicWriteJson(statePath, state);
-      await writeInbox(root, state, `The run stopped and committed nothing: ${e.message}. Run the loop again: it starts this item over in a new worktree.`);
+      await writeInbox(root, state, `The run stopped and committed nothing: ${e.message}. Run the loop again: it starts this item over in a new worktree.`, { project: scope });
       await audit(`halted_isolation: ${e.message}`);
       stderr.write(`[CARJA LOOP] ⛔ stopped: ${e.message}. Nothing was committed.\n`);
       code = 1;
@@ -1716,7 +1716,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     if (!added.length) return;
     holder.rulings = [...(holder.rulings ?? []), ...added];
     await audit(`rulings: ${added.length} new (${added.filter((r) => r.risk === "high").length} high)`);
-    for (const line of rulingInboxLines(added)) await writeInbox(root, state, line);
+    for (const line of rulingInboxLines(added)) await writeInbox(root, state, line, { project: scope });
   }
   // Every ruling on a worktree's branch: its log minus the base checkout's. The
   // PR and the Checker use this, not the run's memory, so a reused worktree's
@@ -2166,7 +2166,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       if (!setup.ok) {
         state.status = "halted_setup_failed";
         await atomicWriteJson(statePath, state);
-        await writeInbox(root, state, `worktree setup failed — ${setup.reason}`);
+        await writeInbox(root, state, `worktree setup failed — ${setup.reason}`, { project: scope });
         await audit(`halted_setup_failed: ${setup.reason}`);
         stderr.write(`⛔  loop.setup failed in ${workCwd} — ${setup.reason}\n`);
         return 1;
@@ -2243,7 +2243,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       audit,
       now: () => Date.now(),
       persist: (s) => atomicWriteJson(statePath, s),
-      writeInbox: (s, reason, o) => writeInbox(root, s, reason, o),
+      writeInbox: (s, reason, o) => writeInbox(root, s, reason, { ...o, project: scope }),
       log: (m) => stdout.write(`${m}\n`),
       costAware: loopConfig.costAware,
     };
@@ -2469,7 +2469,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       audit,
       now: () => Date.now(),
       persist: (s) => atomicWriteJson(statePath, s),
-      writeInbox: (s, reason, o) => writeInbox(root, s, reason, o),
+      writeInbox: (s, reason, o) => writeInbox(root, s, reason, { ...o, project: scope }),
       log: (m) => stdout.write(`${m}\n`),
       costAware: loopConfig.costAware,
       emit,
