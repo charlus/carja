@@ -1,7 +1,19 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, renameSync } from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 
 export const BACKUP_DIR = ".carja-backup";
+
+/**
+ * Paths a backup never copies and a restore never touches: the live worktrees,
+ * full checkouts with their node_modules (2026-11-23: 9.9 GB of copies over
+ * three projects). Their work is in git branches, not in the framework.
+ */
+export const BACKUP_SKIP = Object.freeze([join(".agents", ".worktrees")]);
+
+const skipped = (targetDir, path) => {
+  const rel = relative(targetDir, path);
+  return BACKUP_SKIP.some((s) => rel === s || rel.startsWith(s + sep));
+};
 
 /** Filesystem-safe timestamp. `nowIso` injectable for deterministic tests. */
 export function backupStamp(nowIso) {
@@ -21,7 +33,7 @@ export function createBackup(targetDir, relPaths, { nowIso } = {}) {
     if (!existsSync(src)) continue;
     const dst = join(backupRoot, rel);
     mkdirSync(dirname(dst), { recursive: true });
-    cpSync(src, dst, { recursive: true });
+    cpSync(src, dst, { recursive: true, filter: (from) => !skipped(targetDir, from) });
     copied.push(rel);
   }
   return { backupRoot, copied };
@@ -33,9 +45,20 @@ export function restoreBackup(targetDir, backupRoot, relPaths) {
     const src = join(backupRoot, rel);
     if (!existsSync(src)) continue;
     const dst = join(targetDir, rel);
+    // Move the skipped paths under dst aside, replace dst, then put them back.
+    const kept = BACKUP_SKIP.filter((s) => s.startsWith(rel + sep) && existsSync(join(targetDir, s)));
+    const aside = (s) => join(targetDir, BACKUP_DIR, `restore-keep-${process.pid}-${s.split(sep).join("_")}`);
+    for (const s of kept) {
+      mkdirSync(join(targetDir, BACKUP_DIR), { recursive: true });
+      renameSync(join(targetDir, s), aside(s));
+    }
     rmSync(dst, { recursive: true, force: true });
     mkdirSync(dirname(dst), { recursive: true });
     cpSync(src, dst, { recursive: true });
+    for (const s of kept) {
+      mkdirSync(dirname(join(targetDir, s)), { recursive: true });
+      renameSync(aside(s), join(targetDir, s));
+    }
   }
 }
 
