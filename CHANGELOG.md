@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.4] — 2026-11-23 — An idle loop state starts with a fresh clock
+
+Compatibility: upgrade only
+
+### Fixed
+- **A loop state left at `idle` with an old wall-clock start no longer halts the next run at once with `budget_exceeded`.** The reset for a new run covered only finished runs, and the resume path skipped `idle`, so a hand-rebuilt state on agentic-content-os (2026-11-23) kept the start time of an old run. A run that starts from `idle` now starts its clock at its own start. The beat count is kept, as for any resume. Proven by `test/loop-resume.test.js`.
+
 ## [7.11.3] — 2026-11-20 — The upgrade's waiver commit holds only its own line
 
 Compatibility: upgrade only

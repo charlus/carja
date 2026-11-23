@@ -113,3 +113,23 @@ test("F17: a fresh idle state is left alone", () => {
   const state = normalizeState({ status: "idle", iterations: { current: 0 } });
   assert.equal(startNewRun(state).reset, false);
 });
+
+// ---- An idle state with an old clock (agentic-content-os, 2026-11-23) --------
+//
+// A hand-rebuilt state with status 'idle' kept budget.started_at from an old run.
+// startNewRun resets only terminal statuses and reviveForResume skipped 'idle', so
+// the next run halted at its first guardrail check with budget_exceeded.
+
+test("an idle state starts with a fresh wall clock, beats kept", () => {
+  const state = normalizeState({
+    status: "idle",
+    iterations: { current: 4, max_allowed: 20 },
+    budget: { started_at: "2026-10-01T08:00:00.000Z", max_wall_clock_min: 120 },
+  });
+  startNewRun(state);
+  const r = reviveForResume(state);
+  assert.deepEqual(r, { tasks: 0, run: false }); // nothing to revive, no resume message
+  assert.equal(state.budget.started_at, null);
+  assert.equal(state.iterations.current, 4);
+  assert.equal(state.status, "idle");
+});

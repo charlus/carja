@@ -39,6 +39,10 @@ export function reviveForResume(state) {
   }
 
   let run = false;
+  // An idle state is also the start of a run (the lock guarantees no live one):
+  // its clock starts now. A hand-rebuilt idle state kept an old started_at and
+  // halted at once with budget_exceeded (agentic-content-os, 2026-11-23).
+  if (state?.status === "idle" && state.budget) state.budget.started_at = null;
   if (state && !isTerminal(state.status) && state.status !== "idle") {
     // F20 (autopportunity, 2026-10-21): the wall clock limits a run while it
     // runs. The hours a stopped run spent stopped (a laptop closed overnight)
