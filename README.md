@@ -75,7 +75,7 @@ npx github:charlus/carja upgrade
 ```
 
 Upgrade works from **any prior version** (V4, V5, or a hand-copied install) on a single principle — **your `carja/` project knowledge is preserved; the `.agents/` methodology is replaced.** It will:
-- **Back up first** — the existing `.agents/` (and any migrated folders) are copied to a git-ignored `.carja-backup/<timestamp>/` before anything changes; a failure mid-run auto-restores.
+- **Back up first** — the existing `.agents/` (and any migrated folders) are copied to a git-ignored `.carja-backup/<timestamp>/` before anything changes, except the live worktrees in `.agents/.worktrees/`; a failure mid-run auto-restores and leaves those worktrees as they are.
 - **Replace the instructions** — `.agents/` framework files (workflows, skills, rules, personas) are overwritten with the current version, so a methodology upgrade actually lands. **Custom** skills/workflows you added are carried forward; new core capabilities (e.g. the interview primitives) install even if they postdate your original selection.
 - **Refresh `carja/5-templates/`** — the framework document scaffolding — while leaving all your knowledge in `0-compass`, `2-backlog`, `3-product-areas`, `4-context`, `6-archive` untouched.
 - **Migrate structure & schema** — legacy `.agent/` / `.conductor/` / root numbered folders → the `carja/` dashboard; `loop-state.json` → the current schema.

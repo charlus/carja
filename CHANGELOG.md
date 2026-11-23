@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.6] — 2026-11-23 — The upgrade backup no longer copies the live worktrees
+
+Compatibility: upgrade only
+
+### Fixed
+- **`carja upgrade` no longer copies `.agents/.worktrees/` into `.carja-backup/`.** It backed up all of `.agents/`, so every upgrade copied each live worktree, a full checkout with its `node_modules`. On the owner's machine (2026-11-23) these copies used 9.9 GB over three projects and filled the disk to 90%. A restore after a failed upgrade also replaced `.agents/` as a whole, so it rewound every live worktree to its state at backup time. Now the backup leaves the worktrees out, and a restore leaves them as they are. Their work is in git branches. Existing backups keep their copies: delete `.carja-backup/*/.agents/.worktrees` to free the space. Proven by `test/upgrade-backup-worktrees.test.js`.
+
 ## [7.11.5] — 2026-11-23 — A merged project's loop report and messages leave the workbench
 
 Compatibility: upgrade only
