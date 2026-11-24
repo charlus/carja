@@ -8,6 +8,13 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.8] — 2026-11-24 — In Claude Code, Ship is /ship-it
+
+Compatibility: upgrade only
+
+### Fixed
+- **Claude Code loads Carja's Ship command again, as `/ship-it`.** Claude Code now has a built-in `/ship` and refuses a custom command of that name ("Not loaded: a custom /ship. Rename it, then restart."), so typing `/ship` ran Claude Code's own flow and not Carja's Ship workflow. `carja upgrade` now writes `.claude/commands/ship-it.md` and removes the old `ship.md` it generated. A `ship.md` of your own is kept. `/status`, also a Claude Code built-in, becomes `/carja-status`. The workflow file stays `ship.md`, and the loop and other harnesses are unchanged. Proven by `test/claude-command-names.test.js`.
+
 ## [7.11.7] — 2026-11-24 — Ctrl+C and the same command again resumes the stack, and closes nothing
 
 Compatibility: upgrade only

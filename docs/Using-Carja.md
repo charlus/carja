@@ -2,7 +2,7 @@
 
 How to do each thing, with the exact command. You work in two places:
 
-- **In your agent** (Claude Code, Antigravity, Codex), you run the workflows. In Claude Code each one is a slash command, such as `/spec-it`. Elsewhere you say its trigger ("write the spec").
+- **In your agent** (Claude Code, Antigravity, Codex), you run the workflows. In Claude Code each one is a slash command, such as `/spec-it` (Ship is `/ship-it`: Claude Code keeps `/ship` for its own command). Elsewhere you say its trigger ("write the spec").
 - **In a terminal**, you run the `carja` CLI. Without it on your PATH, use `npx -y github:charlus/carja <command>`.
 
 `carja` with no arguments, inside a project, says where the project stands and the next command. `carja help <command>` shows every option.
@@ -25,7 +25,7 @@ Each stage is one workflow, run in a fresh session. The workflow ends by naming 
 | Discovery | `/genesis`, then `/storyboard` | `genesis/`, `storyboard/` in the project folder |
 | Blueprint | `/grand-prd`, `/ux-ui-design-brief`, `/technical-vision` | `blueprint/`, `DESIGN.md` |
 | Slicing | `/carve` | `implementations/NN-<slice>/` |
-| One slice | `/spec-it`, `/build`, `/ship` | spec and plan, code and tests, the MR |
+| One slice | `/spec-it`, `/build`, `/ship-it` | spec and plan, code and tests, the MR |
 | A small change | `/quick-path` | spec, plan and code in one pass |
 | Look back | `/retrospective` | lessons |
 

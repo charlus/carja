@@ -258,13 +258,13 @@ Three rules for `carja view`:
 
 `init`/`upgrade` generate `.claude/commands/` shims of two kinds. Do not hand-edit either — change the source and re-run `carja upgrade` to regenerate them.
 
-**Workflow shims** — one per Carja workflow (`/build`, `/carve`, `/spec-it`, `/ship`, …). Each loads and runs the matching `.agents/workflows/<name>.md`, so the workflow file stays the single source of truth.
+**Workflow shims** — one per Carja workflow (`/build`, `/carve`, `/spec-it`, `/ship-it`, …). Each loads and runs the matching `.agents/workflows/<name>.md`, so the workflow file stays the single source of truth. Claude Code refuses a custom command with the name of one of its built-ins, so Ship is `/ship-it` and Status is `/carja-status` there.
 
 **CLI shims** — these front a `carja` command rather than a workflow, because capture and status must not depend on the model remembering a prose rule:
 
 | Command | Runs | For |
 |---|---|---|
-| `/status` | `carja status` | Inbox depth, backlog by priority, what's next, loop state — one screen |
+| `/carja-status` | `carja status` | Inbox depth, backlog by priority, what's next, loop state — one screen |
 | `/inbox` | `carja inbox add "…"` | Capture a thought verbatim. No workflow, no triage |
 | `/view` | `carja view --open` | Every `carja/` document rendered into one HTML page — tables, search, backlinks |
 | `/verify` | `carja verify` | Show or set the command `git push` must pass (the push gate) |
