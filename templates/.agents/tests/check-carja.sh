@@ -249,6 +249,8 @@ if [ -d "$commands_dir" ] && [ -d "$workflows_dir" ]; then
   for wf in "$workflows_dir"/*.md; do
     [ -e "$wf" ] || continue
     name="$(basename "$wf")"
+    # Claude Code built-in names get their own command (src/claude-commands.js CLAUDE_NAMES).
+    case "$name" in ship.md) name="ship-it.md" ;; esac
     if [ ! -f "$commands_dir/$name" ]; then
       missing_shims="$missing_shims $name"
     fi

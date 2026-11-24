@@ -38,6 +38,13 @@ function extractDescription(source, fallback) {
   return fallback;
 }
 
+// Claude Code refuses a custom command named like one of its built-ins
+// ("Not loaded: a custom /ship", 2026-11-24). These names get their own
+// command name in Claude Code; the workflow file and other harnesses keep theirs.
+export const CLAUDE_NAMES = { ship: "ship-it", status: "carja-status" };
+export const CLAUDE_BUILTINS = Object.keys(CLAUDE_NAMES);
+const claudeName = (name) => CLAUDE_NAMES[name] ?? name;
+
 // CLI-backed slash commands. These are NOT workflows — they front a
 // deterministic `carja` subcommand, which is the whole point: capture and
 // digest must not depend on the model remembering a prose rule.
@@ -136,17 +143,17 @@ export async function generateClaudeCommands(targetDir, opts = {}) {
   let written = 0;
   for (const file of workflowFiles) {
     const name = file.slice(0, -3); // strip ".md"
-    liveNames.add(name);
+    liveNames.add(claudeName(name));
     const source = await readFile(join(workflowsDir, file), "utf8");
     const description = extractDescription(source, `Run the Carja ${name} workflow`);
-    await writeFile(join(commandsDir, file), shimContent(name, description));
+    await writeFile(join(commandsDir, `${claudeName(name)}.md`), shimContent(name, description));
     written += 1;
   }
 
   // CLI-backed commands, written alongside the workflow shims.
   for (const command of CLI_COMMANDS) {
-    liveNames.add(command.name);
-    await writeFile(join(commandsDir, `${command.name}.md`), cliShimContent(command));
+    liveNames.add(claudeName(command.name));
+    await writeFile(join(commandsDir, `${claudeName(command.name)}.md`), cliShimContent(command));
     written += 1;
   }
 

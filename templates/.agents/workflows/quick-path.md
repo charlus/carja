@@ -177,7 +177,7 @@ The plan is an engineering artefact. Save it as `implementation-plan.md` next to
 
 * Verify all acceptance criteria from Phase 2.
 * Quick-Path ends in **Ship** (`.agents/workflows/ship.md`): Quick-Path → Build → Ship. Never open a PR or MR outside Ship. Ship opens it and writes the ship-log entry, so a PR opened here leaves the product owner with no record.
-* *"Done. [Feature name] is built and verified. Next: `/ship <implementation folder>`."*
+* *"Done. [Feature name] is built and verified. Next: `/ship-it <folder>`."*
 
 ---
 
