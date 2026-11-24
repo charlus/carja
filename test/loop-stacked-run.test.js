@@ -85,19 +85,27 @@ test("one command builds the Carve and every slice, stacked; a closed MR is rebu
     assert.match(rebuilt.stdout, /slice 02-slice-2: its MR was closed without a merge/);
     const after = prs(l);
     const byUrl = (u) => after.find((p) => p.url === u);
-    // Slice 1 and the Carve untouched; slice 2's code MR and slice 3's MRs closed by the loop.
+    // Slice 1 and the Carve untouched. The loop closes nothing: slice 2's code MR and
+    // slice 3's MRs stay open with a note, and the rebuild replaces their branches.
     for (const e of s.slice(0, 2)) assert.equal(byUrl(e.outer.url).state, "OPEN");
     assert.equal(byUrl(s[1].code.url).state, "OPEN");
-    assert.equal(byUrl(s[2].code.url).state, "CLOSED");
-    for (const u of [s[3].outer.url, s[3].code.url]) assert.equal(byUrl(u).state, "CLOSED");
-    // Slices 2 and 3 built again, with new MRs on the same stack.
+    for (const u of [s[2].code.url, s[3].outer.url, s[3].code.url]) {
+      assert.equal(byUrl(u).state, "OPEN");
+      assert.match(byUrl(u).comments?.[0] ?? "", /builds this item again[\s\S]*stays open until the new build replaces its branch/);
+    }
+    assert.ok(!after.some((p) => p.state === "CLOSED" && p.url !== s[2].outer.url), "only the owner's close");
+    // Slices 2 and 3 built again: a new MR for the one the owner closed, the open ones reused.
     const s2 = stack(l);
     assert.deepEqual(s2.map((e) => e.title), s.map((e) => e.title));
     assert.equal(s2[1].outer.url, s[1].outer.url);
     assert.notEqual(s2[2].outer.url, s[2].outer.url);
-    assert.notEqual(s2[3].outer.url, s[3].outer.url);
-    assert.equal(after.length, 11);
-    assert.deepEqual(after.slice(7).filter((p) => !isCode(p)).map((p) => p.base), [s[1].outer.branch, s[2].outer.branch]);
+    assert.equal(s2[3].outer.url, s[3].outer.url);
+    assert.equal(after.length, 8);
+    assert.deepEqual(after.slice(7).map((p) => p.base), [s[1].outer.branch]);
+    // The reused MRs carry the new build: slice 3 sits on the rebuilt slice 2.
+    for (const side of ["outer", "code"]) assert.notEqual(s2[3][side].head, s[3][side].head);
+    G(l.code, "fetch", "-q", "origin");
+    assert.equal(G(l.code, "merge-base", "--is-ancestor", s2[2].code.head, `origin/${s2[3].code.branch}`).length, 0);
 
     // The owner pushes a fix onto slice 2's code branch: it is kept, slice 3 is built again on top.
     const fix = join(l.base, "fix");
@@ -113,7 +121,8 @@ test("one command builds the Carve and every slice, stacked; a closed MR is rebu
     assert.match(onTop.stdout, /slice 02-slice-2: you changed its MR\. Your version is kept/);
     const s3 = stack(l);
     assert.equal(s3[2].outer.url, s2[2].outer.url, "slice 2 kept");
-    assert.notEqual(s3[3].code.url, s2[3].code.url, "slice 3 rebuilt");
+    assert.equal(s3[3].code.url, s2[3].code.url, "slice 3's open MR reused");
+    assert.notEqual(s3[3].code.head, s2[3].code.head, "slice 3 rebuilt");
     G(l.code, "fetch", "-q", "origin");
     assert.ok(G(l.code, "ls-tree", "-r", "--name-only", `origin/${s3[3].code.branch}`).split("\n").includes("owner-fix.py"), "slice 3 is built on the owner's fix");
   } finally {

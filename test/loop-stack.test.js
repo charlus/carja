@@ -7,7 +7,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { reconcileStack, stackTop, renderStackReport, forgeBranchMr, closeMr, summaryFromBody } from "../src/loop/stack.js";
+import { reconcileStack, stackTop, renderStackReport, forgeBranchMr, closeMr, noteMr, summaryFromBody } from "../src/loop/stack.js";
 import { prCommand } from "../src/loop/merge.js";
 import { missingOwnerDocs } from "../src/loop/blueprint.js";
 
@@ -58,6 +58,34 @@ test("reconcile: merged items are never touched, and the items above them stay",
   assert.deepEqual(r.superseded, []);
 });
 
+test("reconcile: an item built on the default branch after the item below was merged is kept (restart after Ctrl+C, 2026-11-23)", () => {
+  // Slice 19 was built after slice 18 merged: its base is the default branch, not slice 18's head.
+  const s = [entry(1), entry(2, { base: { outer: "main-head", code: "code-main-head" } }), entry(3, { base: { outer: "o2", code: "c2" } })];
+  const merged = { outer: { state: "merged", head: null }, code: { state: "merged", head: null } };
+  const r = reconcileStack(s, [merged, open("o2", "c2"), open("o3", "c3")]);
+  assert.deepEqual(r.superseded, [], r.notes.join("\n"));
+  assert.deepEqual(r.keep.map((e) => e.id), ["slice:p/01", "slice:p/02", "slice:p/03"]);
+});
+
+test("reconcile: git ancestry decides when known; the recorded base only when git cannot say", () => {
+  const s = [entry(1), entry(2, { base: { outer: "old", code: "old" } })];
+  // Recorded base differs, but the head below is in this item's history: kept.
+  const on = reconcileStack(s, [open("o1", "c1"), { ...open("o2", "c2"), builtOnBelow: { outer: true, code: true } }]);
+  assert.deepEqual(on.superseded, []);
+  // Recorded base matches, but git says the code below is not in its history: rebuilt.
+  const s2 = [entry(1), entry(2, { base: { outer: "o1", code: "c1" } })];
+  const off = reconcileStack(s2, [open("o1", "c1"), { ...open("o2", "c2"), builtOnBelow: { outer: true, code: false } }]);
+  assert.deepEqual(off.superseded.map((e) => e.id), ["slice:p/02"]);
+});
+
+test("reconcile: a forge that cannot be reached changes nothing", () => {
+  const s = [entry(1), entry(2, { base: { outer: "o1", code: "c1" } })];
+  const r = reconcileStack(s, [{ outer: { state: "unknown", head: "o1" }, code: { state: "open", head: "c1" } }, open("o2", "c2")]);
+  assert.equal(r.unreachable, true);
+  assert.deepEqual(r.superseded, []);
+  assert.deepEqual(r.keep.map((e) => e.id), ["slice:p/01", "slice:p/02"]);
+});
+
 test("the next item starts from the top of the stack; an item with no code passes the code base through", () => {
   assert.deepEqual(stackTop([]), { outer: null, code: null });
   const s = [entry(1), entry(2, { code: false })];
@@ -88,7 +116,17 @@ test("the forge's MR for a branch, on GitLab and GitHub; close says why", async 
   assert.match(calls[0], /source_branch=b%201&state=all/);
   const ghRun = async () => ({ ok: true, stdout: JSON.stringify([{ number: 3, state: "MERGED", url: "https://gh/pr/3", headRefOid: "def" }]) });
   assert.equal((await forgeBranchMr({ forge: "gh", run: ghRun, branch: "b" })).state, "merged");
-  assert.equal(await forgeBranchMr({ forge: "gh", run: async () => ({ ok: false, stdout: "" }), branch: "b" }), null);
+  // A failed call is "unknown", never "no MR": offline must not read as closed.
+  assert.deepEqual(await forgeBranchMr({ forge: "gh", run: async () => ({ ok: false, stdout: "" }), branch: "b" }), { state: "unknown", url: null, head: null, id: null });
+  assert.deepEqual(await forgeBranchMr({ forge: "glab", run: async () => { throw new Error("offline"); }, branch: "b" }), { state: "unknown", url: null, head: null, id: null });
+  assert.equal(await forgeBranchMr({ forge: "gh", run: async () => ({ ok: true, stdout: "[]" }), branch: "b" }), null);
+  const noted = [];
+  assert.equal(await noteMr({ forge: "glab", run: async (c, a) => (noted.push(a.join(" ")), { ok: true }), mr: { id: "7" }, comment: "why" }), true);
+  assert.equal(noted.length, 1);
+  assert.doesNotMatch(noted[0], /state_event/);
+  const ghNoted = [];
+  await noteMr({ forge: "gh", run: async (c, a) => (ghNoted.push(a.join(" ")), { ok: true }), mr: { url: "u" }, comment: "why" });
+  assert.match(ghNoted[0], /^pr comment u --body why$/);
   const closed = [];
   await closeMr({ forge: "glab", run: async (c, a) => (closed.push(a.join(" ")), { ok: true }), mr: { id: "7" }, comment: "why" });
   assert.match(closed.join("\n"), /merge_requests\/7\/notes -f body=why[\s\S]*state_event=close/);

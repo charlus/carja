@@ -57,7 +57,7 @@ import { positionals, looksLikeProject, runKey, scopedState, scopeLoopConfig, RU
 import { verifyWithEvidence } from "../loop/verify-evidence.js";
 import { blankedNames, beatEnv, withBeatEnv } from "../loop/beat-env.js";
 import { mrTitles, readOnlyEnv } from "../loop/team-facing.js";
-import { STACK_FILE, REPORT_REL, forgeBranchMr, closeMr, reconcileStack, stackTop, stackNote, renderStackReport, summaryFromBody, ownerActionsFromBody } from "../loop/stack.js";
+import { STACK_FILE, REPORT_REL, forgeBranchMr, noteMr, reconcileStack, headsBelow, stackTop, stackNote, renderStackReport, summaryFromBody, ownerActionsFromBody } from "../loop/stack.js";
 import { configPath as configPathOf } from "../names.js";
 import { isOldLayout, oldLayoutMessage } from "../names.js";
 
@@ -449,6 +449,12 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
     const r = await g(["ls-remote", "--heads", "origin", branch]);
     return r.ok && r.stdout ? r.stdout.split(/\s+/)[0] : null;
   };
+  // Is `ancestor` in the history of `head`? true, false, or null when git cannot say (an object not fetched).
+  const isAncestor = async (dir, ancestor, head) => {
+    if (!dir || !ancestor || !head) return null;
+    const r = await runCli("git", ["merge-base", "--is-ancestor", ancestor, head], dir);
+    return r.exitCode === 0 ? true : r.exitCode === 1 ? false : null;
+  };
 
   // The project's lock is held for the whole stacked run.
   const lockPath = join(runDir, "loop.lock");
@@ -502,16 +508,33 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
         code: e.code ? { state: code?.state ?? null, head: codeGit ? await remoteHead(codeGit, e.code.branch) : null } : null,
       });
     }
-    const { keep, superseded, notes } = reconcileStack(recorded, observed);
+    // Git, not the recorded base, says whether each item is built on the item below it.
+    for (let i = 0; i < recorded.length; i++) {
+      const below = headsBelow(recorded, observed, i);
+      const e = recorded[i];
+      const o = observed[i];
+      observed[i].builtOnBelow = {
+        outer: below.outer ? await isAncestor(root, below.outer, o.outer.head ?? e.outer.head) : null,
+        code: below.code && e.code ? await isAncestor(codeRoot, below.code, o.code?.head ?? e.code.head) : null,
+      };
+    }
+    const { keep, superseded, notes, unreachable } = reconcileStack(recorded, observed);
     const entries = [...keep];
     for (const n of notes) stdout.write(`[CARJA LOOP] ${n}\n`);
+    if (unreachable) {
+      // Offline, or the forge CLI is not logged in: deciding now would discard built work.
+      stderr.write(`⛔  ${scope}: the forge did not answer (offline, VPN, or \`${[outerForge, codeForge].filter(Boolean)[0] ?? "gh"} auth status\`). The stack is unchanged. Run \`${cmd}\` again when the forge answers.\n`);
+      return 1;
+    }
     if (!dryRun) {
-      // The MRs above a closed or changed one are built on a base that is gone: close them.
+      // The MRs above a closed or changed one stay open, with a note: the rebuild
+      // force-pushes the same branch, so each MR is replaced only when its new
+      // build exists. A run stopped before that leaves the built work in place.
       for (const e of superseded) {
-        const comment = `Closed by \`${cmd}\`: the MR below it was closed or changed. The loop builds this item again on top.`;
+        const comment = `\`${cmd}\` builds this item again: the MR below it was closed or changed. This MR stays open until the new build replaces its branch.`;
         for (const [forge, dir, side] of [[outerForge, root, e.outer], ...(e.code && codeForge ? [[codeForge, codeRoot, e.code]] : [])]) {
           const mr = await forgeBranchMr({ forge, run: run(dir), branch: side.branch });
-          if (mr?.state === "open") await closeMr({ forge, run: run(dir), mr, comment });
+          if (mr?.state === "open") await noteMr({ forge, run: run(dir), mr, comment });
         }
       }
       await mkdir(runDir, { recursive: true });
@@ -547,9 +570,11 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
       // An MR an earlier run opened for this item, on this base, is taken as it is.
       const open = await forgeBranchMr({ forge: outerForge, run: run(root), branch });
       const head = open?.state === "open" ? await remoteHead(rootGit, branch) : null;
-      if (head && belowHeads.outer && (await runCli("git", ["merge-base", "--is-ancestor", belowHeads.outer, head], root)).ok) {
-        const codeMr = codeForge ? await forgeBranchMr({ forge: codeForge, run: run(codeRoot), branch }) : null;
-        const codeHead = codeMr?.state === "open" ? await remoteHead(codeGit, branch) : null;
+      const codeMr = head && codeForge ? await forgeBranchMr({ forge: codeForge, run: run(codeRoot), branch }) : null;
+      const codeHead = codeMr?.state === "open" ? await remoteHead(codeGit, branch) : null;
+      // Both sides must be built on the item below: an MR left open above a changed item is not taken.
+      const codeOnBelow = !codeHead || !belowHeads.code || (await isAncestor(codeRoot, belowHeads.code, codeHead)) === true;
+      if (head && belowHeads.outer && (await isAncestor(root, belowHeads.outer, head)) === true && codeOnBelow) {
         entries.push({
           id: next.id,
           title: itemName(next),
@@ -568,6 +593,12 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
       }
       const below = [...entries].reverse().find((e) => !e.merged) ?? null;
       const belowCode = [...entries].reverse().find((e) => !e.merged && e.code) ?? null;
+      // Resume after Ctrl+C: the item's own branch, still on the base below it,
+      // holds the stages it already did (its spec). Read the item from there.
+      // Only for an item that never reached an MR: one the owner closed is built anew.
+      const own = `refs/heads/${branch}`;
+      const resumed = open === null && (await runCli("git", ["rev-parse", "--verify", "-q", own], root)).ok && (await isAncestor(root, viewRef, own)) === true;
+      if (resumed) stdout.write(`[CARJA LOOP] ${itemName(next)}: resumed from its branch, where the last run stopped.\n`);
       stdout.write(`\n[CARJA LOOP] building ${itemName(next)} on ${viewRef.replace(/^origin\//, "")}\n`);
       built += 1;
       await stackEmit("stack_item", { project: scope, item: itemName(next), n: waitingBelow + built, of: waitingBelow + plan.items.length });
@@ -578,6 +609,7 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
         stack: {
           itemId: next.id,
           viewRef,
+          itemRef: resumed ? own : null,
           outerBase: top.outer ? `origin/${top.outer.branch}` : null,
           outerTarget: top.outer?.branch ?? null,
           codeBase: top.code ? `origin/${top.code.branch}` : null,
@@ -943,7 +975,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       includeInbox: loopConfig.inbox,
     });
     // A stacked item is read from the branch of the item below it.
-    const view = stack?.viewRef ? refView(root, stack.viewRef) : diskView(root);
+    const view = stack?.itemRef ? refView(root, stack.itemRef) : stack?.viewRef ? refView(root, stack.viewRef) : diskView(root);
     // Unattended Lifecycle step 3: the lowest open slice of each opted-in project.
     if (loopConfig.slices === true || loopConfig.slices.length) {
       harvestedQueue = [...harvestedQueue, ...harvestSlices(await readSlices(root, loopConfig.slices, view))];
