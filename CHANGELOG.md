@@ -8,6 +8,18 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.7] — 2026-11-24 — Ctrl+C and the same command again resumes the stack, and closes nothing
+
+Compatibility: upgrade only
+
+### Fixed
+- **A restart of `carja loop <project>` no longer closes and rebuilds a built stack.** The stack check compared each item's base with the head of the item below it, even when that item was merged. An item built after the merge of the one below (so on the default branch) failed that check on every restart. On agentic-content-os (2026-11-23) a restart after Ctrl+C closed four built, Checker-approved MRs (slices 19, 20, 21, 23) and started to rebuild them. A merged item below is no longer checked. For an open one, git decides (is the head below in this item's history?), and the recorded base counts only when git cannot say.
+- **The loop never closes an MR.** When an item below is closed or changed, the MRs above it get a note and stay open. The rebuild force-pushes the same branch and reuses the open MR, so the built work stays on the forge until its replacement exists. An open MR is taken back into the stack only when both its state and its code branches sit on the item below.
+- **A restart that cannot reach the forge changes nothing.** A failed `gh`/`glab` call (offline, VPN, auth) read as "no MR", which counted as closed and discarded the stack. Now the run stops with the stack unchanged and asks to run again when the forge answers.
+- **An item stopped by Ctrl+C resumes from its own branch.** The restart read the item from the branch below, so it wrote the spec again. Now an item with no MR yet, whose local branch still sits on the branch below, continues at the stage where it stopped.
+
+Proven by `test/loop-stack-restart.test.js` (the real CLI, the stub engine stopped by SIGINT to its process group in a Build beat, the stub forge), which fails on 7.11.6 with the incident's message, and by `test/loop-stack.test.js`. Verified live with the real `claude` engine and the stub forge (2026-11-24): Ctrl+C in slice 2 stopped the run in 175 ms, the same command resumed slice 2 from its branch (its spec beat not run again, the commit from before Ctrl+C in the shipped branch), and a restart after a merge of slice 1 rebuilt nothing and closed nothing. Not run against GitLab.
+
 ## [7.11.6] — 2026-11-23 — The upgrade backup no longer copies the live worktrees
 
 Compatibility: upgrade only

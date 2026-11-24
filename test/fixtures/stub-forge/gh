@@ -3,7 +3,7 @@
 // run test (test/loop-stacked-run.test.js). PRs live in $STUB_FORGE_DB, keyed by
 // the repository (its origin URL), so the outer and the code repository each
 // have their own. A test closes a PR by editing that file. Supports only what
-// the loop calls: auth status, pr create, pr list, pr close, and what
+// the loop calls: auth status, pr create, pr list, pr comment, pr close, and what
 // `carja merge-stack` calls: pr view, pr merge, pr edit, a branch delete.
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -50,6 +50,14 @@ if (argv[0] === "pr" && argv[1] === "list") {
     .map((p) => ({ ...p, number: p.n, headRefOid: headOf(p.head), headRefName: p.head }));
   if (flag("--jq") === ".[0].url") console.log(prs[0]?.url ?? "");
   else console.log(JSON.stringify(prs.slice(0, Number(flag("--limit") ?? 30))));
+  process.exit(0);
+}
+if (argv[0] === "pr" && argv[1] === "comment") {
+  const d = load();
+  const p = d.prs.find((x) => x.url === argv[2] || String(x.n) === argv[2]);
+  if (!p) process.exit(1);
+  (p.comments ??= []).push(flag("--body"));
+  save(d);
   process.exit(0);
 }
 if (argv[0] === "pr" && argv[1] === "close") {

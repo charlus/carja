@@ -104,6 +104,15 @@ if (checker) {
   put("carja/1-workbench/pr-body.md", body);
   done();
 } else if (prompt.includes("# Loop Assignment (this beat)")) {
+  // $STUB_HANG: "<text>:<marker file>". The first Build beat whose prompt has the
+  // text hangs (until the test sends Ctrl+C), like a long beat when the owner leaves.
+  if (process.env.STUB_HANG) {
+    const [text, mark] = process.env.STUB_HANG.split(":");
+    if (prompt.includes(text) && !existsSync(mark)) {
+      writeFileSync(mark, String(process.pid));
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 120000);
+    }
+  }
   // In the outer layout ($STUB_CODE_DIR) the code goes into the nested repository.
   // Each build writes a new file, so a slice stacked on another still has code of its own.
   const src = join(process.env.STUB_CODE_DIR ?? ".", "src");

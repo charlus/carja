@@ -33,30 +33,48 @@ export const RUN_DONE_LINE = "Every item of the project is built.";
 /**
  * The latest MR whose source branch is `branch`, from the forge.
  * @param {{forge: "gh"|"glab", run: (cmd: string, argv: string[]) => Promise<{ok: boolean, stdout: string}>, branch: string}} io
- * @returns {Promise<{state: "open"|"merged"|"closed", url: string|null, head: string|null, id: string|null}|null>}
- *   null when there is none or the forge cannot say.
+ * @returns {Promise<{state: "open"|"merged"|"closed"|"unknown", url: string|null, head: string|null, id: string|null}|null>}
+ *   null when the forge answered that there is none; state "unknown" when the
+ *   forge cannot be asked (offline, no auth). Never read "unknown" as closed.
  */
 export async function forgeBranchMr({ forge, run, branch }) {
   try {
     if (forge === "gh") {
       const r = await run("gh", ["pr", "list", "--head", branch, "--state", "all", "--json", "state,url,headRefOid,number", "--limit", "1"]);
-      if (!r.ok) return null;
+      if (!r.ok) return UNKNOWN;
       const pr = JSON.parse(r.stdout || "[]")[0];
       if (!pr) return null;
       return { state: String(pr.state).toLowerCase(), url: pr.url ?? null, head: pr.headRefOid ?? null, id: pr.number != null ? String(pr.number) : pr.url ?? null };
     }
     if (forge === "glab") {
       const r = await run("glab", ["api", `projects/:id/merge_requests?source_branch=${encodeURIComponent(branch)}&state=all&order_by=updated_at&per_page=1`]);
-      if (!r.ok) return null;
+      if (!r.ok) return UNKNOWN;
       const mr = JSON.parse(r.stdout || "[]")[0];
       if (!mr) return null;
       const state = mr.state === "opened" ? "open" : mr.state === "locked" ? "open" : mr.state;
       return { state, url: mr.web_url ?? null, head: mr.sha ?? null, id: mr.iid != null ? String(mr.iid) : null };
     }
   } catch {
-    return null;
+    return UNKNOWN;
   }
   return null;
+}
+
+const UNKNOWN = Object.freeze({ state: "unknown", url: null, head: null, id: null });
+
+/**
+ * Post a note on an MR the loop opened, and leave it open. Used for an MR the
+ * loop builds again: the rebuild force-pushes the same branch, so the MR is
+ * replaced only when the new build exists. Never throws.
+ */
+export async function noteMr({ forge, run, mr, comment }) {
+  try {
+    if (forge === "gh") return (await run("gh", ["pr", "comment", mr.url ?? mr.id, "--body", comment])).ok;
+    if (forge === "glab") return (await run("glab", ["api", "-X", "POST", `projects/:id/merge_requests/${mr.id}/notes`, "-f", `body=${comment}`])).ok;
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 /** Close an MR the loop opened, with a comment saying why. Never throws. */
@@ -75,21 +93,30 @@ export async function closeMr({ forge, run, mr, comment }) {
 
 /**
  * Check the recorded stack against what the forge and the remotes say now.
- * `observed[i]` is `{outer: {state, head}, code: {state, head}|null}` for entry i
- * (`state` null when no MR is found, `head` the remote branch head or null).
+ * `observed[i]` is `{outer: {state, head}, code: {state, head}|null, builtOnBelow?}`
+ * for entry i (`state` null when no MR is found, "unknown" when the forge cannot
+ * be asked, `head` the remote branch head or null). `builtOnBelow` is
+ * `{outer, code}`: true or false when git knows whether the head of the item
+ * below is in this item's history (`headsBelow`), null when it cannot say.
  * Walks bottom-up:
+ *   - any MR state "unknown": nothing is decided, the stack is kept as it is
+ *     and `unreachable` is set (a restart offline must not discard the stack);
  *   - an MR closed, or gone, without a merge: that item and everything above it
  *     are rebuilt;
  *   - merged (both MRs, when there are two): kept, never touched;
- *   - built on a base that is no longer the head of the item below: rebuilt,
- *     with everything above;
+ *   - not built on the head of the open item below it: rebuilt, with everything
+ *     above. An item below that is merged is not checked: the item was then
+ *     built on the default branch, which moves on its own (2026-11-23: every
+ *     restart after a merge discarded the stack);
  *   - a remote head that differs from what the loop pushed: the owner changed
  *     it. Kept as the owner left it; everything above is rebuilt on top.
- * @returns {{keep: object[], superseded: object[], notes: string[]}}
+ * @returns {{keep: object[], superseded: object[], notes: string[], unreachable?: boolean}}
  */
 export function reconcileStack(entries, observed) {
   const keep = [];
   const notes = [];
+  if (observed.some((o) => o?.outer?.state === "unknown" || o?.code?.state === "unknown"))
+    return { keep: [...entries], superseded: [], notes: ["the forge could not be asked about the stack's MRs. Nothing was changed."], unreachable: true };
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
     const o = observed[i] ?? {};
@@ -103,7 +130,7 @@ export function reconcileStack(entries, observed) {
       keep.push({ ...e, merged: true });
       continue;
     }
-    if (!sameBase(e.base, keep)) {
+    if (!builtOnBelow(e.base, keep, o.builtOnBelow)) {
       notes.push(`${e.title}: the item below it changed. The loop builds it again on top.`);
       return { keep, superseded: rest, notes };
     }
@@ -124,17 +151,38 @@ export function reconcileStack(entries, observed) {
 }
 
 /**
- * Was `base` (an entry's recorded base heads) the head of what is below it now?
- * Only compared against items of the stack: the bottom item's base is the
- * default branch, which moves on its own and is not checked.
+ * Is the item built on the head of what is below it now? Per side (outer,
+ * code): no item below, or a merged one, is not checked. Otherwise git's
+ * answer (`known`, from `headsBelow`) decides, and the recorded base is
+ * compared only when git cannot say.
  */
-function sameBase(base, kept) {
-  if (!base) return true;
+function builtOnBelow(base, kept, known = null) {
   const below = kept[kept.length - 1];
-  if (below && base.outer && base.outer !== below.outer.head) return false;
   const codeBelow = [...kept].reverse().find((e) => e.code);
-  if (codeBelow && base.code && base.code !== codeBelow.code.head) return false;
-  return true;
+  const side = (item, recorded, k) => {
+    if (!item || item.merged) return true;
+    if (typeof k === "boolean") return k;
+    return !recorded || recorded === item.head;
+  };
+  const sideOf = (entry, key) => entry?.[key] && { ...entry[key], merged: entry.merged };
+  return side(sideOf(below, "outer"), base?.outer, known?.outer) && side(sideOf(codeBelow, "code"), base?.code, known?.code);
+}
+
+/**
+ * For entry i: the heads git must find in its history, from the item below it
+ * as reconcileStack will keep it (the remote head, else the recorded one).
+ * `headsBelow(entries, observed, i)` → `{outer, code}`, each a sha or null
+ * (null: no open item below on that side, nothing to check).
+ */
+export function headsBelow(entries, observed, i) {
+  const below = i > 0 ? entries[i - 1] : null;
+  let j = i - 1;
+  while (j >= 0 && !entries[j].code) j--;
+  const isMerged = (k, sideKey) => observed[k]?.[sideKey]?.state === "merged";
+  return {
+    outer: below && !isMerged(i - 1, "outer") ? observed[i - 1]?.outer?.head ?? below.outer.head : null,
+    code: j >= 0 && !isMerged(j, "code") ? observed[j]?.code?.head ?? entries[j].code.head : null,
+  };
 }
 
 /**

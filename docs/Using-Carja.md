@@ -261,7 +261,7 @@ carja loop doctor [dir] [--beat]
 
 | Option | What it does |
 |---|---|
-| `<project>` | Build this project, after you approve its Technical Vision: the Carve, then every slice, each one on the branch of the one below, with no wait for a merge. A one-way question stops the run. You merge the MRs in order at the end: the list is in carja/1-workbench/loop-report-<project>.md. An MR you close is built again with everything above it. Its state stays in .git; another terminal in the same folder can build another project at the same time. The loop removes its worktrees when it ends or on Ctrl+C |
+| `<project>` | Build this project, after you approve its Technical Vision: the Carve, then every slice, each one on the branch of the one below, with no wait for a merge. A one-way question stops the run. You merge the MRs in order at the end: the list is in carja/1-workbench/loop-report-<project>.md. An MR you close is built again with everything above it; the loop never closes an MR itself. Ctrl+C stops at once and the same command resumes where it stopped. Its state stays in .git; another terminal in the same folder can build another project at the same time. The loop removes its worktrees when it ends or on Ctrl+C |
 | `--from-carja` | Take the work from carja/: backlog, inbox, slices, Blueprints |
 | `--dry-run` | Show what the run would pick up and do, write nothing |
 | `--platform <name>` | Engine: claude \| codex \| antigravity (default: loop-state, then detected) |
