@@ -14,6 +14,7 @@ import { discoveryDone, harvestBlueprints, BLUEPRINT_STAGES } from "../loop/blue
 import { ignoredNestedRepos } from "../nested-repos.js";
 import { PROJECTS_REL } from "../loop/slices.js";
 import { STATE_REL } from "../loop/state-sync.js";
+import { moveRunStateOut, ownerSettings } from "../loop/run-state.js";
 import { configPath as configPathOf } from "../names.js";
 
 const CONFIG = "carja.config.json";
@@ -111,7 +112,9 @@ export async function loopOnCommand(root, project, { args, stdout, stderr, confi
     return 1;
   }
   await writeJson(configPathOf(root), plan.config);
-  await writeJson(join(root, STATE_REL), plan.state);
+  // The tracked file holds the owner's settings only; a run left in it moves to the run file first.
+  await moveRunStateOut(root, state);
+  await writeJson(join(root, STATE_REL), ownerSettings(plan.state));
   stdout.write(`\n  Written: ${CONFIG}, ${STATE_REL}. Commit them with your next change.\n`);
   const { loopDoctor } = await import("./loop-doctor.js");
   await loopDoctor(root, { stdout });

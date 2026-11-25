@@ -15,6 +15,7 @@ import { buildState } from "../src/carja-state.js";
 import { renderPage, VIEW_FILENAME } from "../src/view/render.js";
 import { renderStatus } from "../src/view/status.js";
 import { readFileSync } from "node:fs";
+import { mergeRunState } from "../src/loop/run-state.js";
 
 const INBOX = "# Inbox\n\n---\n\n- rename the export button\n";
 const BACKLOG = `# Backlog
@@ -167,11 +168,16 @@ describe("the loop line reads the REAL loop-state shape", () => {
   // fixture was invented. So the fixture here is the SHIPPED template file: an
   // invented shape can no longer satisfy this test, and a schema change breaks
   // it loudly instead of silently blanking the line.
-  const seeded = JSON.parse(
-    readFileSync(
-      new URL("../templates/carja/1-workbench/loop-state.json", import.meta.url),
-      "utf8"
-    )
+  // The tracked file holds settings only; collectState merges it with the run's
+  // state (none yet on a fresh install), exactly as here.
+  const seeded = mergeRunState(
+    JSON.parse(
+      readFileSync(
+        new URL("../templates/carja/1-workbench/loop-state.json", import.meta.url),
+        "utf8"
+      )
+    ),
+    null
   );
 
   const lineFor = (loopState) => {

@@ -14,7 +14,8 @@ import { gitCommonDir } from "./loop-take.js";
 import { readFile, writeFile, rm, mkdtemp } from "node:fs/promises";
 import { join, dirname, relative, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
-import { normalizeState, resolveVerifyCommand, preflight, describeHalt } from "../loop/driver.js";
+import { resolveVerifyCommand, preflight, describeHalt } from "../loop/driver.js";
+import { mergeRunState, runStatePathOf } from "../loop/run-state.js";
 import { parseLoopConfig, resolveForge, mergeSandboxSettings, effectiveModels } from "../loop/config.js";
 import { planMergeAction } from "../loop/merge.js";
 import { harvestWorkQueue } from "../loop/harvester.js";
@@ -126,7 +127,9 @@ export async function loopDoctor(root, { stdout, beat = false, cwd = process.cwd
   facts.models = effectiveModels(loopConfig);
   facts.modelRank = loopConfig.modelRank;
 
-  const state = normalizeState(await readJson(statePath));
+  // The owner's settings, with the run's state when there is one (src/loop/run-state.js).
+  const runPath = runStatePathOf(root);
+  const state = mergeRunState(await readJson(statePath), runPath && (await exists(runPath)) ? await readJson(runPath).catch(() => null) : null);
   facts.state = state;
   // F12: never set up here: no work turned on, and loop-state.json still as init wrote it.
   const lb = rawConfig.loop ?? {};

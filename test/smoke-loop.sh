@@ -116,7 +116,7 @@ sed 's/^/    /' "$WORK/out.log"
 echo "Assertions:"
 [ "$code" -eq 0 ] && ok "exit code 0 (clean handoff)" || no "exit code was $code"
 
-status="$(node -e "console.log(require('$STATE').status)")"
+status="$(node -e "console.log(require('$PROJ/.git/carja-loop-logs/loop-state.json').status)")"
 [ "$status" = "awaiting_review" ] && ok "terminal status = awaiting_review" || no "status was '$status'"
 
 WT="$PROJ/.agents/.worktrees/smoke-test-goal"
@@ -207,7 +207,7 @@ else
   no "FEATURE.txt is not committed on the loop branch — work would be lost"
 fi
 
-status2="$(node -e "console.log(require('$STATE2').status)")"
+status2="$(node -e "console.log(require('$PROJ2/.git/carja-loop-logs/loop-state.json').status)")"
 [ "$status2" = "awaiting_review" ] && ok "terminal status = awaiting_review (clean handoff)" || no "status was '$status2'"
 
 echo ""

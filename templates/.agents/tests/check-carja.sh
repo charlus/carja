@@ -316,11 +316,12 @@ echo "12. Autonomous Loop Backend (deterministic driver)..."
 
 LOOP_STATE="$ROOT_DIR/carja/1-workbench/loop-state.json"
 if [ -f "$LOOP_STATE" ]; then
-  for field in '"schema_version": 2' '"budget"' '"verification"' '"stall"' '"maker_reported_done"' '"platform"' '"sandbox"' '"checker_votes"'; do
+  # The owner's settings only: the run's state lives in the git dir.
+  for field in '"schema_version": 2' '"budget"' '"verification"' '"autonomy_level"' '"platform"' '"sandbox"' '"checker_votes"'; do
     if grep -q "$field" "$LOOP_STATE"; then
-      pass "loop-state.json has v2 field: $field"
+      pass "loop-state.json has setting: $field"
     else
-      fail "loop-state.json missing v2 field: $field"
+      fail "loop-state.json missing setting: $field"
     fi
   done
 else
