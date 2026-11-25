@@ -2,13 +2,13 @@ import { writeClaudeSettings, SETTINGS_REL } from "../claude-settings.js";
 import { access, cp, mkdir, rename, rm, readFile, writeFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { planUpdate, executeUpdate } from "../update.js";
 import { renameRecursive, updateChecksumsKeys, renameNumberedFolders, renameFrameworkNames } from "../kebab.js";
 import { generateClaudeCommands, generateClaudeSkills } from "../claude-commands.js";
 import { installHooksCommand } from "./install-hooks.js";
 import { ensureVerifyCommand } from "../verify-config.js";
-import { normalizeState } from "../loop/driver.js";
+import { moveRunStateOut, ownerSettings } from "../loop/run-state.js";
 import { packageVersion, readVersionStamp, writeVersionStamp, detectShape } from "../version.js";
 import { createBackup, restoreBackup, ensureGitignore } from "../backup.js";
 import { buildFrameworkBlock, renderRootAgentsMd, extractStubNotes, appendMovedNotes } from "../agents-md.js";
@@ -434,7 +434,7 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
         stdout.write(`  carja/5-templates/  REFRESH ${c5.UPDATE + c5.COPY} · CARRY ${c5.KEEP} custom\n`);
       }
       const lsPath = join(targetDir, loopStateRel);
-      stdout.write(`  ${loopStateRel}  ${(await exists(lsPath)) ? "MIGRATE schema → v2" : "CREATE"}\n`);
+      stdout.write(`  ${loopStateRel}  ${(await exists(lsPath)) ? "SETTINGS ONLY (the run state moves to the git dir)" : "CREATE"}\n`);
       stdout.write(`  Preserve: carja/ knowledge (0-compass,2-backlog,3-product-areas,4-context,6-archive) untouched\n`);
       stdout.write(`  AGENTS.md: write the framework block (keep your text); move notes from CLAUDE.md/GEMINI.md into it, then remove them\n`);
       stdout.write(`  Then: regenerate .claude/commands, git hooks; stamp ${version}\n`);
@@ -530,17 +530,27 @@ export async function upgradeCommand(args, { cwd, stdout, stderr }) {
       executeUpdate(plan5, source5Templates, target5Templates, "", { writeChecksums: false });
       stdout.write(`  ✅ Refreshed ${c5.UPDATE + c5.COPY} template files, carried ${c5.KEEP} custom.\n`);
 
-      // ---- Step 5: Migrate loop-state.json schema (v1 → v2) ----
-      stdout.write("\nStep 5: Loop-state schema...\n");
+      // ---- Step 5: loop-state.json holds the owner's settings only ----
+      // The run's state moves to the git common dir (src/loop/run-state.js), so
+      // a loop run no longer leaves the tracked file modified.
+      stdout.write("\nStep 5: Loop settings...\n");
       const targetStateFile = join(carjaDir, "1-workbench", "loop-state.json");
       await mkdir(join(carjaDir, "1-workbench"), { recursive: true });
       if (await exists(targetStateFile)) {
         let raw = {};
         try { raw = JSON.parse(await readFile(targetStateFile, "utf8")); } catch { raw = {}; }
-        const wasV2 = raw.schema_version === 2;
-        const migrated = normalizeState(raw);
-        await writeFile(targetStateFile, JSON.stringify(migrated, null, 2) + "\n");
-        stdout.write(wasV2 ? "  ✅ loop-state.json already v2 (normalized).\n" : "  ✅ Migrated loop-state.json → schema v2.\n");
+        const moved = await moveRunStateOut(targetDir, raw);
+        await writeFile(targetStateFile, JSON.stringify(ownerSettings(raw), null, 2) + "\n");
+        // A file a loop run left modified holds the driver's change, not the owner's:
+        // with the same settings as the last commit, the upgrade commits it.
+        const rel = loopStateRel.split(sep).join("/");
+        if (snap.dirty?.includes(rel)) {
+          const head = await git(["show", `HEAD:${rel}`], targetDir);
+          let headRaw = null;
+          try { headRaw = head.ok ? JSON.parse(head.stdout) : null; } catch { headRaw = null; }
+          if (headRaw && JSON.stringify(ownerSettings(headRaw)) === JSON.stringify(ownerSettings(raw))) snap.dirty = snap.dirty.filter((p) => p !== rel);
+        }
+        stdout.write(`  ✅ loop-state.json holds your settings only.${moved ? ` The run's state moved to ${moved}.` : ""}\n`);
       } else {
         const templateStateFile = join(templateDir, "carja", "1-workbench", "loop-state.json");
         if (await exists(templateStateFile)) {

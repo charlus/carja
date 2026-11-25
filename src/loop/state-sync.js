@@ -9,7 +9,8 @@
 //   tracked     → `git update-index --skip-worktree` (per-worktree index)
 //   gitignored  → already invisible
 //   untracked   → listed in info/exclude
-// The driver never reads the worktree copy back: the root file stays the truth.
+// The driver never reads the worktree copy back: the run file in the git dir
+// (src/loop/run-state.js) stays the truth.
 // The driver's signal files (maker-signal.json, checker-verdict.json) are hidden
 // the same way (F18).
 

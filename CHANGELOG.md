@@ -8,6 +8,15 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.9] — 2026-11-25 — A loop run no longer leaves loop-state.json modified
+
+Compatibility: upgrade only
+
+### Fixed
+- **`carja/1-workbench/loop-state.json` holds your loop settings only, and a run never writes it.** The file mixed your settings (goal, phase, autonomy ceiling, sandbox, platform, budget limits, verify command) with the run's state (status, counters, stall, tasks, history). Every run rewrote it, so git showed it modified for good (field report from website, 2026-11-25), and it caused two earlier bugs: the loop committed it onto `main`, and `carja upgrade` refused to commit. The run's state now lives in `.git/carja-loop-logs/loop-state.json`, out of git, as a project's run already did under `runs/<project>/`. The settings stay tracked, so a change to the autonomy ceiling or the sandbox still shows in a diff. `carja status`, `carja loop doctor` and `carja merge-stack --backlog` read both.
+- **A trigger's goal and autonomy hold for its run only.** `--goal` and `--event` set the goal, phase and a lower autonomy in the run's state, and a resume keeps them. A run that starts after a finished one goes back to your settings. The run's state can never raise autonomy above the ceiling in your file.
+- **`carja upgrade` cuts the tracked file to the settings** and moves any run state in it (an interrupted run, its tasks) to the git directory first. When a loop run left the file modified with your settings unchanged, the upgrade commits it, so the tree is clean. An install not yet upgraded still runs: without a run file, the loop reads the run's state from the tracked file once. `carja loop on` writes the settings only. Proven by `test/loop-run-state.test.js`, `test/loop-run-state-cli.test.js` (the real CLI, stub engine) and `test/upgrade.test.js`.
+
 ## [7.11.8] — 2026-11-24 — In Claude Code, Ship is /ship-it
 
 Compatibility: upgrade only

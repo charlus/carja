@@ -11,7 +11,7 @@ import { constants as fsConstants, rmSync, statSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { join, resolve, sep, basename, dirname } from "node:path";
 import { tmpdir } from "node:os";
-import { runLoop, normalizeState, resolveVerifyCommand, beatCeiling } from "../loop/driver.js";
+import { runLoop, resolveVerifyCommand, beatCeiling } from "../loop/driver.js";
 import { resolveAdapter } from "../loop/adapters/index.js";
 import { createWorktree, teardownWorktree, worktreePlan, taskWorktreePlan, materializeCarjaContext, CONTEXT_ANCHORS, hasUniqueCommits, ensureWorktreesExcluded, isLiveWorktree, freeWorktreePath } from "../loop/worktree.js";
 import { guardedAutoCommit, autoCommitMessage, IsolationLostError } from "../loop/autocommit.js";
@@ -54,6 +54,7 @@ import { parseLoopConfig, parsePriorities, resolveForge, mergeSandboxSettings, w
 import { describeModels } from "../loop/profiles.js";
 import { makeEmitter } from "../loop/events.js";
 import { positionals, looksLikeProject, runKey, scopedState, scopeLoopConfig, RUNS_DIR } from "../loop/scope.js";
+import { mergeRunState, recordTriggerSeed, runStatePath } from "../loop/run-state.js";
 import { verifyWithEvidence } from "../loop/verify-evidence.js";
 import { blankedNames, beatEnv, withBeatEnv } from "../loop/beat-env.js";
 import { mrTitles, readOnlyEnv } from "../loop/team-facing.js";
@@ -178,6 +179,7 @@ async function liveProjectRuns(runsDir) {
 /** Atomic state write: temp file + rename, so a kill mid-beat never corrupts the Spine. */
 async function atomicWriteJson(path, obj) {
   const tmp = `${path}.tmp`;
+  await mkdir(dirname(path), { recursive: true });
   await writeFile(tmp, `${JSON.stringify(obj, null, 2)}\n`, "utf8");
   await rename(tmp, path);
 }
@@ -847,7 +849,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     // The stacked run drives the project item by item; each item is one run of this function.
     if (!stack) return stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, runDir, runsDir });
   }
-  const statePath = scope ? join(runDir, "loop-state.json") : join(root, STATE_REL);
+  // The run's state lives in the git common dir; the tracked file holds the owner's settings only (src/loop/run-state.js).
+  const statePath = scope ? join(runDir, "loop-state.json") : commonDirRes.ok ? runStatePath(commonDirRes.stdout) : join(root, STATE_REL);
   const lockPath = scope ? join(runDir, "loop.lock") : join(root, LOCK_REL);
   const loopCmd = scope ? `carja loop ${scope}` : undefined;
   const unsafe = args.includes("--unsafe-no-sandbox");
@@ -862,7 +865,7 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     return 1;
   }
 
-  // Load + migrate v1 → v2 (normalizeState is additive-safe; persist the upgrade).
+  // Load the owner's settings + migrate v1 → v2 (normalizeState in mergeRunState is additive-safe).
   let raw;
   try {
     raw = await readJson(join(root, STATE_REL));
@@ -871,7 +874,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     return 1;
   }
   // A project's run: its own run state, the owner's settings.
-  const state = scope ? scopedState(raw, (await exists(statePath)) ? await readJson(statePath).catch(() => null) : null) : normalizeState(raw);
+  const runRaw = statePath !== join(root, STATE_REL) && (await exists(statePath)) ? await readJson(statePath).catch(() => null) : null;
+  const state = scope ? scopedState(raw, runRaw) : mergeRunState(raw, runRaw);
 
   // The "loop" block of carja.config.json, read from the ROOT checkout only:
   // a beat runs in a worktree and cannot widen its own sandbox or setup. A bad
@@ -951,6 +955,8 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
       // trigger must never rewrite a live run's state before the lock refuses a
       // 2nd loop (payloads can come from untrusted schedulers/webhooks).
       triggerProvenance = applyTrigger(state, payload, { now: Date.now }).provenance;
+      // What the trigger set holds for this run only (src/loop/run-state.js).
+      recordTriggerSeed(state);
     }
   }
 

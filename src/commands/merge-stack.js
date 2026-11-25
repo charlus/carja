@@ -8,6 +8,7 @@
 // default branches.
 
 import { readdir, readFile } from "node:fs/promises";
+import { runStatePathOf } from "../loop/run-state.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -198,7 +199,10 @@ async function mergeBacklog({ root, args, confirm, waitMin, stacks, stdout, stde
   }
   let tasks = [];
   try {
-    tasks = JSON.parse(await readFile(join(root, statePath(root, "carja/1-workbench/loop-state.json")), "utf8")).tasks ?? [];
+    // The run's tasks live in the git common dir; an install from before the split kept them in the tracked file.
+    const runPath = runStatePathOf(root);
+    const runRaw = runPath ? await readFile(runPath, "utf8").catch(() => null) : null;
+    tasks = JSON.parse(runRaw ?? (await readFile(join(root, statePath(root, "carja/1-workbench/loop-state.json")), "utf8"))).tasks ?? [];
   } catch {
     tasks = [];
   }

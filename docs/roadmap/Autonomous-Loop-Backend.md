@@ -1,6 +1,6 @@
 # Robust Autonomy Backend (Ralph-hardened Loop Engine)
 
-> **Status:** Shipped — Phases 1–4 feature-complete (2026-07-14). Only a published/maintained turnkey sandbox container image and a real-LLM CI run remain outside the code. (Spec-hardened 2026-07-14.)
+> **Status:** Shipped — Phases 1–4 feature-complete (2026-07-14). Only a published/maintained turnkey sandbox container image and a real-LLM CI run remain outside the code. (Spec-hardened 2026-07-14.) Since 7.11.9 (2026-11-25) `loop-state.json` holds the owner's settings only; the run's state lives in `.git/carja-loop-logs/loop-state.json` (`src/loop/run-state.js`).
 > **Priority:** High — flagship of the V6 "Enforcement & Autonomy Rebalance"
 > **Decision:** `docs/adr/0001-enforcement-and-autonomy-rebalance.md`
 > **Builds on:** V5 Autonomous Loop Engine (`b953efc..bbe8f55`)

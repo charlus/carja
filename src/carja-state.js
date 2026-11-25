@@ -18,6 +18,7 @@
 // That split is what makes the digest testable without a repo on disk.
 
 import { summariseObserved, OBSERVE_LOG } from "./gate-observe.js";
+import { mergeRunState, runStatePathOf } from "./loop/run-state.js";
 import { readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname, basename, sep } from "node:path";
 import { execFile } from "node:child_process";
@@ -690,7 +691,10 @@ export async function collectState(root, { now = Date.now(), staleDays = 30 } = 
   let loopState = null;
   if (loopRaw) {
     try {
-      loopState = JSON.parse(loopRaw);
+      // The owner's settings, with the run's state from the git common dir (src/loop/run-state.js).
+      const runPath = runStatePathOf(root);
+      const runRaw = runPath ? await readIfPresent(runPath) : null;
+      loopState = mergeRunState(JSON.parse(loopRaw), runRaw ? JSON.parse(runRaw) : null);
     } catch {
       loopState = { status: "unreadable", note: "loop-state.json is not valid JSON" };
     }

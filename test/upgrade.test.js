@@ -1,3 +1,4 @@
+import { normalizeState } from "../src/loop/driver.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, copyFileSync, readdirSync } from "node:fs";
@@ -89,12 +90,12 @@ test("upgrade replaces framework instructions, carries custom, preserves knowled
   assert.ok(!refreshed.includes("OLD FRAMEWORK TEMPLATE"), "framework template refreshed");
   assert.ok(existsSync(join(dir, "carja", "5-templates", "my-custom-template.md")), "custom template carried");
 
-  // loop-state migrated v1 → v2 (fields folded, no data lost).
+  // loop-state migrated v1 → v2 and cut to the owner's settings (the run's state
+  // moves to the git dir; this install is not a git repository, so it has none).
   const ls = JSON.parse(readFileSync(join(dir, "carja", "1-workbench", "loop-state.json"), "utf8"));
   assert.equal(ls.schema_version, 2);
-  assert.equal(ls.budget.tokens_spent, 4321, "tokens_spent folded into budget");
-  assert.equal(ls.stall.consecutive, 2, "consecutive_stalls folded into stall");
   assert.equal(ls.goal_description, "ship it", "user goal preserved");
+  assert.ok(!("stall" in ls) && !("tokens_spent" in ls.budget), "no run state in the tracked file");
 
   // CLAUDE.md is migrated into the root AGENTS.md and removed (D5/D8): the
   // framework block is generated, the user's note moves, the old stub body does not.
@@ -311,19 +312,50 @@ test("an uncommitted file the upgrade did not touch stays out of its commit, and
   writeFileSync(join(dir, ".agents/hooks/lib.sh"), readFileSync(join(dir, ".agents/hooks/lib.sh"), "utf8") + "\n# older release\n");
   g(dir, "add", "-A");
   g(dir, "commit", "-q", "-m", "an older carja install");
-  const statePath = join(dir, "carja/1-workbench/loop-state.json");
-  // As a loop run leaves it: a v2 state, written the way the driver writes it.
-  const mine = `${JSON.stringify({ ...JSON.parse(readFileSync(statePath, "utf8")), status: "completed" }, null, 2)}\n`;
-  writeFileSync(statePath, mine);
+  const cfgPath = join(dir, "carja.config.json");
+  const mine = `${JSON.stringify({ ...JSON.parse(readFileSync(cfgPath, "utf8")), verify: "make check" }, null, 2)}\n`;
+  writeFileSync(cfgPath, mine);
   const before = g(dir, "rev-parse", "HEAD");
   const { code, stdout } = await runUpgrade(dir);
   assert.equal(code, 0, stdout);
   assert.notEqual(g(dir, "rev-parse", "HEAD"), before, `no commit was made: ${stdout}`);
-  assert.ok(!g(dir, "show", "--name-only", "--format=", upgradeCommit(dir)).split("\n").includes("carja/1-workbench/loop-state.json"), "the user's file was committed");
-  assert.equal(readFileSync(statePath, "utf8"), mine, "the user's change is intact");
-  assert.match(g(dir, "status", "--porcelain", "--", "carja/1-workbench/loop-state.json"), /^M /, "still modified, not staged (g trims the leading space)");
-  assert.match(stdout, /carja\/1-workbench\/loop-state\.json/);
-  assert.doesNotMatch(stdout, /(^|[^c])onductor\/1-workbench/m, "a path lost its first letter");
+  assert.ok(!g(dir, "show", "--name-only", "--format=", upgradeCommit(dir)).split("\n").includes("carja.config.json"), "the user's file was committed");
+  assert.equal(readFileSync(cfgPath, "utf8"), mine, "the user's change is intact");
+  assert.match(g(dir, "status", "--porcelain", "--", "carja.config.json"), /^M /, "still modified, not staged (g trims the leading space)");
+  assert.match(stdout, /carja\.config\.json/);
+});
+
+test("a loop-state.json a loop run left modified: the upgrade moves the run out, commits the settings, and the tree is clean", async () => {
+  const dir = await makeGitInstall();
+  const statePath = join(dir, "carja/1-workbench/loop-state.json");
+  // An install from before the split: the tracked file holds settings and run state.
+  const old = { ...normalizeState(JSON.parse(readFileSync(statePath, "utf8"))), goal_description: "ship it", autonomy_level: "L3" };
+  writeFileSync(statePath, `${JSON.stringify(old, null, 2)}\n`);
+  g(dir, "add", "-A");
+  g(dir, "commit", "-q", "-m", "loop set up");
+  // As a loop run leaves it: run state changed, settings as committed.
+  writeFileSync(statePath, `${JSON.stringify({ ...old, status: "running", iterations: { current: 3, max_allowed: 20 }, tasks: [{ id: "slice-1", status: "pending" }] }, null, 2)}\n`);
+  const { code, stdout } = await runUpgrade(dir);
+  assert.equal(code, 0, stdout);
+  assert.equal(g(dir, "status", "--porcelain", "--", "carja/1-workbench/loop-state.json"), "", `the tracked file is committed: ${stdout}`);
+  const tracked = JSON.parse(readFileSync(statePath, "utf8"));
+  assert.equal(tracked.goal_description, "ship it");
+  assert.equal(tracked.autonomy_level, "L3");
+  assert.ok(!("status" in tracked) && !("tasks" in tracked), "settings only");
+  const run = JSON.parse(readFileSync(join(dir, ".git/carja-loop-logs/loop-state.json"), "utf8"));
+  assert.equal(run.status, "running", "the interrupted run is kept");
+  assert.equal(run.iterations.current, 3);
+  assert.deepEqual(run.tasks, [{ id: "slice-1", status: "pending" }]);
+});
+
+test("a loop-state.json with the owner's own uncommitted setting stays out of the upgrade's commit", async () => {
+  const dir = await makeGitInstall();
+  const statePath = join(dir, "carja/1-workbench/loop-state.json");
+  writeFileSync(statePath, `${JSON.stringify({ ...JSON.parse(readFileSync(statePath, "utf8")), autonomy_level: "L3" }, null, 2)}\n`);
+  const { code, stdout } = await runUpgrade(dir);
+  assert.equal(code, 0, stdout);
+  assert.ok(!g(dir, "show", "--name-only", "--format=", "HEAD").split("\n").includes("carja/1-workbench/loop-state.json"), "the owner's setting was committed for them");
+  assert.equal(JSON.parse(readFileSync(statePath, "utf8")).autonomy_level, "L3", "the owner's setting is kept");
 });
 
 test("upgrade migrates a tracked CLAUDE.md and GEMINI.md: notes into AGENTS.md, deletions committed", async () => {
