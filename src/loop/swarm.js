@@ -149,6 +149,8 @@ export function normalizeTask(task, defaults = {}) {
     stages_done: Array.isArray(task.stages_done) ? task.stages_done : [],
     stages_reviewed: Array.isArray(task.stages_reviewed) ? task.stages_reviewed : [],
     reviewed_head: task.reviewed_head ?? null,
+    // The item's branch already holds its archived slice: an earlier Ship beat stopped after that step.
+    ship_resume: task.ship_resume === true,
   };
 }
 
@@ -334,6 +336,14 @@ async function processTask(task, { verifyCommand, runBeat, runVerify, runChecker
   // (a laptop closed during Ship) must not cost another Build beat. The same
   // reviewed code, unchanged, goes straight to Ship, which verifies and reviews
   // the shipped state again.
+  // The same for a run that failed in Ship after the slice was archived in its
+  // branch (2026-11-25): Ship starts only after a passed review, and it verifies
+  // and reviews the shipped state again.
+  if (task.ship_resume) {
+    await audit(`task ${task.id}: an earlier Ship beat archived the slice in this branch and did not finish: resuming at Ship`);
+    task.status = "passed";
+    return { task, outcome: "passed" };
+  }
   if (task.reviewed_head && (await gitHead({ task })) === task.reviewed_head) {
     await audit(`task ${task.id}: its code passed review before an interruption and is unchanged: resuming at Ship`);
     task.status = "passed";

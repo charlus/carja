@@ -79,6 +79,11 @@ if (checker) {
   }
 } else if (prompt.includes("# Spec assignment (this beat)")) {
   const slice = field("Slice folder");
+  // $STUB_SPEC_BLANK names a slice whose Spec beat writes nothing: its Spec stage fails.
+  if (process.env.STUB_SPEC_BLANK && slice.endsWith(process.env.STUB_SPEC_BLANK)) {
+    console.log(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "stub", usage: { input_tokens: 1, output_tokens: 1 } }));
+    process.exit(0);
+  }
   put(join(slice, "feature-spec.md"), "# Feature Spec\n\n## Brief check\n\n- **C1:** None found.\n\n## Stories\n- one\n");
   put(join(slice, "implementation-plan.md"), "# Plan\n\n- step 1\n");
   done();
@@ -87,6 +92,12 @@ if (checker) {
   if (from) {
     mkdirSync(dirname(from[2]), { recursive: true });
     renameSync(from[1], from[2]);
+  }
+  // $STUB_SHIP_NO_LOG names a slice whose Ship beat archives the folder and stops there: its Ship stage fails.
+  if (process.env.STUB_SHIP_NO_LOG && from?.[1].endsWith(process.env.STUB_SHIP_NO_LOG)) {
+    done();
+    console.log(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "stub", usage: { input_tokens: 1, output_tokens: 1 } }));
+    process.exit(0);
   }
   if (prompt.includes("**Tick it in this branch:**")) {
     const b = "carja/2-backlog/task-backlog.md";
@@ -112,6 +123,11 @@ if (checker) {
       writeFileSync(mark, String(process.pid));
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 120000);
     }
+  }
+  // $STUB_BUILD_IDLE names a slice whose Build beats do nothing: the item stalls and fails.
+  if (process.env.STUB_BUILD_IDLE && prompt.includes(process.env.STUB_BUILD_IDLE)) {
+    console.log(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "stub", usage: { input_tokens: 1, output_tokens: 1 } }));
+    process.exit(0);
   }
   // In the outer layout ($STUB_CODE_DIR) the code goes into the nested repository.
   // Each build writes a new file, so a slice stacked on another still has code of its own.
