@@ -599,19 +599,39 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
       // holds the stages it already did (its spec). Read the item from there.
       // Only for an item that never reached an MR: one the owner closed is built anew.
       const own = `refs/heads/${branch}`;
-      const resumed = open === null && (await runCli("git", ["rev-parse", "--verify", "-q", own], root)).ok && (await isAncestor(root, viewRef, own)) === true;
-      if (resumed) stdout.write(`[CARJA LOOP] ${itemName(next)}: resumed from its branch, where the last run stopped.\n`);
+      let resumed = open === null && (await runCli("git", ["rev-parse", "--verify", "-q", own], root)).ok && (await isAncestor(root, viewRef, own)) === true;
+      // A Ship beat archives the slice folder in the item's branch. A run that
+      // failed after that step left a branch where the slice is no longer open:
+      // the item is then read from the branch below and goes straight to Ship
+      // (field report, 2026-11-25: such an item ran no beat again, with no reason given).
+      let shipResume = false;
+      if (resumed && next.type === "slice" && next.source?.path) {
+        const ownView = refView(root, own);
+        if (!(await ownView.list(next.source.path)).length) {
+          shipResume = (await ownView.list(`${ARCHIVED_SLICES_REL}/${next.source.slice}`)).length > 0;
+          if (!shipResume) {
+            resumed = false;
+            stdout.write(`[CARJA LOOP] ${itemName(next)}: its branch no longer holds the slice folder, open or archived. The loop builds it again from the item below.\n`);
+          }
+        }
+      }
+      if (shipResume) stdout.write(`[CARJA LOOP] ${itemName(next)}: the last run archived it in its branch and stopped before its MR. Resuming at Ship.\n`);
+      else if (resumed) stdout.write(`[CARJA LOOP] ${itemName(next)}: resumed from its branch, where the last run stopped.\n`);
       stdout.write(`\n[CARJA LOOP] building ${itemName(next)} on ${viewRef.replace(/^origin\//, "")}\n`);
       built += 1;
       await stackEmit("stack_item", { project: scope, item: itemName(next), n: waitingBelow + built, of: waitingBelow + plan.items.length });
+      const item = {
+        itemId: next.id,
+        viewRef,
+        itemRef: resumed && !shipResume ? own : null,
+        shipResume,
+      };
       const code = await loopCommand(args, {
         cwd,
         stdout,
         stderr,
         stack: {
-          itemId: next.id,
-          viewRef,
-          itemRef: resumed ? own : null,
+          ...item,
           outerBase: top.outer ? `origin/${top.outer.branch}` : null,
           outerTarget: top.outer?.branch ?? null,
           codeBase: top.code ? `origin/${top.code.branch}` : null,
@@ -626,6 +646,11 @@ async function stackedProjectRun(args, { cwd, stdout, stderr }, { scope, root, r
       });
       const st = await readJson(join(runDir, "loop-state.json")).catch(() => ({}));
       const task = (st.tasks ?? []).find((t) => t.id === next.id);
+      if (code === ITEM_NOT_FOUND) {
+        // No beat ran, so the state file is the last run's: never report its status as this run's.
+        stop = { status: "stopped", item: itemName(next), reason: `the loop did not find it as open work on ${(item.itemRef ?? viewRef).replace(/^(origin|refs\/heads)\//, "")}, so no beat ran` };
+        break;
+      }
       if (task?.status === "merged" && task.merge?.pr_url) {
         await runCli("git", ["fetch", "-q", "origin"], root);
         if (codeRoot) await runCli("git", ["fetch", "-q", "origin"], codeRoot);
@@ -687,6 +712,10 @@ async function planStack(root, scope, viewRef) {
   const first = harvestSlices(await readSlices(root, [scope], view));
   return { items: first.length ? [first[0], ...names.slice(1).map((n) => ({ id: `slice:${scope}/${n}`, type: "slice", source: { slice: n } }))] : [] };
 }
+
+/** `loopCommand`'s answer to the stacked run when its item is not in the queue: no beat ran. */
+const ITEM_NOT_FOUND = 3;
+const ARCHIVED_SLICES_REL = "carja/6-archive/completed-implementations";
 
 const itemName = (t) => (t.type === "blueprint" ? "the Carve" : `slice ${t.source?.slice ?? t.id}`);
 
@@ -992,6 +1021,9 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
     }
     // The stacked run builds one item per call, the one it chose: the Carve first.
     if (stack) harvestedQueue = harvestedQueue.filter((t) => t.id === stack.itemId);
+    // Archived in its own branch by a Ship beat that did not finish: the spec is
+    // in the archive, and the item goes straight to Ship, which verifies and reviews again.
+    if (stack?.shipResume) harvestedQueue = harvestedQueue.map((t) => ({ ...t, spec_ready: true, ship_resume: true }));
     // Unattended Lifecycle step 2: claims come from git. An item whose loop
     // branch is on the remote is in progress or in review elsewhere; nothing is
     // committed to the owner's checkout to mark it.
@@ -1562,6 +1594,10 @@ export async function loopCommand(args, { cwd, stdout, stderr, stack = null }) {
 
   // ---- Route: swarm (task graph) vs. pair (single fuzzy goal) --------------
   if (fromCarja && state.tasks.length === 0) {
+    if (stack) {
+      stderr.write(`⛔  ${stack.itemId} is not open work on ${stack.itemRef ?? stack.viewRef}. No beat ran.\n`);
+      return ITEM_NOT_FOUND;
+    }
     if (!scope) stdout.write("[CARJA LOOP] carja/ has no open work items (inbox + backlog empty). Nothing to do.\n");
     return 0;
   }

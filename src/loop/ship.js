@@ -63,7 +63,9 @@ export function renderShipAssignment(task, { branch } = {}) {
       );
     }
   }
-  if (task?.source?.kind === "slice" && task.source.path) {
+  if (task?.source?.kind === "slice" && task.source.path && task.ship_resume) {
+    lines.push(`- **Archive:** already done in this branch by an earlier Ship beat that stopped after it: the slice is in \`carja/6-archive/completed-implementations/${task.source.slice}\`. Check it, then do the rest of Phase 5.`);
+  } else if (task?.source?.kind === "slice" && task.source.path) {
     lines.push(`- **Archive it in this branch:** move \`${task.source.path}\` to \`carja/6-archive/completed-implementations/${task.source.slice}\` (ship.md Phase 5).`);
   }
   if (branch) lines.push(`- **Branch:** \`${branch}\`. In the ship-log entry write \`Platform: branch ${branch} — MR opened by carja loop\`.`);

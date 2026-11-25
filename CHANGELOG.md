@@ -8,6 +8,14 @@ All notable changes to Carja (named Conductor until 6.x) will be documented in t
 
 ---
 
+## [7.11.10] — 2026-11-25 — A slice whose Ship beat failed after the archive is shipped by the next run
+
+Compatibility: upgrade only
+
+### Fixed
+- **`carja loop <project>` no longer gets stuck on a slice whose Ship beat failed after it archived the slice folder.** Ship archives the folder in the item's branch. When the run then failed (no MR body, no ship-log entry, a rejected review), the next run resumed from that branch, found no open slice there, ran no beat, and reported the status of the run before. Every later run did the same, so the slice looked failed for good and nothing said why (field report, 2026-11-25). The next run now reads the item from the branch below, says "the last run archived it in its branch and stopped before its MR. Resuming at Ship", and runs Ship again on the built code: no Spec beat, no Build beat. Ship verifies and reviews the shipped state again before the MR opens. A branch that holds the slice neither open nor archived is built again from the item below, and the run says so.
+- **A stacked item that the loop cannot find as open work stops the run with that reason.** It printed nothing and the report showed the last run's status. A slice whose Spec or Build stage failed was already built again by the next run. Proven by `test/loop-stack-failed-item.test.js` (the real CLI in the outer layout, stub engine, stub forge), not with a real engine.
+
 ## [7.11.9] — 2026-11-25 — A loop run no longer leaves loop-state.json modified
 
 Compatibility: upgrade only
